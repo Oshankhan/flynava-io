@@ -1,0 +1,57 @@
+"""MongoDB access via pymongo.
+
+Single lazily-created client. `ping()` is isolated so tests can stub it
+without a live database. `get_db()` is the FastAPI dependency; tests override
+it with a mongomock database.
+"""
+from __future__ import annotations
+
+from pymongo import ASCENDING, MongoClient
+from pymongo.database import Database
+
+from .config import settings
+
+_client: MongoClient | None = None
+
+
+def get_client() -> MongoClient:
+    global _client
+    if _client is None:
+        _client = MongoClient(settings.mongo_uri, serverSelectionTimeoutMS=3000)
+    return _client
+
+
+def get_db() -> Database:
+    """FastAPI dependency returning the app database."""
+    return get_client()[settings.mongo_db]
+
+
+def ping() -> None:
+    """Raise if MongoDB is unreachable."""
+    get_client().admin.command("ping")
+
+
+def ensure_indexes(db: Database) -> None:
+    """Create indexes used across modules. Idempotent."""
+    db.users.create_index([("email", ASCENDING)], unique=True)
+    db.departments.create_index([("dept_id", ASCENDING)], unique=True)
+    db.projects.create_index([("source_system", ASCENDING), ("source_id", ASCENDING)])
+    db.tasks.create_index([("project_id", ASCENDING)])
+    db.kpi_defs.create_index([("kpi_id", ASCENDING)], unique=True)
+    db.kpi_values.create_index(
+        [("kpi_id", ASCENDING), ("period_start", ASCENDING)]
+    )
+    db.integration_logs.create_index([("source", ASCENDING), ("run_at", ASCENDING)])
+    db.audit_logs.create_index([("created_at", ASCENDING)])
+    db.audit_logs.create_index([("actor_id", ASCENDING), ("created_at", ASCENDING)])
+    db.notifications.create_index([("recipient_id", ASCENDING), ("status", ASCENDING)])
+    db.teams.create_index([("team_id", ASCENDING)], unique=True)
+    db.users.create_index([("team_id", ASCENDING)])
+    db.users.create_index([("reports_to", ASCENDING)])
+    db.tasks.create_index([("assignee", ASCENDING)])
+    db.meetings.create_index([("attendee_ids", ASCENDING), ("start", ASCENDING)])
+    db.requests.create_index([("approver_id", ASCENDING), ("status", ASCENDING)])
+    db.requests.create_index([("requester_id", ASCENDING)])
+    db.tasks.create_index([("author", ASCENDING)])
+    db.leaves.create_index([("status", ASCENDING)])
+    db.positions.create_index([("status", ASCENDING), ("dept", ASCENDING)])

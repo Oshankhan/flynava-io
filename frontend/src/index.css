@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+}
+
+/* box model + slick scrollbars — thin, translucent "glass" thumb,
+   invisible track; Firefox gets the thin variant via scrollbar-width. */
+* {
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 130, 125, 0.35) transparent;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(120, 130, 125, 0.28);
+  border-radius: 9999px;
+  backdrop-filter: blur(4px);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 130, 125, 0.5);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
