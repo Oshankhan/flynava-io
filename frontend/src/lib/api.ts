@@ -394,6 +394,22 @@ export interface PendingLeave {
   status: string;
 }
 
+// --- Phase C: department-head workspace ---
+export interface DeptTeamSummary {
+  team_id: string;
+  name: string;
+  lead_name: string | null;
+  buckets: TaskBuckets;
+  reopened_count: number;
+  member_count: number;
+}
+export interface DeptWorkspaceData {
+  department: string | null;
+  teams: DeptTeamSummary[];
+  dept_kpis: Kpi[];
+  positions: Position[];
+}
+
 async function uploadReq<T>(path: string, form: FormData): Promise<T> {
   const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch(`${API_BASE_URL}/api/v1${path}`, {
@@ -591,4 +607,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ comment }),
     }),
+
+  // Phase C — department-head workspace
+  workspaceDepartment: () => req<DeptWorkspaceData>("/workspace/department"),
 };

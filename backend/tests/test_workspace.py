@@ -211,3 +211,46 @@ def test_audit_middleware_records_mutations(client, auth_header, db):
     assert row["actor_id"] == "u_emp"
     assert row["meta"]["status_code"] == 200
     assert row["meta"]["method"] == "POST"
+
+
+# --- Phase C: department-head workspace ---
+
+def test_workspace_department_requires_l3(client, auth_header):
+    denied = client.get("/api/v1/workspace/department",
+                        headers=auth_header("python.tl@flynava.ai"))
+    assert denied.status_code == 403
+
+
+def test_workspace_department_eng_rollup(client, auth_header):
+    r = client.get("/api/v1/workspace/department",
+                   headers=auth_header("manager@flynava.ai"))
+    assert r.status_code == 200
+    body = r.json()
+    assert body["department"] == "eng"
+    team_ids = {t["team_id"] for t in body["teams"]}
+    assert {"team_java", "team_python", "team_qa"} <= team_ids
+    python_team = next(t for t in body["teams"] if t["team_id"] == "team_python")
+    assert python_team["lead_name"] == "Priya Nair"
+    assert python_team["member_count"] >= 1
+    assert "buckets" in python_team
+    kpi_modules = {k["module"] for k in body["dept_kpis"]}
+    assert kpi_modules <= {"operations", "product_dev"}
+    assert len(body["dept_kpis"]) > 0
+
+
+def test_workspace_department_positions_filtered(client, auth_header):
+    r = client.get("/api/v1/workspace/department",
+                   headers=auth_header("manager@flynava.ai"))
+    positions = r.json()["positions"]
+    assert len(positions) > 0
+    assert all(p["dept"] == "eng" for p in positions)
+
+
+def test_workspace_department_hr(client, auth_header):
+    r = client.get("/api/v1/workspace/department", headers=auth_header("hr@flynava.ai"))
+    assert r.status_code == 200
+    body = r.json()
+    assert body["department"] == "hr"
+    assert {t["team_id"] for t in body["teams"]} == {"team_hr"}
+    kpi_modules = {k["module"] for k in body["dept_kpis"]}
+    assert kpi_modules <= {"hr", "recruitment"}

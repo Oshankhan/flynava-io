@@ -6,10 +6,12 @@ L3 their department's, L4 everything.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pymongo.database import Database
 
+from ...core import rbac
 from ...core.rbac import user_level
+from ...kpi import engine
 from ...services import approvals
 from ...services import meetings as meetings_svc
 from ...services import notifications as notif
@@ -17,6 +19,17 @@ from ...services import tasks as tasks_svc
 from ..deps import get_current_user, get_db
 
 router = APIRouter(tags=["workspace"])
+
+# Which KPI modules feed a department head's "Dept KPI pulse" strip.
+# Intersected with rbac.has_access(role, module) as defence in depth — a
+# dept head's role (manager/hr/marketing) already covers these in MATRIX,
+# this just guards against a future role/module mismatch silently leaking.
+DEPT_KPI_MODULES = {
+    "eng": ["operations", "product_dev"],
+    "fin": ["finance", "compliance"],
+    "hr": ["hr", "recruitment"],
+    "mkt": ["marketing_sales"],
+}
 
 # audit actions that read well in a human feed (auto API audit rows excluded)
 _FEED_VERBS = {
@@ -109,3 +122,38 @@ def workspace_me(user: dict = Depends(get_current_user),
         "unread_notifications": notif.unread_count(db, user["user_id"]),
         "activity": recent_activity(db, user, limit=8),
     }
+
+
+@router.get("/workspace/department")
+def workspace_department(user: dict = Depends(get_current_user),
+                         db: Database = Depends(get_db)) -> dict:
+    """Department-head rollup: per-team buckets, dept KPI strip, open
+    positions. Personal stuff (my tasks/meetings/requests/activity) still
+    comes from /workspace/me — this is additive, not a replacement."""
+    if user_level(user) < 3:
+        raise HTTPException(status.HTTP_403_FORBIDDEN,
+                            "department heads and above only")
+    dept = user.get("department")
+
+    teams = []
+    for t in db.teams.find({"department": dept}):
+        info = tasks_svc.team_tasks(db, t["team_id"])
+        lead = db.users.find_one({"user_id": t.get("lead_id")}, {"name": 1})
+        teams.append({
+            "team_id": t["team_id"],
+            "name": t["name"],
+            "lead_name": lead["name"] if lead else None,
+            "buckets": info["buckets"],
+            "reopened_count": len(info["reopened"]),
+            "member_count": len(info["members"]),
+        })
+
+    modules = [m for m in DEPT_KPI_MODULES.get(dept, [])
+              if rbac.has_access(user["role"], m)]
+    dept_kpis = engine.latest_snapshot(db, modules) if modules else []
+
+    positions = [{k: v for k, v in p.items() if k != "_id"} for p in
+                db.positions.find({"status": "open", "dept": dept})] if dept else []
+
+    return {"department": dept, "teams": teams, "dept_kpis": dept_kpis,
+            "positions": positions}
