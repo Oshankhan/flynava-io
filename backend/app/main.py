@@ -3,10 +3,12 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, HTTPException, status as http_status
 from fastapi.middleware.cors import CORSMiddleware
+from pymongo.database import Database
 
 from . import __version__, db
+from .api.deps import get_db
 from .api.v1 import api_router
 from .config import settings
 from .core.middleware import AuditMiddleware, SecurityMiddleware
@@ -53,6 +55,24 @@ def health() -> dict:
     if mongo_error:
         body["mongo_error"] = mongo_error
     return body
+
+
+@app.post("/api/v1/bootstrap-seed")
+def bootstrap_seed(database: Database = Depends(get_db)) -> dict:
+    """One-time demo-data seed for a freshly deployed, empty database.
+
+    No auth required, because there are no users yet to authenticate as —
+    safety comes from the guard below instead: it refuses to run against a
+    database that already has users, so it can never be used to wipe or
+    reset a live environment.
+    """
+    from .services.seed import seed
+
+    if database.users.count_documents({}) > 0:
+        raise HTTPException(http_status.HTTP_409_CONFLICT,
+                            "already seeded (users collection is non-empty)")
+    seed(database)
+    return {"status": "seeded"}
 
 
 app.include_router(api_router)
