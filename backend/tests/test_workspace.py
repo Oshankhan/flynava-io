@@ -254,3 +254,10 @@ def test_workspace_department_hr(client, auth_header):
     assert {t["team_id"] for t in body["teams"]} == {"team_hr"}
     kpi_modules = {k["module"] for k in body["dept_kpis"]}
     assert kpi_modules <= {"hr", "recruitment"}
+
+
+def test_org_users_directory_includes_reports_to(client, auth_header):
+    r = client.get("/api/v1/org/users", headers=auth_header("employee@flynava.ai"))
+    assert r.status_code == 200
+    evan = next(u for u in r.json() if u["user_id"] == "u_emp")
+    assert evan["reports_to"] == "u_tl_python"

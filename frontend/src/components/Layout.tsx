@@ -15,7 +15,9 @@ import {
   Typography,
 } from "antd";
 import {
+  ApartmentOutlined,
   AuditOutlined,
+  BarChartOutlined,
   BellOutlined,
   BookOutlined,
   BulbOutlined,
@@ -167,10 +169,14 @@ export default function Layout() {
       });
     if (canPeople)
       list.push({ key: "/people", icon: <TeamOutlined />, label: "People (HR)" });
+    if (level >= 3)
+      list.push({ key: "/org-chart", icon: <ApartmentOutlined />, label: "Org Chart" });
     list.push(
       { key: "/my-payslip", icon: <IdcardOutlined />, label: "My Payslip" },
       { key: "/awards", icon: <TrophyOutlined />, label: "Awards" }
     );
+    if (level >= 4)
+      list.push({ key: "/analytics", icon: <BarChartOutlined />, label: "Analytics" });
     if (user.role === "super_admin")
       list.push({ key: "/admin", icon: <SettingOutlined />, label: "Admin" });
     return list;

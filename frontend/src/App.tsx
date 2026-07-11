@@ -20,6 +20,8 @@ import AIWorkspace from "./pages/AIWorkspace";
 import KnowledgeBase from "./pages/KnowledgeBase";
 import NotificationsPage from "./pages/NotificationsPage";
 import MyTeam from "./pages/MyTeam";
+import Analytics from "./pages/Analytics";
+import OrgChart from "./pages/OrgChart";
 
 function Shell() {
   const { dark } = useTheme();
@@ -69,6 +71,8 @@ function Shell() {
               <Route path="/people" element={<People />} />
               <Route path="/my-payslip" element={<MyPayslip />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/org-chart" element={<OrgChart />} />
             </Route>
             <Route path="*" element={<Navigate to="/workspace" replace />} />
           </Routes>

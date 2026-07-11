@@ -14,14 +14,15 @@ from ..deps import get_current_user, get_db
 router = APIRouter(tags=["org"])
 
 _LITE = {"_id": 0, "user_id": 1, "name": 1, "designation": 1, "team_id": 1,
-         "level": 1, "department": 1, "role": 1}
+         "level": 1, "department": 1, "role": 1, "reports_to": 1}
 
 
 def _user_lite(u: dict | None) -> dict | None:
     if not u:
         return None
     return {k: u.get(k) for k in
-            ("user_id", "name", "designation", "team_id", "level", "department", "role")}
+            ("user_id", "name", "designation", "team_id", "level", "department",
+             "role", "reports_to")}
 
 
 def _team_out(db: Database, t: dict) -> dict:

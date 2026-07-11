@@ -255,6 +255,7 @@ export interface UserLite {
   level?: number;
   department?: string | null;
   role?: string;
+  reports_to?: string | null;
 }
 export interface TeamInfo {
   team_id: string;
@@ -408,6 +409,40 @@ export interface DeptWorkspaceData {
   teams: DeptTeamSummary[];
   dept_kpis: Kpi[];
   positions: Position[];
+}
+
+// --- Phase D: L4 analytics + org chart ---
+export interface DayCount {
+  date: string;
+  count: number;
+}
+export interface ActionCount {
+  action: string;
+  count: number;
+}
+export interface ActorCount {
+  user_id: string;
+  name: string;
+  count: number;
+}
+export interface DeptCount {
+  department: string;
+  count: number;
+}
+export interface IntegrationStatus {
+  source: string;
+  status: string | null;
+  run_at: string | null;
+  records_processed: number | null;
+}
+export interface AnalyticsSummary {
+  window_days: number;
+  total_actions: number;
+  actions_per_day: DayCount[];
+  by_action: ActionCount[];
+  top_actors: ActorCount[];
+  by_department: DeptCount[];
+  integrations: IntegrationStatus[];
 }
 
 async function uploadReq<T>(path: string, form: FormData): Promise<T> {
@@ -610,4 +645,8 @@ export const api = {
 
   // Phase C — department-head workspace
   workspaceDepartment: () => req<DeptWorkspaceData>("/workspace/department"),
+
+  // Phase D — L4 analytics + org chart
+  analyticsSummary: (days = 30) =>
+    req<AnalyticsSummary>(`/analytics/summary?days=${days}`),
 };
