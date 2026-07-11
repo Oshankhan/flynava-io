@@ -58,3 +58,29 @@ Seed the DB: `cd backend && python -m app.services.seed`
 
 ## Security
 Secrets live in `.env` only (gitignored). Never commit keys. Rotate any key shared over chat.
+
+## Deploy (free tier)
+Three free services, no credit card required beyond normal signup:
+
+1. **Database — MongoDB Atlas (free M0 cluster)**
+   Create a cluster at atlas.mongodb.com, add a DB user, allow network access
+   (`0.0.0.0/0` for simplicity), copy the `mongodb+srv://...` connection string.
+
+2. **Backend — Render** (`render.yaml` at repo root, `rootDir: backend`)
+   Render → New → Blueprint → point at this repo → it reads `render.yaml`.
+   Fill in the `sync: false` env vars in the Render dashboard: `MONGO_URI`
+   (from step 1), `CORS_ORIGINS` (your Vercel URL from step 3), plus any
+   integration keys you want live (`OPENPROJECT_API_KEY`, `OPENAI_API_KEY`/
+   `ANTHROPIC_API_KEY`, SMTP). `JWT_SECRET` auto-generates. Free tier sleeps
+   after 15 min idle — first request after that takes ~30s to wake up.
+   After first deploy, seed demo data once via the Render Shell tab:
+   `python -m app.services.seed`
+
+3. **Frontend — Vercel** (`frontend/vercel.json`)
+   Vercel → Import Project → this repo → root directory `frontend` (Vite
+   preset auto-detected). Set env var `VITE_API_BASE_URL` to the Render
+   backend URL from step 2. Deploy, then paste the resulting Vercel URL back
+   into Render's `CORS_ORIGINS` and redeploy the backend.
+
+`docker-compose.yml` remains the local-dev path; it isn't used for either
+deployment target above.
