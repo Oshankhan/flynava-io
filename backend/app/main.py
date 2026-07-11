@@ -28,8 +28,13 @@ app.add_middleware(
 
 @app.on_event("startup")
 def _startup() -> None:
-    from .core.tls import use_os_trust_store
-    use_os_trust_store()
+    # NOTE: use_os_trust_store() is intentionally NOT called here. It patches
+    # Python's *global* default SSLContext to trust the OS cert store instead
+    # of certifi — needed only for the OpenProject connector (see
+    # core/tls.py), which calls it itself, scoped to when a sync actually
+    # runs. Calling it here affected every TLS connection in the process,
+    # including MongoDB, and a minimal deploy container's OS trust store may
+    # not have the CA that signs Atlas's certificate chain.
     try:
         db.ensure_indexes(db.get_db())
     except Exception as exc:  # noqa: BLE001 - don't crash boot if Mongo is down
@@ -38,12 +43,16 @@ def _startup() -> None:
 
 @app.get("/api/v1/health")
 def health() -> dict:
-    mongo, status = "up", "ok"
+    mongo, status, mongo_error = "up", "ok", None
     try:
         db.ping()
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
         mongo, status = "down", "degraded"
-    return {"status": status, "service": "io-api", "version": __version__, "mongo": mongo}
+        mongo_error = f"{type(exc).__name__}: {exc}"[:300]
+    body = {"status": status, "service": "io-api", "version": __version__, "mongo": mongo}
+    if mongo_error:
+        body["mongo_error"] = mongo_error
+    return body
 
 
 app.include_router(api_router)

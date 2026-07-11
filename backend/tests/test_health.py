@@ -27,3 +27,4 @@ def test_health_degraded_when_mongo_down(monkeypatch):
     body = r.json()
     assert body["status"] == "degraded"
     assert body["mongo"] == "down"
+    assert body["mongo_error"] == "RuntimeError: no mongo"
