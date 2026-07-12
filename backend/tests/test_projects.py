@@ -10,14 +10,14 @@ def test_list_scoped_by_membership_for_l1(client, auth_header):
     assert r.status_code == 200
     codes = {p["code"] for p in r.json()}
     assert "KQ" in codes
-    assert "OM" not in codes  # Oman is marketing-only right now
+    assert "WY" not in codes  # Oman is marketing-only right now
 
 
 def test_list_shows_all_for_l3(client, auth_header):
     r = client.get("/api/v1/projects", headers=auth_header("harsha.varlani@flynava.ai"))
     assert r.status_code == 200
     codes = {p["code"] for p in r.json()}
-    assert {"KQ", "OM", "SV"} <= codes
+    assert {"KQ", "WY", "SV"} <= codes
 
 
 def test_project_summary_shape(client, auth_header):

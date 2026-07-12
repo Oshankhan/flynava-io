@@ -305,7 +305,7 @@ PROJECTS = [
         "progress": 45, "expected_progress": 50, "open_tasks_target": 12,
     },
     {
-        "project_id": "proj_om", "code": "OM", "name": "Oman Airways",
+        "project_id": "proj_om", "code": "WY", "name": "Oman Airways",
         "client": "Oman Airways", "status": "planning", "logo": "/logos/om.png",
         "engagement": "New Prospect",
         "description": "Marketing phase in progress. If the scenario moves forward, "
@@ -327,8 +327,8 @@ PROJECTS = [
         "progress": 20, "expected_progress": 25, "open_tasks_target": 8,
     },
     {
-        "project_id": "proj_sv", "code": "SV", "name": "Saudia",
-        "client": "Saudia", "status": "active", "logo": "/logos/sv.png",
+        "project_id": "proj_sv", "code": "SV", "name": "Saudia Airlines",
+        "client": "Saudia Airlines", "status": "active", "logo": "/logos/sv.png",
         "engagement": "Implementation & Training",
         "description": "Client training ongoing for key modules and processes.",
         "priority": "Medium", "project_manager_id": "u_mushaheed",
