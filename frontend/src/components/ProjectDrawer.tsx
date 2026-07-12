@@ -418,7 +418,13 @@ export default function ProjectDrawer({
         data ? (
           <Flex justify="space-between" align="center" wrap gap={8}>
             <Flex align="center" gap={10}>
-              <Avatar className="bg-io-600">{data.code}</Avatar>
+              {data.logo ? (
+                <div className="w-9 h-9 shrink-0 rounded-lg bg-white border border-black/10 flex items-center justify-center p-1 overflow-hidden">
+                  <img src={data.logo} alt={data.code} className="max-w-full max-h-full object-contain" />
+                </div>
+              ) : (
+                <Avatar className="bg-io-600">{data.code}</Avatar>
+              )}
               <div>
                 <Flex align="center" gap={8}>
                   <Title level={5} className="m-0">({data.code}) {data.name}</Title>

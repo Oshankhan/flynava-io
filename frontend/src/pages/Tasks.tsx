@@ -222,9 +222,15 @@ function ProjectsTab({ canCreate }: { canCreate: boolean }) {
               >
                 <Flex justify="space-between" gap={16} wrap>
                   <Flex gap={12} className="min-w-0 flex-1">
-                    <Avatar size={40} style={{ backgroundColor: accent, flexShrink: 0 }}>
-                      {p.code}
-                    </Avatar>
+                    {p.logo ? (
+                      <div className="w-10 h-10 shrink-0 rounded-lg bg-white border border-black/10 flex items-center justify-center p-1 overflow-hidden">
+                        <img src={p.logo} alt={p.code} className="max-w-full max-h-full object-contain" />
+                      </div>
+                    ) : (
+                      <Avatar size={40} style={{ backgroundColor: accent, flexShrink: 0 }}>
+                        {p.code}
+                      </Avatar>
+                    )}
                     <div className="min-w-0 flex-1">
                       <Flex align="center" gap={8} wrap>
                         <Text strong>({p.code}) {p.name}</Text>

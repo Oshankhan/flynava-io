@@ -33,6 +33,7 @@ def test_project_summary_shape(client, auth_header):
     assert kq["project_manager"]["name"] == "Animesh Singh"
     assert kq["status"] == "active"
     assert kq["engagement"] == "Existing Client - Production Support"
+    assert kq["logo"] == "/logos/kq.svg"
 
 
 def test_get_project_detail(client, auth_header):

@@ -571,6 +571,7 @@ export interface ProjectSummary {
   name: string;
   client?: string;
   status: string;
+  logo?: string | null;
   description?: string | null;
   engagement?: string | null;
   priority?: string | null;
@@ -612,6 +613,7 @@ export interface ProjectDetail {
   name: string;
   client?: string;
   status: string;
+  logo?: string | null;
   description?: string | null;
   engagement?: string | null;
   priority?: string | null;

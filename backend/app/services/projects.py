@@ -64,7 +64,7 @@ def _summary(db: Database, p: dict) -> dict:
     stage_name = next((s["name"] for s in p.get("stages", []) if s["key"] == p["current_stage"]), None)
     return {
         "project_id": p["project_id"], "code": p["code"], "name": p["name"],
-        "client": p.get("client"), "status": p["status"],
+        "client": p.get("client"), "status": p["status"], "logo": p.get("logo"),
         "description": p.get("description"), "engagement": p.get("engagement"),
         "priority": p.get("priority"), "start_date": p.get("start_date"),
         "due_date": p.get("due_date"),
@@ -105,7 +105,7 @@ def detail(db: Database, project_id: str) -> dict | None:
     owner = db.users.find_one({"user_id": p.get("owner_id")}, {"user_id": 1, "name": 1})
     return {
         "project_id": p["project_id"], "code": p["code"], "name": p["name"],
-        "client": p.get("client"), "status": p["status"],
+        "client": p.get("client"), "status": p["status"], "logo": p.get("logo"),
         "description": p.get("description"), "engagement": p.get("engagement"),
         "priority": p.get("priority"), "start_date": p.get("start_date"),
         "due_date": p.get("due_date"),

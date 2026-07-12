@@ -275,7 +275,7 @@ def _stage(key: str, name: str, description: str, status: str, progress: int,
 PROJECTS = [
     {
         "project_id": "proj_kq", "code": "KQ", "name": "Kenya Airways",
-        "client": "Kenya Airways", "status": "active",
+        "client": "Kenya Airways", "status": "active", "logo": "/logos/kq.svg",
         "engagement": "Existing Client - Production Support",
         "description": "Production support and maintenance for existing modules. "
                        "Handling bugs, patches and minor enhancements as per client requirements.",
@@ -306,7 +306,7 @@ PROJECTS = [
     },
     {
         "project_id": "proj_om", "code": "OM", "name": "Oman Airways",
-        "client": "Oman Airways", "status": "planning",
+        "client": "Oman Airways", "status": "planning", "logo": "/logos/om.png",
         "engagement": "New Prospect",
         "description": "Marketing phase in progress. If the scenario moves forward, "
                        "development teams will be allocated.",
@@ -328,7 +328,7 @@ PROJECTS = [
     },
     {
         "project_id": "proj_sv", "code": "SV", "name": "Saudia",
-        "client": "Saudia", "status": "active",
+        "client": "Saudia", "status": "active", "logo": "/logos/sv.png",
         "engagement": "Implementation & Training",
         "description": "Client training ongoing for key modules and processes.",
         "priority": "Medium", "project_manager_id": "u_mushaheed",
