@@ -9,6 +9,17 @@ export class ApiError extends Error {
   }
 }
 
+// Fired on any 401 from an authenticated call — AuthProvider listens for this
+// and logs out, which sends the user to /login instead of leaving them on a
+// page full of confusing "Not Found"/error alerts from a dead session.
+export const SESSION_EXPIRED_EVENT = "io:session-expired";
+
+function reportIfSessionExpired(path: string, status: number) {
+  if (status === 401 && !path.startsWith("/auth/")) {
+    window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+  }
+}
+
 async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch(`${API_BASE_URL}/api/v1${path}`, {
@@ -20,6 +31,7 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
     },
   });
   if (!res.ok) {
+    reportIfSessionExpired(path, res.status);
     let msg = res.statusText;
     try {
       msg = (await res.json()).detail ?? msg;
@@ -639,6 +651,7 @@ async function uploadReq<T>(path: string, form: FormData): Promise<T> {
     body: form, // browser sets multipart Content-Type + boundary
   });
   if (!res.ok) {
+    reportIfSessionExpired(path, res.status);
     let msg = res.statusText;
     try {
       msg = (await res.json()).detail ?? msg;

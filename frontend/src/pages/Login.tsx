@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Alert, Button, Card, Flex, Form, Input, Typography } from "antd";
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
 import { ApiError } from "../lib/api";
-import { useAuth } from "../lib/auth";
+import { SESSION_EXPIRED_KEY, useAuth } from "../lib/auth";
 
 const { Title, Text } = Typography;
 
@@ -12,6 +12,11 @@ export default function Login() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [sessionExpired] = useState(() => {
+    const expired = localStorage.getItem(SESSION_EXPIRED_KEY) === "1";
+    if (expired) localStorage.removeItem(SESSION_EXPIRED_KEY);
+    return expired;
+  });
 
   async function onFinish(values: { email: string; password: string }) {
     setBusy(true);
@@ -62,6 +67,14 @@ export default function Login() {
           >
             <Input.Password prefix={<LockOutlined />} placeholder="••••••••" size="large" />
           </Form.Item>
+          {sessionExpired && !error && (
+            <Alert
+              type="warning"
+              message="Your session expired. Please sign in again."
+              showIcon
+              className="mb-3"
+            />
+          )}
           {error && <Alert type="error" message={error} showIcon className="mb-3" />}
           <Button type="primary" htmlType="submit" size="large" block loading={busy}>
             Sign in

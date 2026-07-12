@@ -2,13 +2,15 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
-import { api, TOKEN_KEY, type User } from "./api";
+import { api, SESSION_EXPIRED_EVENT, TOKEN_KEY, type User } from "./api";
 
 const USER_KEY = "io_user";
+export const SESSION_EXPIRED_KEY = "io_session_expired";
 
 interface AuthState {
   user: User | null;
@@ -39,6 +41,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(USER_KEY);
     setUser(null);
   }, []);
+
+  useEffect(() => {
+    const onExpired = () => {
+      localStorage.setItem(SESSION_EXPIRED_KEY, "1");
+      logout();
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+  }, [logout]);
 
   const value = useMemo(() => ({ user, login, logout }), [user, login, logout]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

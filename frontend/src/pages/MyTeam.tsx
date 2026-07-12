@@ -103,7 +103,7 @@ export default function MyTeam() {
           <Flex align="center" gap={14}>
             <Avatar size={48} className="bg-io-600 text-lg">{current.name[0]}</Avatar>
             <div>
-              <Title level={5} className="m-0">{current.name}'s Team</Title>
+              <Title level={5} className="m-0">{current.name}'s Direct Reports</Title>
               <Text type="secondary" className="text-[13px]">
                 {reports.length} direct report{reports.length === 1 ? "" : "s"}
                 {current.designation ? ` · ${current.designation}` : ""}
