@@ -53,7 +53,12 @@ export default function KpiCard({ kpi, series }: { kpi: Kpi; series?: KpiSeries 
   const gradId = `kpi-spark-${kpi.kpi_id}`;
 
   return (
-    <Card size="small" bordered={false} className="h-full shadow-sm">
+    <Card
+      size="small"
+      bordered={false}
+      className="h-full shadow-sm"
+      styles={{ body: { display: "flex", flexDirection: "column", height: "100%" } }}
+    >
       <Flex justify="space-between" align="center" gap={8}>
         <span
           className="flex items-center justify-center w-8 h-8 rounded-lg text-[15px] shrink-0"
@@ -93,7 +98,7 @@ export default function KpiCard({ kpi, series }: { kpi: Kpi; series?: KpiSeries 
       )}
 
       {points.length >= 3 && (
-        <div className="w-full h-8 mt-2 -mx-1">
+        <div className="w-full h-8 mt-auto pt-2 -mx-1">
           <ResponsiveContainer>
             <AreaChart data={points} margin={{ top: 2, bottom: 0, left: 0, right: 0 }}>
               <defs>
