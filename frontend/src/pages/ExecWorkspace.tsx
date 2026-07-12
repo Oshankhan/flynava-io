@@ -86,6 +86,8 @@ export default function ExecWorkspace() {
     meetingDays[k].push(m);
   });
 
+  const seriesById = Object.fromEntries((data.series ?? []).map((s) => [s.kpi_id, s]));
+
   const automationCols = [
     { title: "Script", dataIndex: "title", key: "title", ellipsis: true },
     { title: "Module", dataIndex: "module", key: "module", width: 100 },
@@ -133,7 +135,7 @@ export default function ExecWorkspace() {
         <Row gutter={[16, 16]}>
           {data.kpis.slice(0, 8).map((k) => (
             <Col key={k.kpi_id} xs={12} md={6} xl={3}>
-              <KpiCard kpi={k} />
+              <KpiCard kpi={k} series={seriesById[k.kpi_id]} />
             </Col>
           ))}
         </Row>

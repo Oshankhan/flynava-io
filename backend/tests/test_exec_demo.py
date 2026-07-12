@@ -134,19 +134,21 @@ def test_workspace_exec_shape(client, auth_header):
         assert key in body
 
     dept_ids = {d["dept_id"] for d in body["departments"]}
-    assert {"eng", "fin", "hr", "mkt"} <= dept_ids
+    assert {"eng", "fin", "hr"} <= dept_ids
     assert "ui" not in dept_ids
     eng = next(d for d in body["departments"] if d["dept_id"] == "eng")
     assert eng["head"]["name"] == "Harsha Varlani"
     assert eng["teams_count"] == 5  # devops, java, python, qa, ui
 
     # Meghna is multi-role (manager + marketing) — she heads Product (her
-    # primary department) AND Marketing (via her extra role), so neither
-    # department shows up with a blank/unassigned head.
-    product = next(d for d in body["departments"] if d["dept_id"] == "product")
-    mkt = next(d for d in body["departments"] if d["dept_id"] == "mkt")
-    assert product["head"]["name"] == "Meghna Mehra"
-    assert mkt["head"]["name"] == "Meghna Mehra"
+    # primary department) AND Marketing (via her extra role). Rather than two
+    # identical-head cards, they're merged into one combined "Product &
+    # Marketing" card, and Meghna appears exactly once across all dept cards.
+    head_names = [d["head"]["name"] for d in body["departments"] if d.get("head")]
+    assert head_names.count("Meghna Mehra") == 1
+    meghna_card = next(d for d in body["departments"]
+                       if d.get("head") and d["head"]["name"] == "Meghna Mehra")
+    assert "Product" in meghna_card["name"] and "Marketing" in meghna_card["name"]
     assert eng["member_count"] >= 20
 
     assert body["automation"]["pending"] > 0

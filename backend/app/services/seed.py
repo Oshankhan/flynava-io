@@ -647,9 +647,15 @@ def reset_roster(db: Database) -> dict:
     """
     for coll in ("users", "teams", "departments", "projects", "tasks",
                  "attendance", "leaves", "payslips", "employees", "meetings",
-                 "notifications", "automation_scripts", "product_docs"):
+                 "notifications", "automation_scripts", "product_docs",
+                 "kpi_values", "kpi_defs"):
         db[coll].delete_many({})
     seed(db)
+    # Compute the live KPI values now so dashboards show real numbers (the
+    # seeded demo_history gives each card its trailing sparkline; this appends
+    # the real current value as the latest point).
+    from ..kpi import engine
+    engine.run_all(db)
     return {"users": len(USERS), "teams": len(TEAMS), "projects": len(PROJECTS)}
 
 

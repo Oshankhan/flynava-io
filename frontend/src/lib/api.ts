@@ -73,6 +73,9 @@ export interface Kpi {
   direction: "higher" | "lower";
   rag: Rag;
   change_pct?: number | null;
+  // last ~12 history points for the card's inline sparkline (present when the
+  // KPI has enough history); absent for freshly-seeded KPIs.
+  spark?: SeriesPoint[];
 }
 export interface SeriesPoint {
   t: string;

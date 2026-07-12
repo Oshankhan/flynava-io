@@ -34,9 +34,11 @@ def test_bug_kpis_computed_from_openproject_tasks(db):
 
 
 def test_bug_kpis_grey_without_bug_data(db):
-    # the real roster's seed always carries synthetic KQ bugs — clear them to
-    # exercise the "no bug data yet" state.
+    # the real roster's seed carries synthetic KQ bugs AND a demo sparkline
+    # history for the bug KPIs — clear both to exercise the genuinely
+    # "no data yet" state (run_all keeps the last known value otherwise).
     db.tasks.delete_many({"wp_type": {"$regex": "bug", "$options": "i"}})
+    db.kpi_values.delete_many({"kpi_id": {"$regex": "^pd_"}})
     snap = {r["kpi_id"]: r for r in engine.run_all(db, "product_dev")}
     assert snap["pd_open_bugs"]["value"] is None
     assert snap["pd_open_bugs"]["rag"] == "grey"

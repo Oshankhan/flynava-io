@@ -81,8 +81,9 @@ def _bug_breakdown(db: Database) -> list[dict]:
     return [{"status": s, "count": n} for s, n in counts.most_common(8)]
 
 
-def _series(db: Database, kpis: list[dict]) -> list[dict]:
-    hist_map = engine.history_bulk(db, [k["kpi_id"] for k in kpis])
+def _series(kpis: list[dict], hist_map: dict[str, list[dict]]) -> list[dict]:
+    """The (capped) trend-chart series — only the first few KPIs with enough
+    history, for the big line charts below the KPI grid."""
     out = []
     for k in kpis:
         hist = hist_map.get(k["kpi_id"], [])
@@ -99,6 +100,14 @@ def build(db: Database, key: str, user: dict) -> dict:
     accessible = set(rbac.accessible_modules_for_user(user))
     modules = [m for m in spec["modules"] if m in accessible]
     kpis = engine.latest_snapshot(db, modules) if modules else []
+
+    # One batched history read, reused for both per-card sparklines (all KPIs)
+    # and the capped trend-chart series (a few KPIs).
+    hist_map = engine.history_bulk(db, [k["kpi_id"] for k in kpis])
+    for k in kpis:
+        pts = hist_map.get(k["kpi_id"], [])
+        if len(pts) >= 3:
+            k["spark"] = pts
 
     projects = []
     if spec["show_projects"]:
@@ -118,7 +127,7 @@ def build(db: Database, key: str, user: dict) -> dict:
 
     payload = {"key": key, "title": spec["title"], "kpis": kpis,
                "projects": projects, "alerts": alerts,
-               "series": _series(db, kpis)}
+               "series": _series(kpis, hist_map)}
 
     if "product_dev" in modules:
         breakdown = _bug_breakdown(db)

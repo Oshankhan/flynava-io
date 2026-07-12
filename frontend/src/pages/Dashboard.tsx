@@ -41,6 +41,7 @@ export default function Dashboard() {
 
   const charts = data.series ?? [];
   const hasCharts = charts.length > 0 || data.bug_breakdown;
+  const seriesById = Object.fromEntries(charts.map((s) => [s.kpi_id, s]));
 
   return (
     <Flex vertical gap={20}>
@@ -50,7 +51,7 @@ export default function Dashboard() {
         <Row gutter={[16, 16]}>
           {data.kpis.map((k) => (
             <Col key={k.kpi_id} xs={24} sm={12} lg={8} xl={6}>
-              <KpiCard kpi={k} />
+              <KpiCard kpi={k} series={seriesById[k.kpi_id]} />
             </Col>
           ))}
         </Row>

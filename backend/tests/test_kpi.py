@@ -46,8 +46,11 @@ def test_rag_status_directions():
 
 
 def test_run_all_stores_kpi_values(db):
+    before = db.kpi_values.count_documents({"kpi_id": "ops_project_completion"})
     engine.run_all(db, "operations")
-    assert db.kpi_values.count_documents({"kpi_id": "ops_project_completion"}) == 1
+    # each run appends one freshly-computed value (on top of any seeded history)
+    after = db.kpi_values.count_documents({"kpi_id": "ops_project_completion"})
+    assert after == before + 1
 
 
 def test_latest_snapshot_reads_without_recompute(db):

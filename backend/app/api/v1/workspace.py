@@ -52,6 +52,39 @@ _FEED_VERBS = {
 }
 
 
+def _merge_shared_head_departments(departments: list[dict]) -> list[dict]:
+    """Collapse departments that share the same head into a single card.
+
+    One person can head more than one department (e.g. Meghna heads Product +
+    Marketing). Left as-is that renders as two identical-head cards; here we
+    fold them into one card whose name joins the department names ("Product &
+    Marketing") and whose counts are summed. Departments with no head, or a
+    head unique to them, pass through unchanged. Order is preserved by first
+    appearance so the layout stays stable.
+    """
+    out: list[dict] = []
+    by_head: dict[str, dict] = {}
+    for d in departments:
+        head_id = (d.get("head") or {}).get("user_id")
+        if not head_id:
+            out.append(d)
+            continue
+        existing = by_head.get(head_id)
+        if existing is None:
+            by_head[head_id] = d
+            out.append(d)
+            continue
+        # merge d into the already-emitted card for this head
+        existing["name"] = f"{existing['name']} & {d['name']}"
+        existing["teams_count"] += d["teams_count"]
+        existing["member_count"] += d["member_count"]
+        existing["reopened_count"] += d["reopened_count"]
+        existing["late_today"] += d["late_today"]
+        for k in existing["buckets"]:
+            existing["buckets"][k] += d["buckets"][k]
+    return out
+
+
 def _actor_scope(db: Database, user: dict) -> list[str] | None:
     """User-ids whose activity this user may see. None = everyone (L4)."""
     level = user_level(user)
@@ -234,6 +267,11 @@ def workspace_exec(user: dict = Depends(get_current_user),
             "teams_count": len(teams), "member_count": len(dept_users),
             "buckets": agg, "reopened_count": reopened, "late_today": late_today,
         })
+
+    # A single person can head more than one department (e.g. Meghna heads both
+    # Product and Marketing). Rather than render her as two separate cards, merge
+    # every department that shares the same head into one combined card.
+    departments = _merge_shared_head_departments(departments)
 
     automation_rows = [{k: v for k, v in a.items() if k != "_id"}
                        for a in db.automation_scripts.find()]
