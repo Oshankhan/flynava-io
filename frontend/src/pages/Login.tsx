@@ -44,12 +44,14 @@ export default function Login() {
             alt="FlyNava Technologies"
             className="h-11 w-auto"
           />
-          <div className="leading-none">
+          <Flex vertical className="leading-none">
             <Title level={4} className="m-0 text-io-600 leading-none">
               IO
             </Title>
-            <Text type="secondary" className="text-[12px]">FlyNava Technologies</Text>
-          </div>
+            <Text type="secondary" className="text-[12px] leading-none -mt-2">
+              FlyNava Technologies
+            </Text>
+          </Flex>
         </Flex>
 
         <Form name="login" layout="vertical" onFinish={onFinish} requiredMark={false}>
