@@ -44,11 +44,11 @@ export default function Login() {
             alt="FlyNava Technologies"
             className="h-11 w-auto"
           />
-          <div>
-            <Title level={4} className="m-0 text-io-600">
+          <div className="leading-none">
+            <Title level={4} className="m-0 text-io-600 leading-none">
               IO
             </Title>
-            <Text type="secondary">FlyNava Technologies</Text>
+            <Text type="secondary" className="text-[12px]">FlyNava Technologies</Text>
           </div>
         </Flex>
 
