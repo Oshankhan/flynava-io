@@ -19,20 +19,22 @@ DEPARTMENTS = [
     {"dept_id": "hr", "name": "Human Resources"},
     {"dept_id": "fin", "name": "Finance"},
     {"dept_id": "mkt", "name": "Marketing"},
-    {"dept_id": "ui", "name": "UI/UX"},
     {"dept_id": "exec", "name": "Leadership"},
 ]
 
 # Teams are generic units: any department can have one, each led by an L2
 # team lead. Members (L1) carry team_id + reports_to → the approval chain.
+# UI is a team inside Engineering, not its own department — it has no
+# separate L3 head; its lead reports straight to the eng dept head like
+# every other engineering team lead.
 TEAMS = [
     {"team_id": "team_java", "name": "Java Team", "department": "eng", "lead_id": "u_tl_java"},
     {"team_id": "team_python", "name": "Python Team", "department": "eng", "lead_id": "u_tl_python"},
     {"team_id": "team_qa", "name": "QA Team", "department": "eng", "lead_id": "u_tl_qa"},
+    {"team_id": "team_ui", "name": "UI Team", "department": "eng", "lead_id": "u_tl_ui"},
     {"team_id": "team_fin", "name": "Finance Team", "department": "fin", "lead_id": "u_tl_fin"},
     {"team_id": "team_hr", "name": "HR Team", "department": "hr", "lead_id": "u_tl_hr"},
     {"team_id": "team_mkt", "name": "Marketing Team", "department": "mkt", "lead_id": "u_tl_mkt"},
-    {"team_id": "team_ui", "name": "UI Team", "department": "ui", "lead_id": "u_tl_ui"},
 ]
 
 # Org tree (level 4 → 1). reports_to builds the approval chain: every request
@@ -53,8 +55,6 @@ USERS = [
      "Finance Manager", None, "u_admin"),
     ("u_mkt", "Marco Marketing", "marketing@flynava.ai", "marketing", "mkt", 3,
      "Marketing Manager", None, "u_admin"),
-    ("u_birbal", "Birbal Singh", "birbal@flynava.ai", "manager", "ui", 3,
-     "UI Manager", None, "u_admin"),
     # L2 — Team leads
     ("u_tl_java", "Arjun Rao", "java.tl@flynava.ai", "team_lead", "eng", 2,
      "Java Team Lead", "team_java", "u_mgr"),
@@ -68,8 +68,8 @@ USERS = [
      "HR Team Lead", "team_hr", "u_hr"),
     ("u_tl_mkt", "Meera Joshi", "marketing.tl@flynava.ai", "team_lead", "mkt", 2,
      "Marketing Team Lead", "team_mkt", "u_mkt"),
-    ("u_tl_ui", "Nisha Kapadia", "ui.tl@flynava.ai", "team_lead", "ui", 2,
-     "UI Team Lead", "team_ui", "u_birbal"),
+    ("u_tl_ui", "Nisha Kapadia", "ui.tl@flynava.ai", "team_lead", "eng", 2,
+     "UI Team Lead", "team_ui", "u_mgr"),
     # L1 — Executives / developers / QA / recruiters
     ("u_emp", "Evan Employee", "employee@flynava.ai", "employee", "eng", 1,
      "Python Developer", "team_python", "u_tl_python"),
@@ -83,9 +83,9 @@ USERS = [
      "Recruiter", "team_hr", "u_tl_hr"),
     ("u_mkt1", "Dev Sharma", "marketing.exec@flynava.ai", "employee", "mkt", 1,
      "Marketing Executive", "team_mkt", "u_tl_mkt"),
-    ("u_ui1", "Aditi Rao", "ui.dev1@flynava.ai", "employee", "ui", 1,
+    ("u_ui1", "Aditi Rao", "ui.dev1@flynava.ai", "employee", "eng", 1,
      "UI Designer", "team_ui", "u_tl_ui"),
-    ("u_ui2", "Rehan Sheikh", "ui.dev2@flynava.ai", "employee", "ui", 1,
+    ("u_ui2", "Rehan Sheikh", "ui.dev2@flynava.ai", "employee", "eng", 1,
      "UX Designer", "team_ui", "u_tl_ui"),
     # External (outside the ladder)
     ("u_inv", "Ivy Investor", "investor@flynava.ai", "investor", "exec", 0,
@@ -262,7 +262,7 @@ def seed_demo_extras(db: Database) -> dict:
     """Refresh all demo seed data except HR, safe to rerun against an
     already-seeded (live) database.
 
-    Backfills everything `_seed_core` covers (UI department/Birbal chain,
+    Backfills everything `_seed_core` covers (departments/teams/users,
     projects/tasks, KPI defs+values, compliance, positions, automation
     scripts, product docs) plus the attendance window and demo meetings.
     Deliberately skips `seed_hr()` — see `_seed_core`'s docstring — so real
@@ -284,6 +284,23 @@ def seed_demo_extras(db: Database) -> dict:
         "attendance_rows": attendance_rows,
         "meetings": meetings,
     }
+
+
+def merge_ui_into_engineering(db: Database) -> dict:
+    """One-off org correction, safe to rerun against a live database.
+
+    UI was originally seeded as its own department with Birbal Singh as its
+    L3 head; it's actually a team inside Engineering, same as Java/Python/QA.
+    `_seed_core` already upserts team_ui and its lead/members onto "eng" per
+    the corrected canonical seed data — upserting can't remove the two docs
+    that are no longer part of that data, so this deletes them explicitly:
+    Birbal's now-retired user record and the standalone "ui" department doc.
+    """
+    now = dt.datetime.now(dt.timezone.utc)
+    _seed_core(db, now)
+    removed_head = db.users.delete_one({"user_id": "u_birbal"}).deleted_count
+    removed_dept = db.departments.delete_one({"dept_id": "ui"}).deleted_count
+    return {"removed_head": removed_head, "removed_dept": removed_dept}
 
 
 def seed(db: Database) -> None:

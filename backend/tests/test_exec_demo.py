@@ -1,6 +1,7 @@
-"""CEO-demo build, Phase 1: seed enrichment (Birbal/UI dept, attendance,
-automation scripts), org drill-down (/org/reports, /org/users/{id}/overview),
-the L4 exec workspace, and the SSE notification stream.
+"""CEO-demo build, Phase 1: seed enrichment (UI team under Engineering,
+attendance, automation scripts), org drill-down (/org/reports,
+/org/users/{id}/overview), the L4 exec workspace, and the SSE notification
+stream.
 """
 from __future__ import annotations
 
@@ -12,23 +13,24 @@ from tests.conftest import DEMO_PASSWORD
 
 # --- Seed enrichment ---
 
-def test_birbal_ui_chain_seeded(db):
-    birbal = db.users.find_one({"user_id": "u_birbal"})
-    assert birbal["name"] == "Birbal Singh"
-    assert birbal["level"] == 3
-    assert birbal["department"] == "ui"
-    assert birbal["reports_to"] == "u_admin"
+def test_ui_team_folded_into_engineering(db):
+    # UI has no separate L3 head — it's one of Engineering's teams, same as
+    # Java/Python/QA, with its lead reporting straight to the eng dept head.
+    assert db.users.find_one({"user_id": "u_birbal"}) is None
+    assert db.departments.find_one({"dept_id": "ui"}) is None
 
     ui_tl = db.users.find_one({"user_id": "u_tl_ui"})
-    assert ui_tl["reports_to"] == "u_birbal"
+    assert ui_tl["department"] == "eng"
+    assert ui_tl["reports_to"] == "u_mgr"
     assert ui_tl["team_id"] == "team_ui"
 
     devs = list(db.users.find({"team_id": "team_ui", "level": 1}))
     assert len(devs) == 2
     assert all(d["reports_to"] == "u_tl_ui" for d in devs)
+    assert all(d["department"] == "eng" for d in devs)
 
     team = db.teams.find_one({"team_id": "team_ui"})
-    assert team["department"] == "ui"
+    assert team["department"] == "eng"
     assert team["lead_id"] == "u_tl_ui"
 
 
@@ -54,10 +56,10 @@ def test_org_reports_of_ceo_lists_dept_heads(client, auth_header):
     assert r.status_code == 200
     body = r.json()
     names = {m["name"] for m in body}
-    assert "Birbal Singh" in names
-    birbal = next(m for m in body if m["user_id"] == "u_birbal")
-    assert birbal["has_reports"] is True
-    assert "buckets" in birbal and "late_7d" in birbal and "reopened_count" in birbal
+    assert "Mia Manager" in names
+    mgr = next(m for m in body if m["user_id"] == "u_mgr")
+    assert mgr["has_reports"] is True
+    assert "buckets" in mgr and "late_7d" in mgr and "reopened_count" in mgr
 
 
 def test_org_reports_access_control(client, auth_header):
@@ -128,11 +130,12 @@ def test_workspace_exec_shape(client, auth_header):
         assert key in body
 
     dept_ids = {d["dept_id"] for d in body["departments"]}
-    assert {"eng", "fin", "hr", "mkt", "ui"} <= dept_ids
-    ui = next(d for d in body["departments"] if d["dept_id"] == "ui")
-    assert ui["head"]["name"] == "Birbal Singh"
-    assert ui["teams_count"] == 1
-    assert ui["member_count"] >= 4  # Birbal + TL + 2 devs
+    assert {"eng", "fin", "hr", "mkt"} <= dept_ids
+    assert "ui" not in dept_ids
+    eng = next(d for d in body["departments"] if d["dept_id"] == "eng")
+    assert eng["head"]["name"] == "Mia Manager"
+    assert eng["teams_count"] == 4  # java, python, qa, ui
+    assert eng["member_count"] >= 7  # 3 devs + 4 team leads (UI folded in)
 
     assert body["automation"]["pending"] > 0
     assert "Payments" in body["automation"]["by_module"]
@@ -176,6 +179,41 @@ def test_refresh_demo_is_additive_and_preserves_real_leaves(client, auth_header,
 
     assert db.users.count_documents({}) == before_users
     assert db.leaves.find_one({"leave_id": "real1"}) is not None
+
+
+def test_merge_ui_into_engineering_requires_super_admin(client, auth_header):
+    r = client.post("/api/v1/bootstrap-seed/merge-ui-into-engineering",
+                    headers=auth_header("employee@flynava.ai"))
+    assert r.status_code == 403
+
+
+def test_merge_ui_into_engineering_cleans_up_stale_data(client, auth_header, db):
+    # simulate a database seeded before the UI-into-engineering correction
+    db.departments.update_one({"dept_id": "ui"}, {"$set": {"dept_id": "ui", "name": "UI/UX"}},
+                              upsert=True)
+    db.users.update_one({"user_id": "u_birbal"},
+                        {"$set": {"user_id": "u_birbal", "name": "Birbal Singh",
+                                  "department": "ui", "level": 3, "status": "active"}},
+                        upsert=True)
+
+    r = client.post("/api/v1/bootstrap-seed/merge-ui-into-engineering",
+                    headers=auth_header("admin@flynava.ai"))
+    assert r.status_code == 200
+    body = r.json()
+    assert body["status"] == "merged"
+    assert body["removed_head"] == 1
+    assert body["removed_dept"] == 1
+
+    assert db.users.find_one({"user_id": "u_birbal"}) is None
+    assert db.departments.find_one({"dept_id": "ui"}) is None
+    assert db.users.find_one({"user_id": "u_tl_ui"})["department"] == "eng"
+
+    # rerunning is a no-op, not an error
+    again = client.post("/api/v1/bootstrap-seed/merge-ui-into-engineering",
+                        headers=auth_header("admin@flynava.ai"))
+    assert again.status_code == 200
+    assert again.json()["removed_head"] == 0
+    assert again.json()["removed_dept"] == 0
 
 
 # --- SSE stream ---

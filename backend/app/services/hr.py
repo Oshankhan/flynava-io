@@ -16,11 +16,11 @@ import uuid
 from pymongo.database import Database
 
 DESIGNATIONS = {
-    "eng": ["Software Engineer", "Senior Engineer", "QA Engineer", "Tech Lead", "DevOps Engineer"],
+    "eng": ["Software Engineer", "Senior Engineer", "QA Engineer", "Tech Lead",
+            "DevOps Engineer", "UI Designer", "UX Designer"],
     "hr": ["HR Executive", "HR Manager", "Recruiter"],
     "fin": ["Accountant", "Finance Analyst", "Finance Manager"],
     "mkt": ["Marketing Executive", "Content Lead", "SEO Analyst"],
-    "ui": ["UI Designer", "UX Designer", "UI Manager"],
     "exec": ["Director", "VP", "Chief of Staff"],
 }
 DEPTS = list(DESIGNATIONS)

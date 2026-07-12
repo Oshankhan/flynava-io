@@ -95,4 +95,20 @@ def bootstrap_seed_refresh_demo(
     return {"status": "refreshed", **seed_demo_extras(database)}
 
 
+@app.post("/api/v1/bootstrap-seed/merge-ui-into-engineering")
+def bootstrap_seed_merge_ui(
+    database: Database = Depends(get_db),
+    user: dict = Depends(get_current_user),
+) -> dict:
+    """One-off org correction on an already-seeded (live) database: fold the
+    UI department into Engineering. See services.seed.merge_ui_into_engineering
+    for what this does and why it's safe to rerun.
+    """
+    if user.get("role") != "super_admin":
+        raise HTTPException(http_status.HTTP_403_FORBIDDEN, "super_admin only")
+    from .services.seed import merge_ui_into_engineering
+
+    return {"status": "merged", **merge_ui_into_engineering(database)}
+
+
 app.include_router(api_router)

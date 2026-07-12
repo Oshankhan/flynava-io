@@ -32,7 +32,6 @@ DEPT_KPI_MODULES = {
     "fin": ["finance", "compliance"],
     "hr": ["hr", "recruitment"],
     "mkt": ["marketing_sales"],
-    "ui": ["operations", "product_dev"],
 }
 
 # audit actions that read well in a human feed (auto API audit rows excluded)
