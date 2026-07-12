@@ -55,7 +55,7 @@ const STATUS_TAG: Record<string, string> = {
 // Brand-accurate accents so the card's left edge matches each airline's logo.
 const BRAND_COLORS: Record<string, string> = {
   KQ: "#C8102E", // Kenya Airways red
-  OM: "#0F7B4A", // Oman Air green
+  OM: "#B48C3C", // Oman Air gold
   SV: "#006C35", // Saudia green
 };
 const ACCENT_COLORS = ["#dc2626", "#d97706", "#059669", "#2563eb", "#7c3aed", "#db2777"];
