@@ -4,7 +4,6 @@ import {
   Avatar,
   Badge,
   Button,
-  Card,
   Drawer,
   Dropdown,
   Flex,
@@ -24,7 +23,6 @@ import {
   BulbOutlined,
   CalendarOutlined,
   CheckSquareOutlined,
-  CommentOutlined,
   DashboardOutlined,
   FileProtectOutlined,
   HomeOutlined,
@@ -32,11 +30,9 @@ import {
   LogoutOutlined,
   MailOutlined,
   MenuOutlined,
-  PlusOutlined,
   SettingOutlined,
   TeamOutlined,
   TrophyOutlined,
-  UploadOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import { api, type DashboardLink, type User } from "../lib/api";
@@ -44,7 +40,7 @@ import { useAuth } from "../lib/auth";
 import { useTheme } from "../lib/theme";
 import AskIO from "./AskIO";
 import NotificationBell from "./NotificationBell";
-import InayaChat, { INAYA_OPEN_EVENT } from "./InayaChat";
+import InayaChat from "./InayaChat";
 
 const { Sider, Header, Content } = AntLayout;
 const { Text, Title } = Typography;
@@ -230,15 +226,6 @@ export default function Layout() {
   };
   const title = titles[active?.key ?? ""] ?? active?.label ?? "IO";
 
-  const quick = [
-    { icon: <PlusOutlined />, label: "Create Task", to: "/tasks?new=1" },
-    { icon: <UploadOutlined />, label: "Upload Document", to: "/documents" },
-    { icon: <CommentOutlined />, label: "Ask Inaya", to: null },
-    { icon: <DashboardOutlined />, label: "View Reports", to: dashboards[0] ? `/dashboard/${dashboards[0].key}` : "/documents" },
-  ];
-
-  const showQuickLinks = isMobile || !collapsed;
-
   const navContent = (
     <Flex vertical className="h-full">
       <Flex align="center" justify="center" gap={10} className="px-2.5 pt-4 pb-2">
@@ -266,31 +253,6 @@ export default function Layout() {
           className="bg-transparent border-e-0"
         />
       </div>
-      {showQuickLinks && (
-        <Card
-          size="small"
-          title={<Text type="secondary" className="text-xs font-semibold">Quick Links</Text>}
-          className="m-2.5 bg-[#f7f8fa] dark:bg-white/[0.04] border-none"
-          classNames={{ body: "px-2 pb-2 pt-1" }}
-        >
-          {quick.map((q) => (
-            <Button
-              key={q.label}
-              type="text"
-              size="small"
-              icon={q.icon}
-              onClick={() => {
-                setMobileNavOpen(false);
-                if (q.to) navigate(q.to);
-                else window.dispatchEvent(new Event(INAYA_OPEN_EVENT));
-              }}
-              className="flex w-full justify-start"
-            >
-              {q.label}
-            </Button>
-          ))}
-        </Card>
-      )}
     </Flex>
   );
 

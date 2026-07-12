@@ -435,21 +435,28 @@ export default function ProjectDrawer({
                 {data.engagement && <Text type="secondary" className="text-[12px]">{data.engagement}</Text>}
               </div>
             </Flex>
-            {canEditProject && (
-              <Button
-                icon={<EditOutlined />}
-                onClick={() => {
-                  editForm.setFieldsValue({
-                    name: data.name, client: data.client, description: data.description,
-                    engagement: data.engagement, priority: data.priority, status: data.status,
-                    project_manager_id: data.project_manager?.user_id,
-                  });
-                  setEditOpen(true);
-                }}
-              >
-                Edit Project
-              </Button>
-            )}
+            <Flex gap={8}>
+              {canManageMembers && (
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => setTaskOpen(true)}>
+                  Add Task
+                </Button>
+              )}
+              {canEditProject && (
+                <Button
+                  icon={<EditOutlined />}
+                  onClick={() => {
+                    editForm.setFieldsValue({
+                      name: data.name, client: data.client, description: data.description,
+                      engagement: data.engagement, priority: data.priority, status: data.status,
+                      project_manager_id: data.project_manager?.user_id,
+                    });
+                    setEditOpen(true);
+                  }}
+                >
+                  Edit Project
+                </Button>
+              )}
+            </Flex>
           </Flex>
         ) : "Project"
       }
@@ -545,11 +552,6 @@ export default function ProjectDrawer({
               key: "tasks", label: "Tasks",
               children: (
                 <div>
-                  {canManageMembers && (
-                    <Flex justify="end" className="mb-3">
-                      <Button type="primary" icon={<PlusOutlined />} onClick={() => setTaskOpen(true)}>Add Task</Button>
-                    </Flex>
-                  )}
                   <Card size="small" bordered={false} title="Tasks" className="mb-4">
                     {data.tasks.length === 0 ? (
                       <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No tasks yet" />
