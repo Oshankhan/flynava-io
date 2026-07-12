@@ -419,11 +419,11 @@ export default function ProjectDrawer({
           <Flex justify="space-between" align="center" wrap gap={8}>
             <Flex align="center" gap={10}>
               {data.logo ? (
-                <div className="w-14 h-14 shrink-0 flex items-center justify-center overflow-hidden">
+                <div className="w-20 h-20 shrink-0 flex items-center justify-center overflow-hidden">
                   <img src={data.logo} alt={data.code} className="max-w-full max-h-full object-contain" />
                 </div>
               ) : (
-                <Avatar size={48} className="bg-io-600">{data.code}</Avatar>
+                <Avatar size={64} className="bg-io-600">{data.code}</Avatar>
               )}
               <div>
                 <Flex align="center" gap={8}>

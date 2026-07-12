@@ -144,15 +144,15 @@ export default function Layout() {
     const canPeople = roles.some((r) => ["super_admin", "leadership", "hr"].includes(r));
     const list: MenuProps["items"] = [
       { key: "/workspace", icon: <HomeOutlined />, label: "My Workspace" },
-    ];
-    if (level >= 2)
-      list.push({ key: "/my-team", icon: <TeamOutlined />, label: "My Team" });
-    list.push(
       {
         key: "/tasks",
         icon: <CheckSquareOutlined />,
         label: level >= 2 ? "Team Tasks" : "My Tasks",
       },
+    ];
+    if (level >= 2)
+      list.push({ key: "/my-team", icon: <TeamOutlined />, label: "My Team" });
+    list.push(
       {
         key: "/approvals",
         icon: <AuditOutlined />,
