@@ -4,7 +4,6 @@ import { Alert, Button, Card, Flex, Form, Input, Typography } from "antd";
 import { LockOutlined, MailOutlined } from "@ant-design/icons";
 import { ApiError } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { BRAND } from "../lib/brand";
 
 const { Title, Text } = Typography;
 
@@ -31,21 +30,17 @@ export default function Login() {
     <Flex
       align="center"
       justify="center"
-      style={{
-        minHeight: "100vh",
-        background: `linear-gradient(135deg, ${BRAND.primary} 0%, ${BRAND.primaryStrong} 100%)`,
-        padding: 16,
-      }}
+      className="min-h-screen bg-gradient-to-br from-io-600 to-io-900 p-4"
     >
-      <Card style={{ width: 380, boxShadow: "0 12px 40px rgba(0,0,0,0.25)" }}>
-        <Flex align="center" gap={12} style={{ marginBottom: 20 }}>
+      <Card className="w-full max-w-[380px] shadow-2xl">
+        <Flex align="center" gap={12} className="mb-5">
           <img
             src="/flynava-logo.png"
             alt="FlyNava Technologies"
-            style={{ height: 44, width: "auto" }}
+            className="h-11 w-auto"
           />
           <div>
-            <Title level={4} style={{ margin: 0, color: BRAND.primary }}>
+            <Title level={4} className="m-0 text-io-600">
               IO
             </Title>
             <Text type="secondary">FlyNava Technologies</Text>
@@ -67,7 +62,7 @@ export default function Login() {
           >
             <Input.Password prefix={<LockOutlined />} placeholder="••••••••" size="large" />
           </Form.Item>
-          {error && <Alert type="error" message={error} showIcon style={{ marginBottom: 12 }} />}
+          {error && <Alert type="error" message={error} showIcon className="mb-3" />}
           <Button type="primary" htmlType="submit" size="large" block loading={busy}>
             Sign in
           </Button>

@@ -32,9 +32,9 @@ export default function Dashboard() {
     return <Alert type="error" showIcon message="Cannot load dashboard" description={error} />;
   if (!data)
     return (
-      <Flex align="center" justify="center" style={{ minHeight: 240 }}>
+      <Flex align="center" justify="center" className="min-h-[240px]">
         <Spin tip="Loading…">
-          <div style={{ height: 60 }} />
+          <div className="h-[60px]" />
         </Spin>
       </Flex>
     );

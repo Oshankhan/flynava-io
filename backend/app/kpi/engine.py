@@ -187,11 +187,44 @@ def run_all(db: Database, module: str | None = None) -> list[dict]:
 
 
 def latest_snapshot(db: Database, modules: list[str] | None = None) -> list[dict]:
-    """Latest computed value per KPI def (for dashboards), without recomputing."""
+    """Latest computed value per KPI def (for dashboards), without recomputing.
+
+    Batches every kpi_values read into a single query. This used to issue a
+    `find_one` per KPI def (plus a second query per "static" KPI for the
+    change-arrow) — fine locally, but under real network latency to the DB
+    (e.g. cross-region to Atlas) a ~30-KPI dashboard meant 30-50+ round
+    trips for one page load. Now it's always exactly two queries.
+    """
     query = {"module": {"$in": modules}} if modules else {}
+    defs = list(db.kpi_defs.find(query))
+    kpi_ids = [d["kpi_id"] for d in defs]
+    if not kpi_ids:
+        return []
+
+    last_two: dict[str, list] = {}
+    cursor = db.kpi_values.find(
+        {"kpi_id": {"$in": kpi_ids}}, {"kpi_id": 1, "value": 1, "calculated_at": 1}
+    ).sort("calculated_at", -1)
+    for v in cursor:
+        bucket = last_two.setdefault(v["kpi_id"], [])
+        if len(bucket) < 2:
+            bucket.append(v["value"])
+
     snapshot = []
-    for d in db.kpi_defs.find(query):
-        row = db.kpi_values.find_one({"kpi_id": d["kpi_id"]}, sort=[("calculated_at", -1)])
-        value = row["value"] if row else None
-        snapshot.append(_row(db, d, value))
+    for d in defs:
+        vals = last_two.get(d["kpi_id"], [])
+        value = vals[0] if vals else None
+        delta = None
+        if d.get("formula") == "static" and len(vals) == 2 and vals[1]:
+            try:
+                delta = round((vals[0] - vals[1]) / abs(vals[1]) * 100, 1)
+            except ZeroDivisionError:
+                delta = None
+        snapshot.append({
+            "kpi_id": d["kpi_id"], "name": d["name"], "module": d["module"],
+            "value": value, "unit": d.get("unit"), "target": d.get("target"),
+            "direction": d.get("direction", "higher"),
+            "rag": rag_status(value, d.get("target"), d.get("direction", "higher")),
+            "change_pct": delta,
+        })
     return snapshot

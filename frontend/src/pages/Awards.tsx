@@ -17,7 +17,6 @@ import {
 import { LikeOutlined, SmileOutlined, TrophyOutlined } from "@ant-design/icons";
 import { api, type Award, type LeaderRow } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { BRAND } from "../lib/brand";
 
 const { Title, Text, Paragraph } = Typography;
 const CREATORS = ["super_admin", "leadership", "manager", "hr"];
@@ -67,7 +66,7 @@ export default function Awards() {
       <Col xs={24} lg={16}>
         <Title level={4}>Recognition Feed</Title>
         {canCreate && (
-          <Card size="small" style={{ marginBottom: 16 }} title="Give Recognition">
+          <Card size="small" className="mb-4" title="Give Recognition">
             <Form form={form} layout="vertical" onFinish={submit}>
               <Row gutter={12}>
                 <Col span={12}>
@@ -98,23 +97,23 @@ export default function Awards() {
           dataSource={awards}
           locale={{ emptyText: "No recognitions yet." }}
           renderItem={(a) => (
-            <Card size="small" style={{ marginBottom: 12 }}>
+            <Card size="small" className="mb-3">
               <Flex justify="space-between" align="center">
                 <Tag color="green">{a.category}</Tag>
-                <Text type="secondary" style={{ fontSize: 12 }}>
+                <Text type="secondary" className="text-xs">
                   {new Date(a.awarded_at).toLocaleDateString()}
                 </Text>
               </Flex>
-              <Paragraph strong style={{ marginBottom: 2, marginTop: 8 }}>
+              <Paragraph strong className="mb-0.5 mt-2">
                 {a.title}
               </Paragraph>
               <Text type="secondary">{a.description}</Text>
               <div>
-                <Text type="secondary" style={{ fontSize: 12 }}>
+                <Text type="secondary" className="text-xs">
                   To: {a.recipient_id}
                 </Text>
               </div>
-              <Flex gap={8} style={{ marginTop: 8 }}>
+              <Flex gap={8} className="mt-2">
                 {REACTIONS.map((r) => (
                   <Button
                     key={r.type}
@@ -139,13 +138,13 @@ export default function Awards() {
             <List.Item>
               <List.Item.Meta
                 avatar={
-                  <Avatar style={{ background: i === 0 ? "#d4b106" : BRAND.primary }}>
+                  <Avatar className={i === 0 ? "bg-[#d4b106]" : "bg-io-600"}>
                     {i + 1}
                   </Avatar>
                 }
                 title={r.name}
               />
-              <Text strong style={{ color: BRAND.primary }}>
+              <Text strong className="text-io-600">
                 {r.count}
               </Text>
             </List.Item>

@@ -11,7 +11,6 @@ import {
 } from "recharts";
 import { ClockCircleOutlined, ThunderboltOutlined } from "@ant-design/icons";
 import { api, ApiError, type ActorCount, type AnalyticsSummary, type DeptCount } from "../lib/api";
-import { BRAND } from "../lib/brand";
 import TrendChart from "../components/TrendChart";
 import StatusDonut from "../components/StatusDonut";
 
@@ -46,7 +45,7 @@ export default function Analytics() {
   if (error) return <Alert type="error" message={error} showIcon />;
   if (!data)
     return (
-      <Flex justify="center" style={{ paddingTop: 80 }}>
+      <Flex justify="center" className="pt-20">
         <Spin />
       </Flex>
     );
@@ -58,9 +57,9 @@ export default function Analytics() {
 
   return (
     <div>
-      <Flex justify="space-between" align="center" wrap gap={12} style={{ marginBottom: 16 }}>
+      <Flex justify="space-between" align="center" wrap gap={12} className="mb-4">
         <div>
-          <Title level={3} style={{ margin: 0 }}>Analytics</Title>
+          <Title level={3} className="m-0">Analytics</Title>
           <Text type="secondary">
             {data.total_actions} action{data.total_actions === 1 ? "" : "s"} in the last {data.window_days} days
           </Text>
@@ -72,7 +71,7 @@ export default function Analytics() {
           {trend && trend.points.length > 0 ? (
             <TrendChart series={trend} />
           ) : (
-            <Card size="small" bordered={false} title="Actions" style={{ height: "100%" }}>
+            <Card size="small" bordered={false} title="Actions" className="h-full">
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No activity yet" />
             </Card>
           )}
@@ -81,7 +80,7 @@ export default function Analytics() {
           {actionSlices.length > 0 ? (
             <StatusDonut title="Actions by Type" data={actionSlices} centerLabel="Total Actions" />
           ) : (
-            <Card size="small" bordered={false} title="Actions by Type" style={{ height: "100%" }}>
+            <Card size="small" bordered={false} title="Actions by Type" className="h-full">
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No activity yet" />
             </Card>
           )}
@@ -92,7 +91,7 @@ export default function Analytics() {
             {data.top_actors.length === 0 ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No activity yet" />
             ) : (
-              <div style={{ width: "100%", height: Math.max(180, data.top_actors.length * 34) }}>
+              <div className="w-full" style={{ height: Math.max(180, data.top_actors.length * 34) }}>
                 <ResponsiveContainer>
                   <BarChart
                     data={data.top_actors as ActorCount[]}
@@ -103,7 +102,7 @@ export default function Analytics() {
                     <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={110} />
                     <Tooltip />
-                    <Bar dataKey="count" fill={BRAND.primary} radius={[0, 4, 4, 0]} barSize={16} />
+                    <Bar dataKey="count" fill="#157f52" radius={[0, 4, 4, 0]} barSize={16} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -132,28 +131,28 @@ export default function Analytics() {
             bordered={false}
             title={
               <Flex align="center" gap={6}>
-                <ThunderboltOutlined style={{ color: BRAND.primary }} /> Integration Health
+                <ThunderboltOutlined className="text-io-600" /> Integration Health
               </Flex>
             }
           >
             {data.integrations.length === 0 ? (
-              <Text type="secondary" style={{ fontSize: 12 }}>
+              <Text type="secondary" className="text-xs">
                 No integrations synced yet.
               </Text>
             ) : (
               <Row gutter={[16, 16]}>
                 {data.integrations.map((i) => (
                   <Col key={i.source} xs={24} md={8}>
-                    <Card size="small" bordered style={{ height: "100%" }}>
+                    <Card size="small" bordered className="h-full">
                       <Flex justify="space-between" align="center">
                         <Flex vertical>
-                          <Text strong style={{ textTransform: "capitalize" }}>{i.source}</Text>
-                          <Text type="secondary" style={{ fontSize: 11 }}>
+                          <Text strong className="capitalize">{i.source}</Text>
+                          <Text type="secondary" className="text-[11px]">
                             <ClockCircleOutlined />{" "}
                             {i.run_at ? new Date(i.run_at).toLocaleString() : "never synced"}
                           </Text>
                           {i.records_processed != null && (
-                            <Text type="secondary" style={{ fontSize: 11 }}>
+                            <Text type="secondary" className="text-[11px]">
                               {i.records_processed} records processed
                             </Text>
                           )}

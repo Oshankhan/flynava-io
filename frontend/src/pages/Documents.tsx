@@ -64,7 +64,7 @@ export default function Documents() {
   }
 
   return (
-    <Space direction="vertical" size={20} style={{ width: "100%" }}>
+    <Space direction="vertical" size={20} className="w-full">
       <Card title="Upload to FlyNava Archive — routed for approval" size="small">
         <Form form={form} layout="vertical" onFinish={submit} initialValues={{ kind: "document" }}>
           <Row gutter={12}>
@@ -104,6 +104,7 @@ export default function Documents() {
           rowKey="doc_id"
           size="small"
           pagination={{ pageSize: 8 }}
+          scroll={{ x: true }}
           columns={[
             { title: "Title", dataIndex: "title", key: "title" },
             {

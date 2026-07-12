@@ -43,3 +43,7 @@ body,
 *::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+.attendance-late-row td {
+  background: rgba(245, 158, 11, 0.08) !important;
+}

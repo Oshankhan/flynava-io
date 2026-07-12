@@ -72,10 +72,10 @@ export default function Tasks() {
         ellipsis: true,
         render: (t: string, r: TaskRow) => (
           <div>
-            <Text style={{ fontSize: 13 }}>{t}</Text>
+            <Text className="text-[13px]">{t}</Text>
             {r.project && (
               <div>
-                <Text type="secondary" style={{ fontSize: 11 }}>{r.project}</Text>
+                <Text type="secondary" className="text-[11px]">{r.project}</Text>
               </div>
             )}
           </div>
@@ -126,7 +126,7 @@ export default function Tasks() {
         key: "due",
         width: 110,
         render: (d: string | null, r: TaskRow) => (
-          <Text type={r.bucket === "overdue" ? "danger" : "secondary"} style={{ fontSize: 12 }}>
+          <Text type={r.bucket === "overdue" ? "danger" : "secondary"} className="text-xs">
             {d ?? "—"}
           </Text>
         ),
@@ -167,7 +167,7 @@ export default function Tasks() {
   if (error) return <Alert type="error" message={error} showIcon />;
   if (!data)
     return (
-      <Flex justify="center" style={{ paddingTop: 80 }}>
+      <Flex justify="center" className="pt-20">
         <Spin />
       </Flex>
     );
@@ -176,7 +176,7 @@ export default function Tasks() {
 
   return (
     <div>
-      <Flex justify="space-between" align="center" style={{ marginBottom: 12 }} wrap gap={8}>
+      <Flex justify="space-between" align="center" className="mb-3" wrap gap={8}>
         <Flex gap={8} wrap>
           <Tag>{b.total} total</Tag>
           <Tag color="success">{b.completed} completed</Tag>
@@ -199,6 +199,7 @@ export default function Tasks() {
           dataSource={data.rows}
           columns={columns}
           pagination={{ pageSize: 15, showSizeChanger: false }}
+          scroll={{ x: true }}
         />
       </Card>
 
@@ -235,10 +236,10 @@ export default function Tasks() {
             </Form.Item>
           )}
           <Flex gap={12}>
-            <Form.Item name="due_date" label="Due date" style={{ flex: 1 }}>
-              <DatePicker style={{ width: "100%" }} />
+            <Form.Item name="due_date" label="Due date" className="flex-1">
+              <DatePicker className="w-full" />
             </Form.Item>
-            <Form.Item name="priority" label="Priority" initialValue="Normal" style={{ flex: 1 }}>
+            <Form.Item name="priority" label="Priority" initialValue="Normal" className="flex-1">
               <Select
                 options={["Low", "Normal", "High", "Immediate"].map((p) => ({
                   value: p,

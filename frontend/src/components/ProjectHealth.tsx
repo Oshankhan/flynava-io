@@ -12,6 +12,7 @@ export default function ProjectHealth({ projects }: { projects: ProjectRow[] }) 
         rowKey="project_id"
         pagination={false}
         size="small"
+        scroll={{ x: true }}
         columns={[
           { title: "Project", dataIndex: "name", key: "name" },
           {
@@ -23,7 +24,7 @@ export default function ProjectHealth({ projects }: { projects: ProjectRow[] }) 
                 percent={Math.min(v, 100)}
                 size="small"
                 strokeColor={RAG[r.rag].hex}
-                style={{ maxWidth: 180 }}
+                className="max-w-[180px]"
               />
             ),
           },

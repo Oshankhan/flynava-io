@@ -139,14 +139,19 @@ def workspace_department(user: dict = Depends(get_current_user),
                             "department heads and above only")
     dept = user.get("department")
 
+    dept_teams = list(db.teams.find({"department": dept}))
+    bulk = tasks_svc.team_tasks_bulk(db, [t["team_id"] for t in dept_teams])
+    leads = {u["user_id"]: u["name"] for u in db.users.find(
+        {"user_id": {"$in": [t.get("lead_id") for t in dept_teams if t.get("lead_id")]}},
+        {"user_id": 1, "name": 1})}
+
     teams = []
-    for t in db.teams.find({"department": dept}):
-        info = tasks_svc.team_tasks(db, t["team_id"])
-        lead = db.users.find_one({"user_id": t.get("lead_id")}, {"name": 1})
+    for t in dept_teams:
+        info = bulk[t["team_id"]]
         teams.append({
             "team_id": t["team_id"],
             "name": t["name"],
-            "lead_name": lead["name"] if lead else None,
+            "lead_name": leads.get(t.get("lead_id")),
             "buckets": info["buckets"],
             "reopened_count": len(info["reopened"]),
             "member_count": len(info["members"]),
@@ -180,18 +185,36 @@ def workspace_exec(user: dict = Depends(get_current_user),
     today_status = {r["name"]: r["status"] for r in
                     db.attendance.find({"date": today}, {"name": 1, "status": 1})}
 
+    # Batch every department's teams/members/tasks into a handful of queries
+    # instead of looping `team_tasks()` (3 queries each) per team per
+    # department — that N+1 is what made this endpoint slow under real
+    # network latency to the DB.
+    all_teams = list(db.teams.find({}))
+    teams_by_dept: dict[str, list[dict]] = {}
+    for t in all_teams:
+        teams_by_dept.setdefault(t.get("department"), []).append(t)
+    bulk = tasks_svc.team_tasks_bulk(db, [t["team_id"] for t in all_teams])
+
+    all_active_users = list(db.users.find(
+        {"status": "active"}, {"user_id": 1, "name": 1, "department": 1,
+                               "level": 1, "designation": 1}))
+    users_by_dept: dict[str, list[dict]] = {}
+    heads_by_dept: dict[str, dict] = {}
+    for u in all_active_users:
+        users_by_dept.setdefault(u.get("department"), []).append(u)
+        if u.get("level") == 3 and u.get("department") not in heads_by_dept:
+            heads_by_dept[u["department"]] = u
+
     departments = []
     for d in db.departments.find({"dept_id": {"$ne": "exec"}}):
         dept_id = d["dept_id"]
-        head = db.users.find_one({"department": dept_id, "level": 3},
-                                 {"user_id": 1, "name": 1, "designation": 1})
-        dept_users = list(db.users.find({"department": dept_id, "status": "active"},
-                                        {"name": 1}))
-        teams = list(db.teams.find({"department": dept_id}))
+        head = heads_by_dept.get(dept_id)
+        dept_users = users_by_dept.get(dept_id, [])
+        teams = teams_by_dept.get(dept_id, [])
         agg = {"total": 0, "completed": 0, "in_progress": 0, "pending": 0, "overdue": 0}
         reopened = 0
         for t in teams:
-            info = tasks_svc.team_tasks(db, t["team_id"])
+            info = bulk[t["team_id"]]
             for k in agg:
                 agg[k] += info["buckets"][k]
             reopened += len(info["reopened"])

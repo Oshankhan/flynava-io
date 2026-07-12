@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, Empty, Flex, Input, List, Tag, Typography } from "antd";
 import { FilePdfOutlined, FileTextOutlined, SearchOutlined } from "@ant-design/icons";
 import { api, API_BASE_URL, TOKEN_KEY, type IoDocument } from "../lib/api";
-import { BRAND } from "../lib/brand";
 
 const { Text } = Typography;
 
@@ -46,7 +45,7 @@ export default function KnowledgeBase() {
 
   return (
     <div>
-      <Flex justify="space-between" align="center" style={{ marginBottom: 12 }} wrap gap={8}>
+      <Flex justify="space-between" align="center" className="mb-3" wrap gap={8}>
         <Text type="secondary">
           Approved policies, meeting minutes and documents — searchable, always current.
         </Text>
@@ -54,7 +53,7 @@ export default function KnowledgeBase() {
           prefix={<SearchOutlined />}
           placeholder="Search knowledge base…"
           allowClear
-          style={{ maxWidth: 320 }}
+          className="max-w-[320px]"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
@@ -67,21 +66,21 @@ export default function KnowledgeBase() {
             dataSource={approved}
             renderItem={(d) => (
               <List.Item
-                style={{ cursor: "pointer" }}
+                className="cursor-pointer"
                 onClick={() => download(d)}
                 actions={[<Tag key="k">{KIND_LABEL[d.kind] ?? d.kind}</Tag>]}
               >
                 <List.Item.Meta
                   avatar={
                     d.filename?.toLowerCase().endsWith(".pdf") ? (
-                      <FilePdfOutlined style={{ fontSize: 22, color: "#dc2626" }} />
+                      <FilePdfOutlined className="text-[22px] text-red-600" />
                     ) : (
-                      <FileTextOutlined style={{ fontSize: 22, color: BRAND.primary }} />
+                      <FileTextOutlined className="text-[22px] text-io-600" />
                     )
                   }
                   title={<Text strong>{d.title}</Text>}
                   description={
-                    <Text type="secondary" style={{ fontSize: 12 }}>
+                    <Text type="secondary" className="text-xs">
                       {d.filename} · {(d.size / 1024).toFixed(0)} KB ·{" "}
                       {new Date(d.created_at).toLocaleDateString()}
                     </Text>

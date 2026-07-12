@@ -23,7 +23,6 @@ import dayjs from "dayjs";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { api, ApiError, type Meeting, type UserLite } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { BRAND } from "../lib/brand";
 
 const { Text } = Typography;
 
@@ -99,7 +98,7 @@ export default function CalendarPage() {
   return (
     <Row gutter={[16, 16]}>
       <Col xs={24} lg={16}>
-        <Card size="small" bordered={false} styles={{ body: { paddingTop: 4 } }}>
+        <Card size="small" bordered={false} classNames={{ body: "pt-1" }}>
           <Calendar
             value={selected}
             onSelect={setSelected}
@@ -112,50 +111,28 @@ export default function CalendarPage() {
               const ms = byDay(day);
               return (
                 <div
-                  style={{
-                    minHeight: 78,
-                    borderRadius: 8,
-                    padding: "4px 6px",
-                    margin: 2,
-                    background: isSelected
-                      ? `${BRAND.primary}1f`
+                  className={`min-h-[78px] rounded-lg p-1.5 m-0.5 border ${
+                    isSelected
+                      ? "bg-io-600/[0.12] border-transparent"
                       : isToday
-                      ? `${BRAND.primary}0d`
-                      : "transparent",
-                    border: isToday ? `1px solid ${BRAND.primary}66` : "1px solid transparent",
-                    opacity: inMonth ? 1 : 0.4,
-                  }}
+                      ? "bg-io-600/5 border-io-600/40"
+                      : "bg-transparent border-transparent"
+                  } ${inMonth ? "opacity-100" : "opacity-40"}`}
                 >
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontWeight: isToday ? 700 : 400,
-                      color: isToday ? BRAND.primaryStrong : undefined,
-                    }}
-                  >
+                  <Text className={`text-xs ${isToday ? "font-bold text-io-900" : "font-normal"}`}>
                     {day.date()}
                   </Text>
-                  <Flex vertical gap={2} style={{ marginTop: 2 }}>
+                  <Flex vertical gap={2} className="mt-0.5">
                     {ms.slice(0, 2).map((m) => (
                       <div
                         key={m.meeting_id}
-                        style={{
-                          fontSize: 11,
-                          lineHeight: "16px",
-                          padding: "0 6px",
-                          borderRadius: 6,
-                          background: `${BRAND.primary}1a`,
-                          color: BRAND.primaryStrong,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
+                        className="text-[11px] leading-4 px-1.5 rounded-md bg-io-600/10 text-io-900 truncate"
                       >
                         {m.title}
                       </div>
                     ))}
                     {ms.length > 2 && (
-                      <Text type="secondary" style={{ fontSize: 10 }}>
+                      <Text type="secondary" className="text-[10px]">
                         +{ms.length - 2} more
                       </Text>
                     )}
@@ -175,7 +152,7 @@ export default function CalendarPage() {
             size="small"
             bordered={false}
             title={selected.format("dddd, D MMMM")}
-            styles={{ body: { minHeight: 420 } }}
+            classNames={{ body: "min-h-[420px]" }}
           >
             {dayList.length === 0 ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No meetings" />
@@ -184,7 +161,7 @@ export default function CalendarPage() {
                 dataSource={dayList}
                 renderItem={(m) => (
                   <List.Item
-                    style={{ padding: "12px 4px" }}
+                    className="py-3 px-1"
                     actions={
                       m.organizer_id === user?.user_id
                         ? [
@@ -203,14 +180,14 @@ export default function CalendarPage() {
                     <List.Item.Meta
                       title={
                         <Flex align="center" gap={8} wrap>
-                          <Tag color={BRAND.primary} style={{ marginInlineEnd: 0 }}>
+                          <Tag color="#157f52" className="me-0">
                             {m.start.slice(11, 16)}–{m.end.slice(11, 16)}
                           </Tag>
-                          <Text style={{ fontSize: 13 }}>{m.title}</Text>
+                          <Text className="text-[13px]">{m.title}</Text>
                         </Flex>
                       }
                       description={
-                        <Text type="secondary" style={{ fontSize: 11 }}>
+                        <Text type="secondary" className="text-[11px]">
                           {[m.location, `by ${m.organizer_name}`, `${m.attendee_ids.length} attendees`]
                             .filter(Boolean)
                             .join(" · ")}
@@ -238,11 +215,11 @@ export default function CalendarPage() {
             <Input maxLength={200} />
           </Form.Item>
           <Flex gap={12}>
-            <Form.Item name="date" label="Date" rules={[{ required: true }]} style={{ flex: 1 }}>
-              <DatePicker style={{ width: "100%" }} />
+            <Form.Item name="date" label="Date" rules={[{ required: true }]} className="flex-1">
+              <DatePicker className="w-full" />
             </Form.Item>
-            <Form.Item name="time" label="Time" rules={[{ required: true, message: "Pick a time" }]} style={{ flex: 1 }}>
-              <TimePicker.RangePicker format="HH:mm" minuteStep={15} style={{ width: "100%" }} />
+            <Form.Item name="time" label="Time" rules={[{ required: true, message: "Pick a time" }]} className="flex-1">
+              <TimePicker.RangePicker format="HH:mm" minuteStep={15} className="w-full" />
             </Form.Item>
           </Flex>
           <Form.Item name="attendee_ids" label="Invite">

@@ -18,7 +18,6 @@ import {
   type ProjectRow,
   type TeamTasks,
 } from "../lib/api";
-import { BRAND } from "../lib/brand";
 import ProjectHealth from "./ProjectHealth";
 import TrendChart from "./TrendChart";
 
@@ -66,12 +65,12 @@ function QaPanel({ variant }: { variant: Variant }) {
             bordered={false}
             title={
               <Flex align="center" gap={6}>
-                <ExperimentOutlined style={{ color: "#7cc8e0" }} /> Retest Queue
+                <ExperimentOutlined className="text-[#7cc8e0]" /> Retest Queue
               </Flex>
             }
           >
             {retest.length === 0 ? (
-              <Text type="secondary" style={{ fontSize: 12 }}>Nothing to retest right now.</Text>
+              <Text type="secondary" className="text-xs">Nothing to retest right now.</Text>
             ) : (
               <List
                 size="small"
@@ -84,7 +83,7 @@ function QaPanel({ variant }: { variant: Variant }) {
                       </Tag>,
                     ]}
                   >
-                    <Text style={{ fontSize: 13 }}>{t.title}</Text>
+                    <Text className="text-[13px]">{t.title}</Text>
                   </List.Item>
                 )}
               />
@@ -97,19 +96,19 @@ function QaPanel({ variant }: { variant: Variant }) {
             bordered={false}
             title={
               <Flex align="center" gap={6}>
-                <FileSearchOutlined style={{ color: BRAND.primary }} /> Bugs I Reported
+                <FileSearchOutlined className="text-io-600" /> Bugs I Reported
               </Flex>
             }
           >
             {authored.length === 0 ? (
-              <Text type="secondary" style={{ fontSize: 12 }}>No bugs reported under your name.</Text>
+              <Text type="secondary" className="text-xs">No bugs reported under your name.</Text>
             ) : (
               <List
                 size="small"
                 dataSource={authored}
                 renderItem={(t) => (
                   <List.Item actions={[<Tag key="s">{t.status ?? "—"}</Tag>]}>
-                    <Text style={{ fontSize: 13 }}>{t.title}</Text>
+                    <Text className="text-[13px]">{t.title}</Text>
                   </List.Item>
                 )}
               />
@@ -132,7 +131,7 @@ function QaPanel({ variant }: { variant: Variant }) {
       bordered={false}
       title={
         <Flex align="center" gap={6}>
-          <ExperimentOutlined style={{ color: "#7cc8e0" }} /> Team Retest Workload
+          <ExperimentOutlined className="text-[#7cc8e0]" /> Team Retest Workload
         </Flex>
       }
     >
@@ -178,12 +177,12 @@ function FinPanel({ variant }: { variant: Variant }) {
           bordered={false}
           title={
             <Flex align="center" gap={6}>
-              <AlertOutlined style={{ color: "#f59e0b" }} /> Compliance Deadlines
+              <AlertOutlined className="text-amber-500" /> Compliance Deadlines
             </Flex>
           }
         >
           {items.length === 0 ? (
-            <Text type="secondary" style={{ fontSize: 12 }}>Nothing on the calendar.</Text>
+            <Text type="secondary" className="text-xs">Nothing on the calendar.</Text>
           ) : (
             <List
               size="small"
@@ -196,12 +195,12 @@ function FinPanel({ variant }: { variant: Variant }) {
                 >
                   <List.Item.Meta
                     title={
-                      <Text style={{ fontSize: 13, fontWeight: c.owner === "Finance" ? 600 : 400 }}>
+                      <Text className={`text-[13px] ${c.owner === "Finance" ? "font-semibold" : "font-normal"}`}>
                         {c.title}
                       </Text>
                     }
                     description={
-                      <Text type="secondary" style={{ fontSize: 11 }}>
+                      <Text type="secondary" className="text-[11px]">
                         {c.owner} · due {c.due_date}
                       </Text>
                     }
@@ -251,7 +250,7 @@ function HrPanel({ variant }: { variant: Variant }) {
         bordered={false}
         title={
           <Flex align="center" gap={6}>
-            <UserAddOutlined style={{ color: BRAND.primary }} /> Open Positions
+            <UserAddOutlined className="text-io-600" /> Open Positions
           </Flex>
         }
       >
@@ -284,7 +283,7 @@ function HrPanel({ variant }: { variant: Variant }) {
       bordered={false}
       title={
         <Flex align="center" gap={6}>
-          <TeamOutlined style={{ color: BRAND.primary }} /> Pending Leaves ({pending.length})
+          <TeamOutlined className="text-io-600" /> Pending Leaves ({pending.length})
         </Flex>
       }
     >
@@ -368,7 +367,7 @@ function MktPanel({ variant }: { variant: Variant }) {
       bordered={false}
       title={
         <Flex align="center" gap={6}>
-          <FundOutlined style={{ color: BRAND.primary }} /> Lead Funnel
+          <FundOutlined className="text-io-600" /> Lead Funnel
         </Flex>
       }
     >

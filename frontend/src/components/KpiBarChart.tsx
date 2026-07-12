@@ -18,7 +18,7 @@ export default function KpiBarChart({ kpis }: { kpis: Kpi[] }) {
   if (!data.length) return null;
   return (
     <Card title="KPI Overview" size="small" bordered={false}>
-      <div style={{ width: "100%", height: 280 }}>
+      <div className="w-full h-[280px]">
         <ResponsiveContainer>
           <BarChart data={data} margin={{ left: 8, right: 8, top: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#dfeee6" />

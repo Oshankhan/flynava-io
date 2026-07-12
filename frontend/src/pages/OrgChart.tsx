@@ -3,20 +3,19 @@ import { Alert, Card, Flex, Spin, Tree, Typography } from "antd";
 import type { TreeDataNode } from "antd";
 import { ApartmentOutlined, UserOutlined } from "@ant-design/icons";
 import { api, ApiError, type UserLite } from "../lib/api";
-import { BRAND } from "../lib/brand";
 
 const { Text } = Typography;
 
 function nodeTitle(u: UserLite): React.ReactNode {
   return (
     <Flex align="center" gap={8}>
-      <UserOutlined style={{ color: BRAND.primary }} />
-      <Text strong style={{ fontSize: 13 }}>{u.name}</Text>
+      <UserOutlined className="text-io-600" />
+      <Text strong className="text-[13px]">{u.name}</Text>
       {u.designation && (
-        <Text type="secondary" style={{ fontSize: 12 }}>— {u.designation}</Text>
+        <Text type="secondary" className="text-xs">— {u.designation}</Text>
       )}
       {u.team_id && (
-        <Text type="secondary" style={{ fontSize: 11 }}>({u.team_id.replace("team_", "")})</Text>
+        <Text type="secondary" className="text-[11px]">({u.team_id.replace("team_", "")})</Text>
       )}
     </Flex>
   );
@@ -68,7 +67,7 @@ export default function OrgChart() {
   if (error) return <Alert type="error" message={error} showIcon />;
   if (!users)
     return (
-      <Flex justify="center" style={{ paddingTop: 80 }}>
+      <Flex justify="center" className="pt-20">
         <Spin />
       </Flex>
     );
@@ -79,19 +78,21 @@ export default function OrgChart() {
       bordered={false}
       title={
         <Flex align="center" gap={6}>
-          <ApartmentOutlined style={{ color: BRAND.primary }} /> Organization Chart
+          <ApartmentOutlined className="text-io-600" /> Organization Chart
         </Flex>
       }
     >
       {treeData.length === 0 ? (
         <Text type="secondary">No users to show.</Text>
       ) : (
-        <Tree
-          showLine
-          defaultExpandedKeys={allKeys}
-          selectable={false}
-          treeData={treeData}
-        />
+        <div className="overflow-x-auto">
+          <Tree
+            showLine
+            defaultExpandedKeys={allKeys}
+            selectable={false}
+            treeData={treeData}
+          />
+        </div>
       )}
     </Card>
   );

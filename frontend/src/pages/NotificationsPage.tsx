@@ -9,7 +9,6 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { api, type NotificationItem } from "../lib/api";
-import { BRAND } from "../lib/brand";
 
 const { Text } = Typography;
 
@@ -51,7 +50,7 @@ export default function NotificationsPage() {
 
   return (
     <div>
-      <Flex justify="space-between" align="center" style={{ marginBottom: 12 }}>
+      <Flex justify="space-between" align="center" className="mb-3">
         <Text type="secondary">
           {unread > 0 ? `${unread} unread` : "All caught up"}
         </Text>
@@ -70,7 +69,7 @@ export default function NotificationsPage() {
             renderItem={(n) => (
               <List.Item
                 onClick={() => read(n)}
-                style={{ cursor: "pointer", opacity: n.status === "unread" ? 1 : 0.6 }}
+                className={`cursor-pointer ${n.status === "unread" ? "opacity-100" : "opacity-60"}`}
                 actions={[
                   n.status === "unread" ? (
                     <Tag key="s" color="processing">
@@ -82,20 +81,20 @@ export default function NotificationsPage() {
                 <List.Item.Meta
                   avatar={
                     <Avatar
-                      style={{ background: n.status === "unread" ? BRAND.primary : "#9ca3af" }}
+                      className={n.status === "unread" ? "bg-io-600" : "bg-gray-400"}
                       icon={TYPE_ICON[n.type] ?? <BellOutlined />}
                     />
                   }
                   title={
-                    <Text strong={n.status === "unread"} style={{ fontSize: 14 }}>
+                    <Text strong={n.status === "unread"} className="text-sm">
                       {n.title}
                     </Text>
                   }
                   description={
                     <>
-                      <Text style={{ fontSize: 12 }}>{n.body}</Text>
+                      <Text className="text-xs">{n.body}</Text>
                       <div>
-                        <Text type="secondary" style={{ fontSize: 11 }}>
+                        <Text type="secondary" className="text-[11px]">
                           {new Date(n.created_at).toLocaleString()}
                         </Text>
                       </div>

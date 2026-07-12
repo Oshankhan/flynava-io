@@ -100,9 +100,9 @@ export default function Reports() {
   }
 
   return (
-    <Space direction="vertical" size={16} style={{ width: "100%" }}>
-      <Title level={4} style={{ margin: 0 }}>
-        Bug Report Builder <Text type="secondary" style={{ fontSize: 14 }}>· from OpenProject</Text>
+    <Space direction="vertical" size={16} className="w-full">
+      <Title level={4} className="m-0">
+        Bug Report Builder <Text type="secondary" className="text-sm">· from OpenProject</Text>
       </Title>
 
       <Card size="small">
@@ -111,7 +111,7 @@ export default function Reports() {
             <Text type="secondary">Project</Text>
             <Select
               placeholder="Select an OpenProject project"
-              style={{ width: "100%" }}
+              className="w-full"
               value={project}
               onChange={setProject}
               options={projects.map((p) => ({
@@ -125,7 +125,7 @@ export default function Reports() {
             <Select
               allowClear
               placeholder="All"
-              style={{ width: "100%" }}
+              className="w-full"
               value={statusFilter}
               onChange={setStatusFilter}
               options={statuses.map((s) => ({ value: s, label: s }))}
@@ -136,7 +136,7 @@ export default function Reports() {
             <Select
               allowClear
               placeholder="All"
-              style={{ width: "100%" }}
+              className="w-full"
               value={priorityFilter}
               onChange={setPriorityFilter}
               options={priorities.map((p) => ({ value: p, label: p }))}
@@ -154,6 +154,7 @@ export default function Reports() {
           rowKey="op_id"
           size="small"
           pagination={{ pageSize: 10 }}
+          scroll={{ x: true }}
           rowSelection={{
             selectedRowKeys: selected,
             onChange: (keys) => setSelected(keys as string[]),
@@ -199,7 +200,7 @@ export default function Reports() {
             <Text type="secondary">Recipients</Text>
             <Select
               mode="tags"
-              style={{ width: "100%" }}
+              className="w-full"
               placeholder="type an email and press Enter"
               value={recipients}
               onChange={setRecipients}
@@ -221,7 +222,7 @@ export default function Reports() {
             />
           </Col>
         </Row>
-        <Flex gap={12} style={{ marginTop: 12 }}>
+        <Flex gap={12} className="mt-3">
           <Button icon={<MailOutlined />} loading={busy} onClick={preview}>
             Preview & draft
           </Button>
@@ -231,7 +232,7 @@ export default function Reports() {
         </Flex>
         {result && (
           <Alert
-            style={{ marginTop: 12 }}
+            className="mt-3"
             type={result.status === "sent" ? "success" : "info"}
             showIcon
             message={
@@ -252,7 +253,7 @@ export default function Reports() {
       >
         {previewHtml && (
           <div
-            style={{ border: "1px solid #eee", padding: 16, borderRadius: 8 }}
+            className="border border-[#eee] p-4 rounded-lg"
             // eslint-disable-next-line react/no-danger
             dangerouslySetInnerHTML={{ __html: previewHtml }}
           />

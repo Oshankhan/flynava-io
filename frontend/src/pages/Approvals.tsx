@@ -45,14 +45,14 @@ const STATUS_TAG: Record<string, string> = {
 function History({ req }: { req: IoRequest }) {
   return (
     <Timeline
-      style={{ marginTop: 8 }}
+      className="mt-2"
       items={req.history.map((h) => ({
         color: h.action === "approved" ? "green" : h.action === "rejected" ? "red" : "blue",
         children: (
-          <Text style={{ fontSize: 12 }}>
+          <Text className="text-xs">
             <b>{h.by_name ?? h.by}</b> {h.action}
             {h.comment ? ` — “${h.comment}”` : ""}
-            <Text type="secondary" style={{ fontSize: 11 }}>
+            <Text type="secondary" className="text-[11px]">
               {" "}
               {h.at ? new Date(h.at).toLocaleString() : ""}
             </Text>
@@ -142,9 +142,9 @@ export default function Approvals() {
 
   const typeCell = (t: string) => (
     <Flex gap={4} align="center">
-      <Text style={{ fontSize: 13 }}>{typeLabel(t)}</Text>
+      <Text className="text-[13px]">{typeLabel(t)}</Text>
       {t === "hr_grievance" && (
-        <Tag color="purple" style={{ marginInlineStart: 4 }}>
+        <Tag color="purple" className="ms-1">
           Confidential
         </Tag>
       )}
@@ -153,10 +153,10 @@ export default function Approvals() {
 
   const titleCell = (title: string, r: IoRequest) => (
     <div>
-      <Text style={{ fontSize: 13 }}>{title}</Text>
+      <Text className="text-[13px]">{title}</Text>
       {r.type === "leave" && r.from_date && (
         <div>
-          <Text type="secondary" style={{ fontSize: 11 }}>
+          <Text type="secondary" className="text-[11px]">
             {r.leave_type} · {r.from_date} → {r.to_date} · {r.days} day{r.days === 1 ? "" : "s"}
           </Text>
         </div>
@@ -233,8 +233,8 @@ export default function Approvals() {
 
   const expandable = {
     expandedRowRender: (r: IoRequest) => (
-      <div style={{ paddingLeft: 8 }}>
-        {r.body && <Text style={{ fontSize: 13 }}>{r.body}</Text>}
+      <div className="pl-2">
+        {r.body && <Text className="text-[13px]">{r.body}</Text>}
         <History req={r} />
       </div>
     ),
@@ -252,6 +252,7 @@ export default function Approvals() {
           columns={myCols}
           expandable={expandable}
           pagination={{ pageSize: 10, showSizeChanger: false }}
+          scroll={{ x: true }}
         />
       )}
     </Card>
@@ -269,6 +270,7 @@ export default function Approvals() {
           columns={inboxCols}
           expandable={expandable}
           pagination={{ pageSize: 10, showSizeChanger: false }}
+          scroll={{ x: true }}
         />
       )}
     </Card>
@@ -276,7 +278,7 @@ export default function Approvals() {
 
   return (
     <div>
-      <Flex justify="flex-end" style={{ marginBottom: 12 }}>
+      <Flex justify="flex-end" className="mb-3">
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
           New Request
         </Button>
@@ -320,7 +322,7 @@ export default function Approvals() {
                 name="leave_type"
                 label="Leave type"
                 rules={[{ required: true, message: "Pick a leave type" }]}
-                style={{ flex: 1 }}
+                className="flex-1"
               >
                 <Select options={LEAVE_TYPES.map((v) => ({ value: v, label: v }))} />
               </Form.Item>
@@ -328,9 +330,9 @@ export default function Approvals() {
                 name="leave_range"
                 label="Dates"
                 rules={[{ required: true, message: "Pick your leave dates" }]}
-                style={{ flex: 2 }}
+                className="flex-[2]"
               >
-                <RangePicker style={{ width: "100%" }} />
+                <RangePicker className="w-full" />
               </Form.Item>
             </Flex>
           )}

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Avatar, Button, Card, Descriptions, Flex, Input, Spin, Tag, Typography } from "antd";
 import { CloseOutlined, SendOutlined } from "@ant-design/icons";
 import { api, ApiError, type AiAnswer } from "../lib/api";
-import { BRAND } from "../lib/brand";
 import inayaImg from "../assets/inaya/Inaya-img.png";
 
 const { Paragraph, Text } = Typography;
@@ -67,17 +66,7 @@ export default function InayaChat() {
       {open && (
         <Card
           size="small"
-          style={{
-            position: "fixed",
-            bottom: 88,
-            right: 24,
-            width: 380,
-            height: 560,
-            zIndex: 1000,
-            boxShadow: "0 12px 32px rgba(0,0,0,0.22)",
-            display: "flex",
-            flexDirection: "column",
-          }}
+          className="fixed inset-x-4 bottom-24 sm:inset-x-auto sm:bottom-[88px] sm:right-6 w-auto sm:w-[380px] h-[70vh] max-h-[560px] sm:h-[560px] z-[1000] shadow-2xl flex flex-col"
           styles={{ body: { display: "flex", flexDirection: "column", height: "100%", padding: 12 } }}
           title={
             <Flex align="center" gap={8}>
@@ -87,11 +76,11 @@ export default function InayaChat() {
           }
           extra={<Button type="text" size="small" icon={<CloseOutlined />} onClick={() => setOpen(false)} />}
         >
-          <div style={{ flex: 1, overflowY: "auto", paddingRight: 4 }}>
+          <div className="flex-1 overflow-y-auto pe-1">
             {turns.length === 0 && (
-              <Card bordered={false} style={{ textAlign: "center", marginTop: 24 }}>
+              <Card bordered={false} className="text-center mt-6">
                 <Avatar size={48} src={inayaImg} />
-                <Paragraph strong style={{ marginTop: 12 }}>
+                <Paragraph strong className="mt-3">
                   Hi, I'm Inaya. Ask me anything about your work.
                 </Paragraph>
                 <Flex gap={8} wrap justify="center">
@@ -104,23 +93,23 @@ export default function InayaChat() {
               </Card>
             )}
             {turns.map((t, i) => (
-              <div key={i} style={{ marginBottom: 14 }}>
-                <Flex gap={8} justify="flex-end" style={{ marginBottom: 8 }}>
-                  <Card size="small" style={{ maxWidth: "80%", background: `${BRAND.primary}14` }} bordered={false}>
-                    <Text style={{ fontSize: 13 }}>{t.q}</Text>
+              <div key={i} className="mb-3.5">
+                <Flex gap={8} justify="flex-end" className="mb-2">
+                  <Card size="small" className="max-w-[80%] bg-io-600/10" bordered={false}>
+                    <Text className="text-[13px]">{t.q}</Text>
                   </Card>
                 </Flex>
                 {(t.a || t.error || (i === turns.length - 1 && busy)) && (
                   <Flex gap={8}>
-                    <Avatar size="small" src={inayaImg} style={{ flexShrink: 0 }} />
-                    <Card size="small" style={{ maxWidth: "85%" }} bordered={false}>
+                    <Avatar size="small" src={inayaImg} className="shrink-0" />
+                    <Card size="small" className="max-w-[85%]" bordered={false}>
                       {i === turns.length - 1 && busy && !t.a && !t.error ? (
                         <Spin size="small" />
                       ) : t.error ? (
                         <Text type="danger">{t.error}</Text>
                       ) : t.a ? (
                         <>
-                          <Paragraph strong style={{ marginBottom: 8, fontSize: 13 }}>
+                          <Paragraph strong className="mb-2 text-[13px]">
                             {t.a.answer}
                           </Paragraph>
                           <Descriptions column={1} size="small" colon>
@@ -139,7 +128,7 @@ export default function InayaChat() {
             ))}
             <div ref={bottom} />
           </div>
-          <Flex gap={8} style={{ marginTop: 10 }}>
+          <Flex gap={8} className="mt-2.5">
             <Input
               placeholder="Ask Inaya…"
               value={q}
@@ -155,19 +144,9 @@ export default function InayaChat() {
       <Button
         shape="circle"
         onClick={() => setOpen((o) => !o)}
-        style={{
-          position: "fixed",
-          bottom: 24,
-          right: 24,
-          width: 56,
-          height: 56,
-          zIndex: 1000,
-          padding: 0,
-          boxShadow: "0 8px 20px rgba(0,0,0,0.25)",
-          border: `2px solid ${BRAND.primary}`,
-        }}
+        className="fixed bottom-6 right-6 w-14 h-14 z-[1000] p-0 shadow-xl border-2 border-io-600"
       >
-        <img src={inayaImg} alt="Inaya" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+        <img src={inayaImg} alt="Inaya" className="w-full h-full object-cover rounded-full" />
       </Button>
     </>
   );

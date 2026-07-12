@@ -34,7 +34,7 @@ export default function NotificationBell() {
   }
 
   const content = (
-    <div style={{ width: 320, maxHeight: 380, overflowY: "auto" }}>
+    <div className="w-80 max-h-[380px] overflow-y-auto">
       {items.length === 0 ? (
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No notifications" />
       ) : (
@@ -44,15 +44,15 @@ export default function NotificationBell() {
           renderItem={(n) => (
             <List.Item
               onClick={() => read(n.notif_id)}
-              style={{ cursor: "pointer", opacity: n.status === "unread" ? 1 : 0.6 }}
+              className={`cursor-pointer ${n.status === "unread" ? "opacity-100" : "opacity-60"}`}
             >
               <List.Item.Meta
                 title={
-                  <Text strong={n.status === "unread"} style={{ fontSize: 13 }}>
+                  <Text strong={n.status === "unread"} className="text-[13px]">
                     {n.title}
                   </Text>
                 }
-                description={<Text style={{ fontSize: 12 }}>{n.body}</Text>}
+                description={<Text className="text-xs">{n.body}</Text>}
               />
             </List.Item>
           )}

@@ -17,7 +17,6 @@ import {
 } from "antd";
 import { ArrowLeftOutlined, ScheduleOutlined } from "@ant-design/icons";
 import { api, ApiError, type TaskRow, type UserOverview } from "../lib/api";
-import { BRAND } from "../lib/brand";
 
 const { Text, Title } = Typography;
 
@@ -28,11 +27,18 @@ const BUCKET_TAG: Record<string, string> = {
   overdue: "error",
 };
 
-function StatTile({ label, value, color }: { label: string; value: number; color: string }) {
+const TILE_TINT = {
+  primary: "text-io-600",
+  amber: "text-amber-500",
+  sky: "text-sky-400",
+  red: "text-red-500",
+} as const;
+
+function StatTile({ label, value, tint }: { label: string; value: number; tint: keyof typeof TILE_TINT }) {
   return (
-    <Card size="small" bordered={false} style={{ height: "100%" }}>
-      <Text type="secondary" style={{ fontSize: 12 }}>{label}</Text>
-      <div style={{ fontSize: 22, fontWeight: 700, color }}>{value}</div>
+    <Card size="small" bordered={false} className="h-full">
+      <Text type="secondary" className="text-xs">{label}</Text>
+      <div className={`text-[22px] font-bold ${TILE_TINT[tint]}`}>{value}</div>
     </Card>
   );
 }
@@ -56,7 +62,7 @@ export default function MemberDetail() {
   if (error) return <Alert type="error" message={error} showIcon />;
   if (!data)
     return (
-      <Flex justify="center" style={{ paddingTop: 80 }}>
+      <Flex justify="center" className="pt-20">
         <Spin />
       </Flex>
     );
@@ -93,18 +99,18 @@ export default function MemberDetail() {
         type="link"
         icon={<ArrowLeftOutlined />}
         onClick={() => navigate(-1)}
-        style={{ paddingInline: 0, marginBottom: 8 }}
+        className="px-0 mb-2"
       >
         Back
       </Button>
 
-      <Card size="small" bordered={false} style={{ marginBottom: 16 }}>
+      <Card size="small" bordered={false} className="mb-4">
         <Flex align="center" gap={16} wrap>
-          <Avatar size={56} style={{ background: BRAND.primary, fontSize: 22 }}>
+          <Avatar size={56} className="bg-io-600 text-[22px]">
             {u.name[0]}
           </Avatar>
           <div>
-            <Title level={4} style={{ margin: 0 }}>{u.name}</Title>
+            <Title level={4} className="m-0">{u.name}</Title>
             <Text type="secondary">
               {u.designation ?? "—"}
               {data.team ? ` · ${data.team.name}` : ""}
@@ -115,21 +121,21 @@ export default function MemberDetail() {
       </Card>
 
       <Row gutter={[16, 16]}>
-        <Col flex="1 1 140px"><StatTile label="Total Tasks" value={b.total} color={BRAND.primary} /></Col>
-        <Col flex="1 1 140px"><StatTile label="Completed" value={b.completed} color="#157f52" /></Col>
-        <Col flex="1 1 140px"><StatTile label="In Progress" value={b.in_progress} color="#f59e0b" /></Col>
-        <Col flex="1 1 140px"><StatTile label="Pending" value={b.pending} color="#7cc8e0" /></Col>
-        <Col flex="1 1 140px"><StatTile label="Overdue" value={b.overdue} color="#ef4444" /></Col>
+        <Col flex="1 1 140px"><StatTile label="Total Tasks" value={b.total} tint="primary" /></Col>
+        <Col flex="1 1 140px"><StatTile label="Completed" value={b.completed} tint="primary" /></Col>
+        <Col flex="1 1 140px"><StatTile label="In Progress" value={b.in_progress} tint="amber" /></Col>
+        <Col flex="1 1 140px"><StatTile label="Pending" value={b.pending} tint="sky" /></Col>
+        <Col flex="1 1 140px"><StatTile label="Overdue" value={b.overdue} tint="red" /></Col>
       </Row>
 
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+      <Row gutter={[16, 16]} className="mt-4">
         <Col xs={24} lg={14}>
-          <Card size="small" bordered={false} title="Tasks" style={{ height: "100%" }}>
+          <Card size="small" bordered={false} title="Tasks" className="h-full">
             {data.tasks.length === 0 ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No tasks" />
             ) : (
               <Table size="small" rowKey="task_id" dataSource={data.tasks} columns={taskCols}
-                pagination={{ pageSize: 8, showSizeChanger: false }} />
+                pagination={{ pageSize: 8, showSizeChanger: false }} scroll={{ x: true }} />
             )}
           </Card>
         </Col>
@@ -138,12 +144,12 @@ export default function MemberDetail() {
             <Col span={24}>
               <Card size="small" bordered={false} title="Reopened Bugs">
                 {data.reopened.length === 0 ? (
-                  <Text type="secondary" style={{ fontSize: 12 }}>None. 🎉</Text>
+                  <Text type="secondary" className="text-xs">None. 🎉</Text>
                 ) : (
                   <List size="small" dataSource={data.reopened}
                     renderItem={(t) => (
                       <List.Item actions={[<Tag key="p" color="orange">{t.priority ?? "—"}</Tag>]}>
-                        <Text style={{ fontSize: 13 }}>{t.title}</Text>
+                        <Text className="text-[13px]">{t.title}</Text>
                       </List.Item>
                     )} />
                 )}
@@ -152,12 +158,12 @@ export default function MemberDetail() {
             <Col span={24}>
               <Card size="small" bordered={false} title="Bugs Authored">
                 {data.authored.length === 0 ? (
-                  <Text type="secondary" style={{ fontSize: 12 }}>None.</Text>
+                  <Text type="secondary" className="text-xs">None.</Text>
                 ) : (
                   <List size="small" dataSource={data.authored}
                     renderItem={(t) => (
                       <List.Item actions={[<Tag key="s">{t.status ?? "—"}</Tag>]}>
-                        <Text style={{ fontSize: 13 }}>{t.title}</Text>
+                        <Text className="text-[13px]">{t.title}</Text>
                       </List.Item>
                     )} />
                 )}
@@ -172,14 +178,14 @@ export default function MemberDetail() {
             bordered={false}
             title={
               <Flex align="center" gap={6}>
-                <ScheduleOutlined style={{ color: BRAND.primary }} /> Attendance (last 7 days)
+                <ScheduleOutlined className="text-io-600" /> Attendance (last 7 days)
               </Flex>
             }
           >
-            <Flex gap={16} style={{ marginBottom: 10 }}>
+            <Flex gap={16} className="mb-2.5">
               <Text><b>{data.attendance.present_count}</b> present</Text>
-              <Text><b style={{ color: "#f59e0b" }}>{data.attendance.late_count}</b> late</Text>
-              <Text><b style={{ color: "#ef4444" }}>{data.attendance.absent_count}</b> absent</Text>
+              <Text><b className="text-amber-500">{data.attendance.late_count}</b> late</Text>
+              <Text><b className="text-red-500">{data.attendance.absent_count}</b> absent</Text>
               {data.attendance.avg_hours != null && (
                 <Text type="secondary">avg {data.attendance.avg_hours}h/day</Text>
               )}
@@ -188,7 +194,7 @@ export default function MemberDetail() {
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No attendance data" />
             ) : (
               <Table size="small" rowKey="date" dataSource={data.attendance.rows}
-                columns={attendanceCols} pagination={false}
+                columns={attendanceCols} pagination={false} scroll={{ x: true }}
                 rowClassName={(r) => (r.status === "Late" ? "attendance-late-row" : "")} />
             )}
           </Card>
@@ -196,22 +202,22 @@ export default function MemberDetail() {
         <Col xs={24} lg={12}>
           <Card size="small" bordered={false} title="Leave Balance & History">
             {data.leave_balance ? (
-              <Flex gap={20} style={{ marginBottom: 10 }}>
+              <Flex gap={20} className="mb-2.5">
                 {Object.entries(data.leave_balance).map(([type, days]) => (
-                  <div key={type} style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: BRAND.primaryStrong }}>{days}</div>
-                    <Text type="secondary" style={{ fontSize: 11 }}>{type}</Text>
+                  <div key={type} className="text-center">
+                    <div className="text-lg font-bold text-io-900">{days}</div>
+                    <Text type="secondary" className="text-[11px]">{type}</Text>
                   </div>
                 ))}
               </Flex>
             ) : (
-              <Text type="secondary" style={{ fontSize: 12 }}>No HR record linked.</Text>
+              <Text type="secondary" className="text-xs">No HR record linked.</Text>
             )}
             {data.recent_leaves.length > 0 && (
               <List size="small" dataSource={data.recent_leaves}
                 renderItem={(l) => (
                   <List.Item actions={[<Tag key="s" color={l.status === "Approved" ? "success" : "processing"}>{l.status}</Tag>]}>
-                    <Text style={{ fontSize: 12 }}>{l.type} · {l.from} → {l.to} · {l.days}d</Text>
+                    <Text className="text-xs">{l.type} · {l.from} → {l.to} · {l.days}d</Text>
                   </List.Item>
                 )} />
             )}
@@ -221,12 +227,12 @@ export default function MemberDetail() {
         <Col xs={24} lg={12}>
           <Card size="small" bordered={false} title="Pending Documents">
             {data.pending_docs.length === 0 ? (
-              <Text type="secondary" style={{ fontSize: 12 }}>Nothing pending.</Text>
+              <Text type="secondary" className="text-xs">Nothing pending.</Text>
             ) : (
               <List size="small" dataSource={data.pending_docs}
                 renderItem={(d) => (
                   <List.Item actions={[<Tag key="k">{d.kind}</Tag>]}>
-                    <Text style={{ fontSize: 13 }}>{d.title}</Text>
+                    <Text className="text-[13px]">{d.title}</Text>
                   </List.Item>
                 )} />
             )}
@@ -235,14 +241,14 @@ export default function MemberDetail() {
         <Col xs={24} lg={12}>
           <Card size="small" bordered={false} title="Recent Activity">
             {data.activity.length === 0 ? (
-              <Text type="secondary" style={{ fontSize: 12 }}>Nothing yet.</Text>
+              <Text type="secondary" className="text-xs">Nothing yet.</Text>
             ) : (
               <List size="small" dataSource={data.activity}
                 renderItem={(a) => (
                   <List.Item>
                     <List.Item.Meta
-                      title={<Text style={{ fontSize: 13 }}>{a.text}</Text>}
-                      description={<Text type="secondary" style={{ fontSize: 11 }}>
+                      title={<Text className="text-[13px]">{a.text}</Text>}
+                      description={<Text type="secondary" className="text-[11px]">
                         {new Date(a.at).toLocaleString()}
                       </Text>}
                     />

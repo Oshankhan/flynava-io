@@ -17,7 +17,6 @@ import {
 import { RightOutlined, TeamOutlined } from "@ant-design/icons";
 import { api, ApiError, type OrgReportRow } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { BRAND } from "../lib/brand";
 
 const { Text, Title } = Typography;
 
@@ -64,7 +63,7 @@ export default function MyTeam() {
   if (error) return <Alert type="error" message={error} showIcon />;
   if (!stack || !reports)
     return (
-      <Flex justify="center" style={{ paddingTop: 80 }}>
+      <Flex justify="center" className="pt-20">
         <Spin />
       </Flex>
     );
@@ -84,7 +83,7 @@ export default function MyTeam() {
   return (
     <div>
       <Breadcrumb
-        style={{ marginBottom: 12 }}
+        className="mb-3"
         items={stack.map((c, i) => ({
           key: c.user_id,
           title:
@@ -96,10 +95,10 @@ export default function MyTeam() {
         }))}
       />
 
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+      <Row gutter={[16, 16]} className="mb-4">
         <Col xs={24} md={12}>
           <Card size="small" bordered={false}>
-            <Title level={5} style={{ marginTop: 0 }}>
+            <Title level={5} className="mt-0">
               {current.name}'s Team
             </Title>
             <Text type="secondary">
@@ -130,19 +129,19 @@ export default function MyTeam() {
         <Row gutter={[16, 16]}>
           {reports.map((m) => (
             <Col key={m.user_id} xs={24} sm={12} lg={8} xl={6}>
-              <Card size="small" style={{ height: "100%" }}>
-                <Flex align="center" gap={10} style={{ marginBottom: 8 }}>
-                  <Avatar style={{ background: BRAND.primary }}>{m.name[0]}</Avatar>
-                  <div style={{ minWidth: 0 }}>
-                    <Text strong style={{ fontSize: 13 }} ellipsis>{m.name}</Text>
+              <Card size="small" className="h-full">
+                <Flex align="center" gap={10} className="mb-2">
+                  <Avatar className="bg-io-600">{m.name[0]}</Avatar>
+                  <div className="min-w-0">
+                    <Text strong className="text-[13px]" ellipsis>{m.name}</Text>
                     <div>
-                      <Text type="secondary" style={{ fontSize: 11 }} ellipsis>
+                      <Text type="secondary" className="text-[11px]" ellipsis>
                         {m.designation ?? "—"}{m.team_name ? ` · ${m.team_name}` : ""}
                       </Text>
                     </div>
                   </div>
                 </Flex>
-                <Flex gap={4} wrap style={{ marginBottom: 10 }}>
+                <Flex gap={4} wrap className="mb-2.5">
                   <Tag>{m.buckets.completed}/{m.buckets.total} tasks</Tag>
                   {m.buckets.overdue > 0 && <Tag color="error">{m.buckets.overdue} overdue</Tag>}
                   {m.reopened_count > 0 && <Tag color="orange">{m.reopened_count} reopened</Tag>}

@@ -99,18 +99,56 @@ def my_tasks(db: Database, user: dict) -> dict:
 
 
 def team_tasks(db: Database, team_id: str) -> dict:
-    members = list(db.users.find({"team_id": team_id, "status": "active"},
-                                 {"user_id": 1, "name": 1}))
+    return team_tasks_bulk(db, [team_id])[team_id]
+
+
+def team_tasks_bulk(db: Database, team_ids: list[str]) -> dict[str, dict]:
+    """Same per-team shape as calling `team_tasks()` once per id, but O(1)
+    Mongo round trips instead of O(len(team_ids)) — batches members and
+    tasks across every team into one pair of queries. `team_tasks()` calling
+    this with a single id is the common case; callers rolling up many teams
+    (department/exec dashboards) should call this directly instead of
+    looping `team_tasks()`, since each `team_tasks()` call re-runs
+    `_project_names()` and a task query on its own.
+    """
+    if not team_ids:
+        return {}
+    members = list(db.users.find(
+        {"team_id": {"$in": team_ids}, "status": "active"},
+        {"user_id": 1, "name": 1, "team_id": 1},
+    ))
     names = [m["name"] for m in members]
     ids = [m["user_id"] for m in members]
-    result = tasks_for(db, names, ids)
-    # per-member rollup for workload / performance panels
-    per_member = []
+    pnames = _project_names(db)
+    rows = [_row(t, pnames) for t in
+            db.tasks.find(_match_query(names, ids)).sort("due_date", 1)]
+
+    members_by_team: dict[str, list[dict]] = {tid: [] for tid in team_ids}
+    owner_to_team: dict[str, str] = {}
     for m in members:
-        rows = [r for r in result["rows"] if r["assignee"] in (m["name"], m["user_id"])]
-        per_member.append({"user_id": m["user_id"], "name": m["name"],
-                           **_buckets(rows)})
-    result["members"] = per_member
+        members_by_team.setdefault(m["team_id"], []).append(m)
+        owner_to_team[m["name"]] = m["team_id"]
+        owner_to_team[m["user_id"]] = m["team_id"]
+
+    rows_by_team: dict[str, list[dict]] = {tid: [] for tid in team_ids}
+    for r in rows:
+        tid = owner_to_team.get(r["assignee"])
+        if tid:
+            rows_by_team[tid].append(r)
+
+    result = {}
+    for tid in team_ids:
+        trows = rows_by_team[tid]
+        reopened = [r for r in trows
+                    if "bug" in (r["wp_type"] or "").lower()
+                    and "reopen" in (r["status"] or "").lower()]
+        per_member = []
+        for m in members_by_team.get(tid, []):
+            mrows = [r for r in trows if r["assignee"] in (m["name"], m["user_id"])]
+            per_member.append({"user_id": m["user_id"], "name": m["name"],
+                               **_buckets(mrows)})
+        result[tid] = {"rows": trows, "buckets": _buckets(trows),
+                       "reopened": reopened, "members": per_member}
     return result
 
 

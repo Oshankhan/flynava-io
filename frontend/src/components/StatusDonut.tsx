@@ -33,8 +33,8 @@ export default function StatusDonut({
 }) {
   const total = data.reduce((s, d) => s + d.count, 0);
   return (
-    <Card title={title} size="small" bordered={false} style={{ height: "100%" }}>
-      <div style={{ width: "100%", height: 260, position: "relative" }}>
+    <Card title={title} size="small" bordered={false} className="h-full">
+      <div className="relative w-full h-[260px]">
         <ResponsiveContainer>
           <PieChart>
             <Pie
@@ -53,18 +53,9 @@ export default function StatusDonut({
             <Legend wrapperStyle={{ fontSize: 12 }} />
           </PieChart>
         </ResponsiveContainer>
-        <div
-          style={{
-            position: "absolute",
-            top: "42%",
-            left: 0,
-            right: 0,
-            textAlign: "center",
-            pointerEvents: "none",
-          }}
-        >
-          <div style={{ fontSize: 22, fontWeight: 700 }}>{total}</div>
-          <div style={{ fontSize: 11, opacity: 0.65 }}>{centerLabel ?? "Total"}</div>
+        <div className="absolute inset-x-0 top-[42%] text-center pointer-events-none">
+          <div className="text-[22px] font-bold">{total}</div>
+          <div className="text-[11px] opacity-65">{centerLabel ?? "Total"}</div>
         </div>
       </div>
     </Card>

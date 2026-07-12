@@ -30,31 +30,24 @@ export default function AskIO() {
   }
 
   return (
-    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+    <div className="relative flex items-center">
       <Input.Search
         aria-label="Ask IO"
         placeholder="Ask IO…  e.g. which projects are at risk?"
         allowClear
         enterButton
-        style={{ width: 360 }}
+        className="w-[180px] sm:w-[260px] md:w-[360px]"
         onSearch={ask}
         onFocus={() => answer && setOpen(true)}
       />
       {open && (loading || answer || error) && (
         <Card
           size="small"
-          style={{
-            position: "absolute",
-            right: 0,
-            top: 44,
-            width: 440,
-            zIndex: 1050,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
-          }}
+          className="absolute right-0 top-11 w-[calc(100vw-32px)] max-w-[440px] z-[1050] shadow-lg"
           extra={
             <Text
               type="secondary"
-              style={{ cursor: "pointer" }}
+              className="cursor-pointer"
               onClick={() => setOpen(false)}
             >
               ✕
@@ -62,11 +55,11 @@ export default function AskIO() {
           }
           title="Ask IO"
         >
-          {loading && <Spin tip="Thinking…"><div style={{ height: 40 }} /></Spin>}
+          {loading && <Spin tip="Thinking…"><div className="h-10" /></Spin>}
           {error && <Empty description={error} />}
           {!loading && answer && (
             <>
-              <Paragraph strong style={{ marginBottom: 8 }}>
+              <Paragraph strong className="mb-2">
                 {answer.answer}
               </Paragraph>
               <Descriptions column={1} size="small" colon>
@@ -76,7 +69,7 @@ export default function AskIO() {
                 </Descriptions.Item>
               </Descriptions>
               {answer.evidence?.length > 0 && (
-                <ul style={{ margin: "6px 0", paddingInlineStart: 18, fontSize: 12, opacity: 0.75 }}>
+                <ul className="my-1.5 ps-[18px] text-xs opacity-75">
                   {answer.evidence.slice(0, 6).map((e, i) => (
                     <li key={i}>{e}</li>
                   ))}

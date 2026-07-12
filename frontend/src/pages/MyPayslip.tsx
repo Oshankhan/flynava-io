@@ -39,7 +39,7 @@ export default function MyPayslip() {
       <Card>
         <Flex justify="space-between" wrap="wrap" gap={12}>
           <div>
-            <Title level={4} style={{ margin: 0 }}>{me.name}</Title>
+            <Title level={4} className="m-0">{me.name}</Title>
             <Text type="secondary">
               {me.designation} · {me.department.toUpperCase()} · {me.emp_id}
             </Text>
@@ -65,7 +65,7 @@ export default function MyPayslip() {
           <Select
             size="small"
             value={month}
-            style={{ width: 130 }}
+            className="w-[130px]"
             onChange={setMonth}
             options={me.payslips.map((p) => ({ value: p.month, label: p.month }))}
           />
@@ -82,7 +82,7 @@ export default function MyPayslip() {
             <Descriptions.Item label="PF">- {inr(slip.pf)}</Descriptions.Item>
             <Descriptions.Item label="Tax (TDS)">- {inr(slip.tax)}</Descriptions.Item>
             <Descriptions.Item label="Net Pay">
-              <Text strong style={{ color: "#157f52" }}>{inr(slip.net)}</Text>
+              <Text strong className="text-io-600">{inr(slip.net)}</Text>
             </Descriptions.Item>
           </Descriptions>
         )}
@@ -94,6 +94,7 @@ export default function MyPayslip() {
           rowKey="leave_id"
           size="small"
           pagination={false}
+          scroll={{ x: true }}
           columns={[
             { title: "Type", dataIndex: "type", key: "type" },
             { title: "From", dataIndex: "from", key: "from" },

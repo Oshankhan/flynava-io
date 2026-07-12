@@ -5,8 +5,10 @@ import {
   Badge,
   Button,
   Card,
+  Drawer,
   Dropdown,
   Flex,
+  Grid,
   Layout as AntLayout,
   Menu,
   type MenuProps,
@@ -29,6 +31,7 @@ import {
   IdcardOutlined,
   LogoutOutlined,
   MailOutlined,
+  MenuOutlined,
   PlusOutlined,
   SettingOutlined,
   TeamOutlined,
@@ -39,13 +42,13 @@ import {
 import { api, type DashboardLink, type User } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useTheme } from "../lib/theme";
-import { BRAND } from "../lib/brand";
 import AskIO from "./AskIO";
 import NotificationBell from "./NotificationBell";
 import InayaChat, { INAYA_OPEN_EVENT } from "./InayaChat";
 
 const { Sider, Header, Content } = AntLayout;
 const { Text, Title } = Typography;
+const { useBreakpoint } = Grid;
 
 const ROLE_LEVEL: Record<string, number> = {
   super_admin: 4,
@@ -71,8 +74,11 @@ export default function Layout() {
   const navigate = useNavigate();
   const [dashboards, setDashboards] = useState<DashboardLink[]>([]);
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [inbox, setInbox] = useState(0);
   const lastUnread = useRef<number | null>(null);
+  const screens = useBreakpoint();
+  const isMobile = !screens.lg;
 
   const level = levelOf(user);
 
@@ -223,111 +229,110 @@ export default function Layout() {
     { icon: <DashboardOutlined />, label: "View Reports", to: dashboards[0] ? `/dashboard/${dashboards[0].key}` : "/documents" },
   ];
 
-  return (
-    <AntLayout style={{ height: "100vh" }}>
-      <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={setCollapsed}
-        theme={dark ? "dark" : "light"}
-        width={236}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          borderRight: dark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #eef0f4",
-        }}
-      >
-        <Flex vertical style={{ height: "100%" }}>
-          <Flex align="center" justify="center" gap={10} style={{ padding: "16px 10px 8px" }}>
-            <img
-              src="/flynava-logo.png"
-              alt="FlyNava Technologies"
-              style={{ height: collapsed ? 26 : 48, width: "auto", display: "block" }}
-            />
-            {!collapsed && (
-              <span
-                style={{
-                  fontSize: 22,
-                  fontWeight: 800,
-                  letterSpacing: 1,
-                  background: `linear-gradient(135deg, ${BRAND.primary} 0%, ${BRAND.primaryStrong} 100%)`,
-                  WebkitBackgroundClip: "text",
-                  backgroundClip: "text",
-                  color: "transparent",
-                  borderLeft: dark ? "2px solid rgba(255,255,255,0.15)" : "2px solid #e3e8e5",
-                  paddingLeft: 10,
-                  lineHeight: 1.1,
-                }}
-              >
-                IO
-              </span>
-            )}
-          </Flex>
-          <div style={{ flex: 1, overflowY: "auto", paddingInline: 6, paddingTop: 16 }}>
-            <Menu
-              theme={dark ? "dark" : "light"}
-              mode="inline"
-              selectedKeys={[selected]}
-              items={items}
-              onClick={({ key }) => {
-                if (key.startsWith("/")) navigate(key);
-              }}
-              style={{ background: "transparent", borderInlineEnd: 0 }}
-            />
-          </div>
-          {!collapsed && (
-            <Card
+  const showQuickLinks = isMobile || !collapsed;
+
+  const navContent = (
+    <Flex vertical className="h-full">
+      <Flex align="center" justify="center" gap={10} className="px-2.5 pt-4 pb-2">
+        <img
+          src="/flynava-logo.png"
+          alt="FlyNava Technologies"
+          className={!isMobile && collapsed ? "h-[26px] w-auto block" : "h-12 w-auto block"}
+        />
+        {(isMobile || !collapsed) && (
+          <span className="text-[22px] font-extrabold tracking-wide bg-gradient-to-br from-io-600 to-io-900 bg-clip-text text-transparent border-l-2 border-[#e3e8e5] dark:border-white/15 pl-2.5 leading-tight">
+            IO
+          </span>
+        )}
+      </Flex>
+      <div className="flex-1 overflow-y-auto px-1.5 pt-4">
+        <Menu
+          theme={dark ? "dark" : "light"}
+          mode="inline"
+          selectedKeys={[selected]}
+          items={items}
+          onClick={({ key }) => {
+            if (key.startsWith("/")) navigate(key);
+            setMobileNavOpen(false);
+          }}
+          className="bg-transparent border-e-0"
+        />
+      </div>
+      {showQuickLinks && (
+        <Card
+          size="small"
+          title={<Text type="secondary" className="text-xs font-semibold">Quick Links</Text>}
+          className="m-2.5 bg-[#f7f8fa] dark:bg-white/[0.04] border-none"
+          classNames={{ body: "px-2 pb-2 pt-1" }}
+        >
+          {quick.map((q) => (
+            <Button
+              key={q.label}
+              type="text"
               size="small"
-              title={<Text type="secondary" style={{ fontSize: 12, fontWeight: 600 }}>Quick Links</Text>}
-              style={{
-                margin: 10,
-                background: dark ? "rgba(255,255,255,0.04)" : "#f7f8fa",
-                border: "none",
+              icon={q.icon}
+              onClick={() => {
+                setMobileNavOpen(false);
+                if (q.to) navigate(q.to);
+                else window.dispatchEvent(new Event(INAYA_OPEN_EVENT));
               }}
-              styles={{ body: { padding: "4px 8px 8px" } }}
+              className="flex w-full justify-start"
             >
-              {quick.map((q) => (
-                <Button
-                  key={q.label}
-                  type="text"
-                  size="small"
-                  icon={q.icon}
-                  onClick={() =>
-                    q.to ? navigate(q.to) : window.dispatchEvent(new Event(INAYA_OPEN_EVENT))
-                  }
-                  style={{
-                    display: "flex",
-                    width: "100%",
-                    justifyContent: "flex-start",
-                  }}
-                >
-                  {q.label}
-                </Button>
-              ))}
-            </Card>
-          )}
-        </Flex>
-      </Sider>
+              {q.label}
+            </Button>
+          ))}
+        </Card>
+      )}
+    </Flex>
+  );
+
+  return (
+    <AntLayout className="h-screen">
+      {isMobile ? (
+        <Drawer
+          placement="left"
+          open={mobileNavOpen}
+          onClose={() => setMobileNavOpen(false)}
+          closable={false}
+          width={236}
+          styles={{ body: { padding: 0 } }}
+        >
+          {navContent}
+        </Drawer>
+      ) : (
+        <Sider
+          collapsible
+          collapsed={collapsed}
+          onCollapse={setCollapsed}
+          theme={dark ? "dark" : "light"}
+          width={236}
+          className="flex flex-col border-r border-[#eef0f4] dark:border-white/10"
+        >
+          {navContent}
+        </Sider>
+      )}
 
       <AntLayout>
-        <Header
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            height: 64,
-            lineHeight: "normal",
-            paddingInline: 24,
-            borderBottom: "1px solid rgba(0,0,0,0.06)",
-          }}
-        >
-          <Title level={4} style={{ margin: 0, color: BRAND.primary }}>
-            {title}
-          </Title>
-          <Flex align="center" gap={16} style={{ height: "100%" }}>
-            <AskIO />
+        <Header className="flex items-center justify-between h-16 [line-height:normal] px-3 sm:px-6 border-b border-black/[0.06] dark:border-white/10 gap-3">
+          <Flex align="center" gap={12} className="min-w-0">
+            {isMobile && (
+              <Button
+                type="text"
+                icon={<MenuOutlined />}
+                onClick={() => setMobileNavOpen(true)}
+                aria-label="Open navigation"
+              />
+            )}
+            <Title level={4} className="m-0 shrink-0 text-io-600">
+              {title}
+            </Title>
+          </Flex>
+          <Flex align="center" gap={16} className="h-full overflow-x-auto">
+            <div className="hidden sm:block">
+              <AskIO />
+            </div>
             <NotificationBell />
-            <Flex align="center" gap={6}>
+            <Flex align="center" gap={6} className="hidden sm:flex">
               <BulbOutlined />
               <Switch
                 size="small"
@@ -342,7 +347,7 @@ export default function Layout() {
                   {
                     key: "role",
                     label: (
-                      <Text type="secondary" style={{ textTransform: "capitalize" }}>
+                      <Text type="secondary" className="capitalize">
                         {user.designation ?? user.role?.replace("_", " ")}
                       </Text>
                     ),
@@ -358,13 +363,13 @@ export default function Layout() {
                 ],
               }}
             >
-              <Button type="text" style={{ height: "auto", padding: 4 }}>
+              <Button type="text" className="h-auto p-1">
                 <Flex align="center" gap={8}>
-                  <Avatar size="small" style={{ background: BRAND.primary }} icon={<UserOutlined />} />
-                  <Flex vertical align="flex-start" style={{ lineHeight: 1.2 }}>
+                  <Avatar size="small" className="bg-io-600" icon={<UserOutlined />} />
+                  <Flex vertical align="flex-start" className="leading-tight hidden sm:flex">
                     <span>{user.name}</span>
                     {user.designation && (
-                      <Text type="secondary" style={{ fontSize: 11 }}>
+                      <Text type="secondary" className="text-[11px]">
                         {user.designation}
                       </Text>
                     )}
@@ -374,7 +379,7 @@ export default function Layout() {
             </Dropdown>
           </Flex>
         </Header>
-        <Content style={{ padding: "20px 24px 24px", overflowY: "auto" }}>
+        <Content className="p-3 sm:p-5 sm:pt-5 overflow-y-auto">
           <Outlet />
         </Content>
       </AntLayout>

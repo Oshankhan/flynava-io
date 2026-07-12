@@ -52,8 +52,9 @@ function Directory() {
         rowKey="emp_id"
         size="small"
         pagination={{ pageSize: 12 }}
+        scroll={{ x: true }}
         onRow={(r) => ({
-          style: { cursor: "pointer" },
+          className: "cursor-pointer",
           onClick: () => api.hrEmployee(r.emp_id).then(setDetail),
         })}
         columns={[
@@ -197,7 +198,7 @@ function Attendance() {
 
       {preview.length > 0 && (
         <Card size="small" title={`2 · Parsed ${preview.length} record(s)`}>
-          <Space wrap style={{ marginBottom: 12 }}>
+          <Space wrap className="mb-3">
             {Object.entries(summary).map(([s, n]) => (
               <Tag key={s} color={STATUS_COLOR[s] ?? "default"}>
                 {s}: {n}
@@ -209,6 +210,7 @@ function Attendance() {
             rowKey={(r) => `${r.emp_code}-${r.name}-${r.date}`}
             size="small"
             pagination={{ pageSize: 8 }}
+            scroll={{ x: true }}
             columns={[
               { title: "Employee", dataIndex: "name", key: "name" },
               { title: "Date", dataIndex: "date", key: "date" },
@@ -236,7 +238,7 @@ function Attendance() {
             />
             <Select
               mode="tags"
-              style={{ width: "100%" }}
+              className="w-full"
               placeholder="recipient emails — type and press Enter"
               value={recipients}
               onChange={setRecipients}
@@ -261,7 +263,7 @@ function Attendance() {
       >
         {emailHtml && (
           <div
-            style={{ border: "1px solid #eee", padding: 16, borderRadius: 8 }}
+            className="border border-[#eee] p-4 rounded-lg"
             dangerouslySetInnerHTML={{ __html: emailHtml }}
           />
         )}
@@ -276,7 +278,7 @@ export default function People() {
       <Alert
         type="info"
         showIcon
-        style={{ marginBottom: 16 }}
+        className="mb-4"
         message="People & Attendance ERP — employee directory, payslips, and biometric attendance upload → email."
       />
       <Tabs

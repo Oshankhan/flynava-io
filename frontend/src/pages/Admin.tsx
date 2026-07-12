@@ -101,7 +101,7 @@ export default function Admin() {
   }
 
   const usersTab = (
-    <Space direction="vertical" size={16} style={{ width: "100%" }}>
+    <Space direction="vertical" size={16} className="w-full">
       <Card size="small" title="Create user">
         <Form form={form} layout="inline" onFinish={createUser} initialValues={{ role: "employee" }}>
           <Form.Item name="name" rules={[{ required: true }]}>
@@ -111,7 +111,7 @@ export default function Admin() {
             <Input placeholder="Email" />
           </Form.Item>
           <Form.Item name="role">
-            <Select style={{ width: 140 }} options={ROLES.map((r) => ({ value: r, label: r }))} />
+            <Select className="w-[140px]" options={ROLES.map((r) => ({ value: r, label: r }))} />
           </Form.Item>
           <Form.Item name="password" rules={[{ required: true }]}>
             <Input.Password placeholder="Password" />
@@ -126,6 +126,7 @@ export default function Admin() {
         rowKey="user_id"
         size="small"
         pagination={false}
+        scroll={{ x: true }}
         columns={[
           { title: "Name", dataIndex: "name", key: "name" },
           { title: "Email", dataIndex: "email", key: "email" },
@@ -136,7 +137,7 @@ export default function Admin() {
               <Select
                 size="small"
                 value={u.role}
-                style={{ width: 130 }}
+                className="w-[130px]"
                 onChange={(v) => changeRole(u, v)}
                 options={ROLES.map((r) => ({ value: r, label: r }))}
               />
@@ -190,6 +191,7 @@ export default function Admin() {
               rowKey="kpi_id"
               size="small"
               pagination={{ pageSize: 10 }}
+              scroll={{ x: true }}
               columns={[
                 { title: "KPI", dataIndex: "name", key: "name" },
                 { title: "Module", dataIndex: "module", key: "module" },
@@ -197,7 +199,7 @@ export default function Admin() {
                   title: "Formula",
                   dataIndex: "formula",
                   key: "formula",
-                  render: (f: string) => <code style={{ fontSize: 12 }}>{f}</code>,
+                  render: (f: string) => <code className="text-xs">{f}</code>,
                 },
                 { title: "Target", dataIndex: "target", key: "target", render: (t) => t ?? "—" },
               ]}
@@ -216,8 +218,8 @@ export default function Admin() {
                     dataSource={audit.slice(0, 20)}
                     renderItem={(a) => (
                       <List.Item>
-                        <code style={{ fontSize: 12 }}>{a.action}</code>
-                        <Text type="secondary" style={{ fontSize: 12 }}>
+                        <code className="text-xs">{a.action}</code>
+                        <Text type="secondary" className="text-xs">
                           {a.actor_id ?? "system"} · {new Date(a.created_at).toLocaleString()}
                         </Text>
                       </List.Item>
@@ -232,7 +234,7 @@ export default function Admin() {
                     dataSource={log.slice(0, 20)}
                     renderItem={(n) => (
                       <List.Item>
-                        <Text style={{ fontSize: 13 }}>{n.title}</Text>
+                        <Text className="text-[13px]">{n.title}</Text>
                         <Tag color={n.status === "unread" ? "processing" : "default"}>
                           {n.status}
                         </Tag>

@@ -24,7 +24,7 @@ export default function BugDonut({ data }: { data: BugSlice[] }) {
       size="small"
       bordered={false}
     >
-      <div style={{ width: "100%", height: 260 }}>
+      <div className="w-full h-[260px]">
         <ResponsiveContainer>
           <PieChart>
             <Pie

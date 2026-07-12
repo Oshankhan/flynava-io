@@ -14,7 +14,7 @@ import { BRAND } from "../lib/brand";
 export default function TrendChart({ series }: { series: KpiSeries }) {
   return (
     <Card title={`${series.name} · 12-month trend`} size="small" bordered={false}>
-      <div style={{ width: "100%", height: 180 }}>
+      <div className="w-full h-[180px]">
         <ResponsiveContainer>
           <AreaChart data={series.points} margin={{ left: 8, right: 8, top: 8 }}>
             <defs>

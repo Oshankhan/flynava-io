@@ -33,7 +33,6 @@ import {
   type IoRequest,
   type WorkspaceData,
 } from "../lib/api";
-import { BRAND } from "../lib/brand";
 import KpiCard from "../components/KpiCard";
 
 const { Text, Title } = Typography;
@@ -49,27 +48,34 @@ function pct(part: number, total: number): string {
   return total > 0 ? `${Math.round((part / total) * 100)}%` : "0%";
 }
 
+const TILE_TINT = {
+  primary: "bg-io-600/15 text-io-600",
+  amber: "bg-amber-500/15 text-amber-500",
+  sky: "bg-sky-400/15 text-sky-400",
+  red: "bg-red-500/15 text-red-500",
+} as const;
+
 function StatTile({
   icon,
   label,
   value,
   sub,
-  color,
+  tint,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number;
   sub: string;
-  color: string;
+  tint: keyof typeof TILE_TINT;
 }) {
   return (
-    <Card size="small" bordered={false} style={{ height: "100%" }}>
+    <Card size="small" bordered={false} className="h-full">
       <Flex gap={12} align="center">
-        <Avatar shape="square" size={42} style={{ background: `${color}22`, color }} icon={icon} />
+        <Avatar shape="square" size={42} className={TILE_TINT[tint]} icon={icon} />
         <div>
-          <Text type="secondary" style={{ fontSize: 12 }}>{label}</Text>
-          <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.1 }}>{value}</div>
-          <Text type="secondary" style={{ fontSize: 11 }}>{sub}</Text>
+          <Text type="secondary" className="text-xs">{label}</Text>
+          <div className="text-2xl font-bold leading-tight">{value}</div>
+          <Text type="secondary" className="text-[11px]">{sub}</Text>
         </div>
       </Flex>
     </Card>
@@ -79,7 +85,7 @@ function StatTile({
 function loadColor(openPct: number): string {
   if (openPct > 80) return "#ef4444";
   if (openPct > 50) return "#f59e0b";
-  return BRAND.primary;
+  return "#157f52";
 }
 
 function dayLabel(iso: string): string {
@@ -125,7 +131,7 @@ export default function DeptWorkspace() {
   if (error) return <Alert type="error" message={error} showIcon />;
   if (!ws)
     return (
-      <Flex justify="center" style={{ paddingTop: 80 }}>
+      <Flex justify="center" className="pt-20">
         <Spin />
       </Flex>
     );
@@ -155,9 +161,9 @@ export default function DeptWorkspace() {
       key: "name",
       render: (_: unknown, t: DeptTeamSummary) => (
         <div>
-          <Text strong style={{ fontSize: 13 }}>{t.name}</Text>
+          <Text strong className="text-[13px]">{t.name}</Text>
           <div>
-            <Text type="secondary" style={{ fontSize: 11 }}>
+            <Text type="secondary" className="text-[11px]">
               {t.lead_name ?? "No lead"} · {t.member_count} member{t.member_count === 1 ? "" : "s"}
             </Text>
           </div>
@@ -174,10 +180,10 @@ export default function DeptWorkspace() {
             percent={t.buckets.total ? Math.round((t.buckets.completed / t.buckets.total) * 100) : 0}
             size="small"
             showInfo={false}
-            strokeColor={BRAND.primary}
-            style={{ width: 80 }}
+            strokeColor="#157f52"
+            className="w-20"
           />
-          <Text style={{ fontSize: 12 }}>{t.buckets.completed} / {t.buckets.total}</Text>
+          <Text className="text-xs">{t.buckets.completed} / {t.buckets.total}</Text>
         </Flex>
       ),
     },
@@ -200,9 +206,9 @@ export default function DeptWorkspace() {
   return (
     <div>
       {/* Greeting */}
-      <Flex justify="space-between" align="center" wrap gap={12} style={{ marginBottom: 16 }}>
+      <Flex justify="space-between" align="center" wrap gap={12} className="mb-4">
         <div>
-          <Title level={3} style={{ margin: 0 }}>
+          <Title level={3} className="m-0">
             {greeting()}, {ws.user.name.split(" ")[0]}!
           </Title>
           <Text type="secondary">
@@ -221,7 +227,7 @@ export default function DeptWorkspace() {
                 year: "numeric",
               })}
             </Text>
-            <Text type="secondary" style={{ fontSize: 12 }}>
+            <Text type="secondary" className="text-xs">
               <ClockCircleOutlined />{" "}
               {new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
             </Text>
@@ -233,29 +239,29 @@ export default function DeptWorkspace() {
       <Row gutter={[16, 16]}>
         <Col flex="1 1 160px">
           <StatTile icon={<ProfileOutlined />} label="Dept Tasks" value={b.total}
-            sub="Across all teams" color={BRAND.primary} />
+            sub="Across all teams" tint="primary" />
         </Col>
         <Col flex="1 1 160px">
           <StatTile icon={<CheckCircleOutlined />} label="Completed" value={b.completed}
-            sub={pct(b.completed, b.total)} color="#157f52" />
+            sub={pct(b.completed, b.total)} tint="primary" />
         </Col>
         <Col flex="1 1 160px">
           <StatTile icon={<SyncOutlined />} label="In Progress" value={b.in_progress}
-            sub={pct(b.in_progress, b.total)} color="#f59e0b" />
+            sub={pct(b.in_progress, b.total)} tint="amber" />
         </Col>
         <Col flex="1 1 160px">
           <StatTile icon={<ClockCircleOutlined />} label="Pending" value={b.pending}
-            sub={pct(b.pending, b.total)} color="#7cc8e0" />
+            sub={pct(b.pending, b.total)} tint="sky" />
         </Col>
         <Col flex="1 1 160px">
           <StatTile icon={<ExclamationCircleOutlined />} label="Overdue" value={b.overdue}
-            sub={pct(b.overdue, b.total)} color="#ef4444" />
+            sub={pct(b.overdue, b.total)} tint="red" />
         </Col>
       </Row>
 
       {/* Dept KPI strip */}
       {dept && dept.dept_kpis.length > 0 && (
-        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Row gutter={[16, 16]} className="mt-4">
           {dept.dept_kpis.slice(0, 4).map((k) => (
             <Col key={k.kpi_id} xs={12} md={6}>
               <KpiCard kpi={k} />
@@ -264,7 +270,7 @@ export default function DeptWorkspace() {
         </Row>
       )}
 
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+      <Row gutter={[16, 16]} className="mt-4">
         {/* Main column */}
         <Col xs={24} xl={16}>
           <Row gutter={[16, 16]}>
@@ -279,6 +285,7 @@ export default function DeptWorkspace() {
                     dataSource={teams}
                     columns={teamCols}
                     pagination={false}
+                    scroll={{ x: true }}
                   />
                 )}
               </Card>
@@ -300,17 +307,17 @@ export default function DeptWorkspace() {
                       <List.Item>
                         <List.Item.Meta
                           avatar={
-                            <Avatar size="small" style={{ background: BRAND.primary }}>
+                            <Avatar size="small" className="bg-io-600">
                               {a.actor_name?.[0] ?? "?"}
                             </Avatar>
                           }
                           title={
-                            <Text style={{ fontSize: 13 }}>
+                            <Text className="text-[13px]">
                               {a.actor_name} {a.text}
                             </Text>
                           }
                           description={
-                            <Text type="secondary" style={{ fontSize: 11 }}>
+                            <Text type="secondary" className="text-[11px]">
                               {a.at ? new Date(a.at).toLocaleString() : ""}
                             </Text>
                           }
@@ -327,29 +334,21 @@ export default function DeptWorkspace() {
                 bordered={false}
                 title="My Calendar"
                 extra={<Button type="link" size="small" onClick={() => navigate("/calendar")}>View Calendar</Button>}
-                style={{ height: "100%" }}
+                className="h-full"
               >
                 {ws.meetings.length === 0 ? (
                   <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No upcoming meetings" />
                 ) : (
                   Object.entries(meetingDays).map(([day, ms]) => (
-                    <div key={day} style={{ marginBottom: 10 }}>
-                      <Text strong style={{ fontSize: 12 }}>{day}</Text>
+                    <div key={day} className="mb-2.5">
+                      <Text strong className="text-xs">{day}</Text>
                       {ms.map((m) => (
-                        <Flex key={m.meeting_id} gap={8} align="center" style={{ padding: "6px 0" }}>
-                          <Text type="secondary" style={{ fontSize: 12, width: 62 }}>
+                        <Flex key={m.meeting_id} gap={8} align="center" className="py-1.5">
+                          <Text type="secondary" className="text-xs w-[62px]">
                             {m.start.slice(11, 16)}
                           </Text>
-                          <span
-                            style={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: 4,
-                              background: BRAND.primary,
-                              flexShrink: 0,
-                            }}
-                          />
-                          <Text style={{ fontSize: 13 }}>{m.title}</Text>
+                          <span className="w-2 h-2 rounded-full bg-io-600 shrink-0" />
+                          <Text className="text-[13px]">{m.title}</Text>
                         </Flex>
                       ))}
                     </div>
@@ -370,7 +369,7 @@ export default function DeptWorkspace() {
               extra={<Button type="link" size="small" onClick={() => navigate("/approvals")}>View All</Button>}
             >
               {inbox.length === 0 ? (
-                <Text type="secondary" style={{ fontSize: 12 }}>
+                <Text type="secondary" className="text-xs">
                   Nothing waiting on you. 🎉
                 </Text>
               ) : (
@@ -379,14 +378,14 @@ export default function DeptWorkspace() {
                   dataSource={inbox.slice(0, 5)}
                   renderItem={(r) => (
                     <List.Item
-                      style={{ cursor: "pointer" }}
+                      className="cursor-pointer"
                       onClick={() => navigate("/approvals")}
                       actions={[<Tag key="t" color="processing">pending</Tag>]}
                     >
                       <List.Item.Meta
-                        title={<Text style={{ fontSize: 13 }}>{r.title}</Text>}
+                        title={<Text className="text-[13px]">{r.title}</Text>}
                         description={
-                          <Text type="secondary" style={{ fontSize: 11 }}>
+                          <Text type="secondary" className="text-[11px]">
                             {TYPE_LABEL[r.type] ?? r.type} · {r.requester_name}
                           </Text>
                         }
@@ -402,12 +401,12 @@ export default function DeptWorkspace() {
               bordered={false}
               title={
                 <Flex align="center" gap={6}>
-                  <UserAddOutlined style={{ color: BRAND.primary }} /> Open Positions
+                  <UserAddOutlined className="text-io-600" /> Open Positions
                 </Flex>
               }
             >
               {!dept || dept.positions.length === 0 ? (
-                <Text type="secondary" style={{ fontSize: 12 }}>No open roles in this department.</Text>
+                <Text type="secondary" className="text-xs">No open roles in this department.</Text>
               ) : (
                 <List
                   size="small"
@@ -421,9 +420,9 @@ export default function DeptWorkspace() {
                       ]}
                     >
                       <List.Item.Meta
-                        title={<Text style={{ fontSize: 13 }}>{p.title}</Text>}
+                        title={<Text className="text-[13px]">{p.title}</Text>}
                         description={
-                          <Text type="secondary" style={{ fontSize: 11 }}>
+                          <Text type="secondary" className="text-[11px]">
                             {p.candidates} candidate{p.candidates === 1 ? "" : "s"}
                           </Text>
                         }
@@ -436,7 +435,7 @@ export default function DeptWorkspace() {
 
             <Card size="small" bordered={false} title="Team Workload">
               {teams.length === 0 ? (
-                <Text type="secondary" style={{ fontSize: 12 }}>No teams</Text>
+                <Text type="secondary" className="text-xs">No teams</Text>
               ) : (
                 <>
                   {teams.map((t) => {
@@ -444,21 +443,21 @@ export default function DeptWorkspace() {
                       ? Math.round(((t.buckets.total - t.buckets.completed) / t.buckets.total) * 100)
                       : 0;
                     return (
-                      <Flex key={t.team_id} align="center" gap={10} style={{ marginBottom: 8 }}>
-                        <Text style={{ fontSize: 12, width: 96 }} ellipsis>{t.name}</Text>
+                      <Flex key={t.team_id} align="center" gap={10} className="mb-2">
+                        <Text className="text-xs w-24" ellipsis>{t.name}</Text>
                         <Progress
                           percent={openPct}
                           size="small"
                           strokeColor={loadColor(openPct)}
-                          style={{ flex: 1 }}
+                          className="flex-1"
                         />
                       </Flex>
                     );
                   })}
-                  <Flex gap={12} style={{ marginTop: 6 }}>
-                    <Text type="secondary" style={{ fontSize: 11 }}>● 0–50% Low</Text>
-                    <Text type="secondary" style={{ fontSize: 11, color: "#f59e0b" }}>● 51–80% Medium</Text>
-                    <Text type="secondary" style={{ fontSize: 11, color: "#ef4444" }}>● 81–100% High</Text>
+                  <Flex gap={12} wrap className="mt-1.5">
+                    <Text type="secondary" className="text-[11px]">● 0–50% Low</Text>
+                    <Text type="secondary" className="text-[11px] text-amber-500">● 51–80% Medium</Text>
+                    <Text type="secondary" className="text-[11px] text-red-500">● 81–100% High</Text>
                   </Flex>
                 </>
               )}
