@@ -427,7 +427,7 @@ export default function ProjectDrawer({
               )}
               <div>
                 <Flex align="center" gap={8}>
-                  <Title level={5} className="m-0">({data.code}) {data.name}</Title>
+                  <Title level={4} className="m-0">{data.name} ({data.code})</Title>
                   <Tag color={STATUS_TAG[data.status] ?? "default"} className="capitalize">
                     {data.status.replace("_", " ")}
                   </Tag>

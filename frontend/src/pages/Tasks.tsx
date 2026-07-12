@@ -239,7 +239,7 @@ function ProjectsTab({ canCreate }: { canCreate: boolean }) {
                       </Avatar>
                     )}
                     <div className="min-w-0 flex-1">
-                      <Text strong className="text-[15px] block">({p.code}) {p.name}</Text>
+                      <Text strong className="text-lg block">{p.name} ({p.code})</Text>
                       <Flex align="center" gap={8} wrap className="mt-1">
                         <Tag color={STATUS_TAG[p.status] ?? "default"} className="capitalize m-0">
                           {p.status.replace("_", " ")}
