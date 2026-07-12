@@ -4,14 +4,14 @@ from __future__ import annotations
 
 def test_analytics_requires_l4_role(client, auth_header):
     denied = client.get("/api/v1/analytics/summary",
-                        headers=auth_header("manager@flynava.ai"))
+                        headers=auth_header("harsha.varlani@flynava.ai"))
     assert denied.status_code == 403
     ok = client.get("/api/v1/analytics/summary", headers=auth_header("admin@flynava.ai"))
     assert ok.status_code == 200
 
 
 def test_analytics_shape_and_counts(client, auth_header, db):
-    h_emp = auth_header("employee@flynava.ai")
+    h_emp = auth_header("manas.ankarla@flynava.ai")
     h_admin = auth_header("admin@flynava.ai")
 
     client.post("/api/v1/tasks", headers=h_emp, json={"title": "Analytics probe"})
@@ -25,7 +25,7 @@ def test_analytics_shape_and_counts(client, auth_header, db):
 
     assert body["total_actions"] > 0
     assert any(row["action"] == "api_call" for row in body["by_action"])
-    assert any(a["user_id"] == "u_emp" for a in body["top_actors"])
+    assert any(a["user_id"] == "u_manas" for a in body["top_actors"])
     # AuditMiddleware attaches meta.department for resolved actors (Evan -> eng)
     assert any(d["department"] == "eng" for d in body["by_department"])
     today = db.audit_logs.find_one(sort=[("created_at", -1)])["created_at"].strftime("%Y-%m-%d")

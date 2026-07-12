@@ -22,6 +22,7 @@ import MyTeam from "./pages/MyTeam";
 import Analytics from "./pages/Analytics";
 import OrgChart from "./pages/OrgChart";
 import MemberDetail from "./pages/MemberDetail";
+import ProjectDetail from "./pages/ProjectDetail";
 
 function Shell() {
   const { dark } = useTheme();
@@ -59,6 +60,7 @@ function Shell() {
               <Route path="/workspace" element={<Workspace />} />
               <Route path="/my-team" element={<MyTeam />} />
               <Route path="/tasks" element={<Tasks />} />
+              <Route path="/projects/:projectId" element={<ProjectDetail />} />
               <Route path="/approvals" element={<Approvals />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/knowledge" element={<KnowledgeBase />} />
@@ -68,7 +70,7 @@ function Shell() {
               <Route path="/documents" element={<Documents />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/people" element={<People />} />
-              <Route path="/people/:userId" element={<MemberDetail />} />
+              <Route path="/member/:userId" element={<MemberDetail />} />
               <Route path="/my-payslip" element={<MyPayslip />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/analytics" element={<Analytics />} />

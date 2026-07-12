@@ -1,161 +1,87 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Alert,
+  Avatar,
   Button,
   Card,
-  DatePicker,
+  Col,
+  Empty,
   Flex,
   Form,
   Input,
   message,
   Modal,
+  Progress,
+  Row,
   Select,
   Spin,
-  Table,
   Tag,
+  Tooltip,
   Typography,
 } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
-import {
-  api,
-  ApiError,
-  type MyTasks,
-  type TaskRow,
-  type TeamTasks,
-  type UserLite,
-} from "../lib/api";
+import { BugOutlined, PlusOutlined } from "@ant-design/icons";
+import { api, ApiError, type ProjectSummary, type TeamInfo, type UserLite } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { levelOf } from "../components/Layout";
 
 const { Text } = Typography;
 
-const BUCKET_TAG: Record<string, string> = {
-  completed: "success",
-  in_progress: "processing",
-  pending: "default",
-  overdue: "error",
+const STATUS_TAG: Record<string, string> = {
+  pipeline: "default",
+  active: "processing",
+  maintenance: "success",
 };
 
 export default function Tasks() {
   const { user } = useAuth();
   const level = levelOf(user);
-  const isLead = level >= 2;
-  const [data, setData] = useState<MyTasks | TeamTasks | null>(null);
+  const canCreateProject = level >= 3;
+  const navigate = useNavigate();
+
+  const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [params, setParams] = useSearchParams();
-  const [open, setOpen] = useState(params.get("new") === "1");
+  const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [teams, setTeams] = useState<TeamInfo[]>([]);
   const [people, setPeople] = useState<UserLite[]>([]);
   const [form] = Form.useForm();
 
   const load = useCallback(() => {
-    const fetcher = isLead ? api.teamTasks() : api.myTasks();
-    fetcher
-      .then(setData)
-      .catch((e) => setError(e instanceof ApiError ? e.message : "Failed to load tasks"));
-  }, [isLead]);
+    api
+      .projects()
+      .then(setProjects)
+      .catch((e) => setError(e instanceof ApiError ? e.message : "Failed to load projects"));
+  }, []);
 
   useEffect(load, [load]);
 
   useEffect(() => {
-    if (open && isLead)
+    if (open) {
+      api.orgTeams().then(setTeams).catch(() => setTeams([]));
       api.orgUsers().then(setPeople).catch(() => setPeople([]));
-  }, [open, isLead]);
-
-  const columns = useMemo(
-    () => [
-      {
-        title: "Task",
-        dataIndex: "title",
-        key: "title",
-        ellipsis: true,
-        render: (t: string, r: TaskRow) => (
-          <div>
-            <Text className="text-[13px]">{t}</Text>
-            {r.project && (
-              <div>
-                <Text type="secondary" className="text-[11px]">{r.project}</Text>
-              </div>
-            )}
-          </div>
-        ),
-      },
-      ...(isLead
-        ? [{
-            title: "Assignee",
-            dataIndex: "assignee",
-            key: "assignee",
-            width: 150,
-            ellipsis: true,
-          }]
-        : []),
-      {
-        title: "Type",
-        dataIndex: "wp_type",
-        key: "type",
-        width: 90,
-        render: (t: string | null) => t ?? "—",
-      },
-      {
-        title: "Status",
-        key: "status",
-        width: 130,
-        filters: [
-          { text: "Completed", value: "completed" },
-          { text: "In Progress", value: "in_progress" },
-          { text: "Pending", value: "pending" },
-          { text: "Overdue", value: "overdue" },
-        ],
-        onFilter: (v: unknown, r: TaskRow) => r.bucket === v,
-        render: (_: unknown, r: TaskRow) => (
-          <Tag color={BUCKET_TAG[r.bucket]}>{r.status ?? "—"}</Tag>
-        ),
-      },
-      {
-        title: "Priority",
-        dataIndex: "priority",
-        key: "priority",
-        width: 100,
-        render: (p: string | null) =>
-          p ? <Tag color={/high|immediate/i.test(p) ? "red" : undefined}>{p}</Tag> : "—",
-      },
-      {
-        title: "Due",
-        dataIndex: "due_date",
-        key: "due",
-        width: 110,
-        render: (d: string | null, r: TaskRow) => (
-          <Text type={r.bucket === "overdue" ? "danger" : "secondary"} className="text-xs">
-            {d ?? "—"}
-          </Text>
-        ),
-      },
-    ],
-    [isLead]
-  );
+    }
+  }, [open]);
 
   async function create(values: {
-    title: string;
-    description?: string;
-    assignee_id?: string;
-    due_date?: { format: (f: string) => string } | null;
-    priority?: string;
+    code: string;
+    name: string;
+    client?: string;
+    team_ids?: string[];
+    member_ids?: string[];
   }) {
     setSaving(true);
     try {
-      await api.createTask({
-        title: values.title,
-        description: values.description ?? "",
-        assignee_id: values.assignee_id ?? "",
-        due_date: values.due_date ? values.due_date.format("YYYY-MM-DD") : null,
-        priority: values.priority ?? "Normal",
+      await api.createProject({
+        code: values.code,
+        name: values.name,
+        client: values.client ?? "",
+        team_ids: values.team_ids ?? [],
+        member_ids: values.member_ids ?? [],
       });
-      message.success("Task created");
+      message.success("Project created");
       setOpen(false);
       form.resetFields();
-      params.delete("new");
-      setParams(params, { replace: true });
       load();
     } catch (e) {
       message.error(e instanceof ApiError ? e.message : "Create failed");
@@ -165,89 +91,134 @@ export default function Tasks() {
   }
 
   if (error) return <Alert type="error" message={error} showIcon />;
-  if (!data)
+  if (!projects)
     return (
       <Flex justify="center" className="pt-20">
         <Spin />
       </Flex>
     );
 
-  const b = data.buckets;
-
   return (
     <div>
-      <Flex justify="space-between" align="center" className="mb-3" wrap gap={8}>
-        <Flex gap={8} wrap>
-          <Tag>{b.total} total</Tag>
-          <Tag color="success">{b.completed} completed</Tag>
-          <Tag color="processing">{b.in_progress} in progress</Tag>
-          <Tag>{b.pending} pending</Tag>
-          <Tag color="error">{b.overdue} overdue</Tag>
-          {data.reopened.length > 0 && (
-            <Tag color="orange">{data.reopened.length} reopened bugs</Tag>
-          )}
-        </Flex>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
-          Create Task
-        </Button>
+      <Flex justify="space-between" align="center" className="mb-4" wrap gap={8}>
+        <Text type="secondary">
+          {projects.length} project{projects.length === 1 ? "" : "s"} — organized by client
+          engagement, each moving through its own stage pipeline.
+        </Text>
+        {canCreateProject && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
+            Add Project
+          </Button>
+        )}
       </Flex>
 
-      <Card size="small" bordered={false}>
-        <Table
-          size="small"
-          rowKey="task_id"
-          dataSource={data.rows}
-          columns={columns}
-          pagination={{ pageSize: 15, showSizeChanger: false }}
-          scroll={{ x: true }}
-        />
-      </Card>
+      {projects.length === 0 ? (
+        <Card size="small" bordered={false}>
+          <Empty description="No projects yet." />
+        </Card>
+      ) : (
+        <Row gutter={[16, 16]}>
+          {projects.map((p) => (
+            <Col key={p.project_id} xs={24} md={12} xl={8}>
+              <Card
+                size="small"
+                hoverable
+                className="h-full"
+                onClick={() => navigate(`/projects/${p.project_id}`)}
+              >
+                <Flex justify="space-between" align="start" className="mb-1">
+                  <div className="min-w-0">
+                    <Flex align="center" gap={8}>
+                      <Tag color="blue">{p.code}</Tag>
+                      <Text strong ellipsis>{p.name}</Text>
+                    </Flex>
+                    <Text type="secondary" className="text-[12px]">{p.client}</Text>
+                  </div>
+                  <Tag color={STATUS_TAG[p.status] ?? "default"} className="capitalize shrink-0">
+                    {p.status}
+                  </Tag>
+                </Flex>
+
+                <div className="mt-2 mb-1">
+                  <Flex justify="space-between">
+                    <Text type="secondary" className="text-[12px]">
+                      {p.current_stage_name ?? p.current_stage}
+                    </Text>
+                    <Text type="secondary" className="text-[12px]">{p.progress}%</Text>
+                  </Flex>
+                  <Progress percent={p.progress} showInfo={false} size="small" />
+                </div>
+
+                <Flex justify="space-between" align="center" className="mt-3">
+                  <Avatar.Group max={{ count: 5 }} size="small">
+                    {p.members.map((m) => (
+                      <Tooltip key={m.user_id} title={m.name}>
+                        <Avatar className="bg-io-600">{m.name[0]}</Avatar>
+                      </Tooltip>
+                    ))}
+                  </Avatar.Group>
+                  <Flex gap={6}>
+                    {p.bug_count > 0 && (
+                      <Tag icon={<BugOutlined />} color="red">{p.bug_count}</Tag>
+                    )}
+                    <Tag>{p.task_count} tasks</Tag>
+                  </Flex>
+                </Flex>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      )}
 
       <Modal
-        title="Create Task"
+        title="Add Project"
         open={open}
-        onCancel={() => {
-          setOpen(false);
-          params.delete("new");
-          setParams(params, { replace: true });
-        }}
+        onCancel={() => setOpen(false)}
         onOk={() => form.submit()}
         confirmLoading={saving}
         okText="Create"
       >
         <Form form={form} layout="vertical" onFinish={create}>
-          <Form.Item name="title" label="Title" rules={[{ required: true, message: "Title required" }]}>
-            <Input placeholder="What needs to be done?" maxLength={300} />
-          </Form.Item>
-          <Form.Item name="description" label="Description">
-            <Input.TextArea rows={3} />
-          </Form.Item>
-          {isLead && (
-            <Form.Item name="assignee_id" label="Assign to" extra="Leave empty to assign to yourself">
-              <Select
-                allowClear
-                showSearch
-                optionFilterProp="label"
-                options={people.map((p) => ({
-                  value: p.user_id,
-                  label: `${p.name}${p.designation ? ` — ${p.designation}` : ""}`,
-                }))}
-              />
-            </Form.Item>
-          )}
           <Flex gap={12}>
-            <Form.Item name="due_date" label="Due date" className="flex-1">
-              <DatePicker className="w-full" />
+            <Form.Item
+              name="code"
+              label="Code"
+              className="flex-1"
+              rules={[{ required: true, message: "Required" }]}
+            >
+              <Input placeholder="e.g. KQ" maxLength={10} />
             </Form.Item>
-            <Form.Item name="priority" label="Priority" initialValue="Normal" className="flex-1">
-              <Select
-                options={["Low", "Normal", "High", "Immediate"].map((p) => ({
-                  value: p,
-                  label: p,
-                }))}
-              />
+            <Form.Item
+              name="name"
+              label="Project name"
+              className="flex-[2]"
+              rules={[{ required: true, message: "Required" }]}
+            >
+              <Input placeholder="e.g. Kenya Airways" maxLength={200} />
             </Form.Item>
           </Flex>
+          <Form.Item name="client" label="Client">
+            <Input maxLength={200} />
+          </Form.Item>
+          <Form.Item name="team_ids" label="Teams involved">
+            <Select
+              mode="multiple"
+              placeholder="Select teams"
+              options={teams.map((t) => ({ value: t.team_id, label: t.name }))}
+            />
+          </Form.Item>
+          <Form.Item name="member_ids" label="Members">
+            <Select
+              mode="multiple"
+              showSearch
+              optionFilterProp="label"
+              placeholder="Select members"
+              options={people.map((p) => ({
+                value: p.user_id,
+                label: p.designation ? `${p.name} — ${p.designation}` : p.name,
+              }))}
+            />
+          </Form.Item>
         </Form>
       </Modal>
     </div>

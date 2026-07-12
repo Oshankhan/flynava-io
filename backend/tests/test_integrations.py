@@ -79,7 +79,7 @@ def test_missing_api_key_logs_error_without_crashing(db):
 
 def test_sync_endpoint_requires_super_admin(client, auth_header):
     denied = client.post("/api/v1/integrations/openproject/sync",
-                         headers=auth_header("manager@flynava.ai"))
+                         headers=auth_header("harsha.varlani@flynava.ai"))
     assert denied.status_code == 403
 
 

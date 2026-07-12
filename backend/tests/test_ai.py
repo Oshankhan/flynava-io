@@ -8,9 +8,14 @@ def test_get_provider_defaults_to_echo_without_key():
 
 
 def test_retrieve_pulls_evidence_from_seeded_data(db):
+    # insert a controlled at-risk active project rather than relying on the
+    # real roster's seeded projects (whose progress numbers change over time)
+    db.projects.insert_one({"project_id": "px_risk", "name": "At Risk Co",
+                            "status": "active", "progress": 20,
+                            "expected_progress": 70})
     engine.run_all(db)
     evidence = rag.retrieve(db, "which projects are at risk?")
-    assert any("AT RISK" in e for e in evidence)  # p_alpha 42 < 0.7*70
+    assert any("AT RISK" in e for e in evidence)  # 20 < 0.7*70
     assert any("overdue" in e for e in evidence)  # seeded overdue task
 
 

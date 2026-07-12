@@ -42,6 +42,16 @@ def user_level(user: dict) -> int:
     lvl = user.get("level")
     return lvl if isinstance(lvl, int) else DEFAULT_LEVEL.get(user.get("role", ""), 1)
 
+
+def user_roles(user: dict) -> list[str]:
+    """A user's full role set. Most people have exactly one (`roles` is set
+    to `[role]` at seed time); a few hold more than one (e.g. a manager who
+    is also the marketing lead) and carry extra entries in `roles`. Falls
+    back to `[role]` for any document seeded before this field existed.
+    """
+    roles = user.get("roles")
+    return list(roles) if roles else [user.get("role", "employee")]
+
 # Modules
 MODULES = [
     "operations",
@@ -128,3 +138,22 @@ def has_access(role: str, module: str) -> bool:
 def accessible_modules(role: str) -> dict[str, str]:
     """Map of module -> level for every module the role can see (drives nav)."""
     return {m: access_level(role, m) for m in MODULES if has_access(role, m)}
+
+
+def has_any_access(user: dict, module: str) -> bool:
+    """Union-over-roles gate for multi-role users (see `user_roles`) — a
+    manager who's also the marketing lead should see marketing_sales even
+    though the "manager" role alone doesn't grant it.
+    """
+    return any(has_access(r, module) for r in user_roles(user))
+
+
+def accessible_modules_for_user(user: dict) -> dict[str, str]:
+    """Like `accessible_modules`, but unioned across every role a user
+    holds — a module appears if ANY of their roles grants access to it.
+    """
+    out: dict[str, str] = {}
+    for role in user_roles(user):
+        for m, lvl in accessible_modules(role).items():
+            out.setdefault(m, lvl)
+    return out

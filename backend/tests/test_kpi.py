@@ -2,17 +2,38 @@ from app.kpi import engine
 
 
 def test_operations_kpis_match_seeded_data(db):
+    """Cross-checks the KPI engine's computed values against the actual
+    seeded projects/tasks (derived here, not hardcoded) — robust to the
+    exact seed roster/project mix changing over time.
+    """
+    import datetime as dt
+
     snap = {r["kpi_id"]: r for r in engine.run_all(db, "operations")}
 
-    # 2 active seed projects, progress 42 and 88 -> mean 65.0
-    assert snap["ops_project_completion"]["value"] == 65.0
-    # 3 tasks, 1 done -> 33.33%
-    assert snap["ops_task_completion"]["value"] == 33.33
-    # t2 overdue (progress 30, due 2020)
-    assert snap["ops_overdue_tasks"]["value"] == 1
-    # p_alpha 42 < 0.7*70 -> at risk; p_beta not
-    assert snap["ops_at_risk_projects"]["value"] == 1
-    assert snap["ops_active_projects"]["value"] == 2
+    active_projects = list(db.projects.find({"status": "active"}))
+    expected_completion = round(
+        sum(p.get("progress", 0) for p in active_projects) / len(active_projects), 2
+    ) if active_projects else 0.0
+    assert snap["ops_project_completion"]["value"] == expected_completion
+    assert snap["ops_active_projects"]["value"] == len(active_projects)
+
+    expected_at_risk = sum(
+        1 for p in active_projects
+        if p.get("expected_progress") and p.get("progress", 0) < 0.7 * p["expected_progress"]
+    )
+    assert snap["ops_at_risk_projects"]["value"] == expected_at_risk
+
+    total_tasks = db.tasks.count_documents({})
+    done_tasks = db.tasks.count_documents(
+        {"$or": [{"status": {"$in": ["Done", "Closed", "done", "closed", "Resolved"]}},
+                 {"progress": 100}]})
+    expected_task_completion = round(done_tasks / total_tasks * 100, 2) if total_tasks else 0.0
+    assert snap["ops_task_completion"]["value"] == expected_task_completion
+
+    today = dt.date.today().isoformat()
+    expected_overdue = db.tasks.count_documents(
+        {"due_date": {"$lt": today, "$ne": None}, "progress": {"$lt": 100}})
+    assert snap["ops_overdue_tasks"]["value"] == expected_overdue
 
 
 def test_rag_status_directions():
@@ -30,17 +51,17 @@ def test_run_all_stores_kpi_values(db):
 
 
 def test_latest_snapshot_reads_without_recompute(db):
-    engine.run_all(db, "operations")
+    fresh = {r["kpi_id"]: r for r in engine.run_all(db, "operations")}
     snap = engine.latest_snapshot(db, ["operations"])
     by_id = {r["kpi_id"]: r for r in snap}
-    assert by_id["ops_project_completion"]["value"] == 65.0
+    assert by_id["ops_project_completion"]["value"] == fresh["ops_project_completion"]["value"]
     assert by_id["ops_at_risk_projects"]["rag"] in {"red", "amber", "green"}
 
 
 def test_kpis_endpoint_filters_by_role(client, auth_header, db):
     engine.run_all(db)  # all modules
     # marketing role: no operations access, but has marketing_sales
-    r = client.get("/api/v1/kpis", headers=auth_header("marketing@flynava.ai"))
+    r = client.get("/api/v1/kpis", headers=auth_header("tanvi.gupta@flynava.ai"))
     assert r.status_code == 200
     modules = {row["module"] for row in r.json()}
     assert "operations" not in modules

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import Depends, FastAPI, HTTPException, status as http_status
+from fastapi import Depends, FastAPI, HTTPException, Query, status as http_status
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo.database import Database
 
@@ -95,20 +95,28 @@ def bootstrap_seed_refresh_demo(
     return {"status": "refreshed", **seed_demo_extras(database)}
 
 
-@app.post("/api/v1/bootstrap-seed/merge-ui-into-engineering")
-def bootstrap_seed_merge_ui(
+@app.post("/api/v1/bootstrap-seed/reset-roster")
+def bootstrap_seed_reset_roster(
+    confirm: bool = Query(False),
     database: Database = Depends(get_db),
     user: dict = Depends(get_current_user),
 ) -> dict:
-    """One-off org correction on an already-seeded (live) database: fold the
-    UI department into Engineering. See services.seed.merge_ui_into_engineering
-    for what this does and why it's safe to rerun.
+    """DESTRUCTIVE: wipe every seed-owned collection (users, teams,
+    departments, projects, tasks, attendance, leaves, payslips, employees,
+    meetings, notifications, automation scripts, product docs) and reseed
+    from scratch with the current roster. For rebuilding the whole org (not
+    just refreshing demo values) — e.g. swapping in a new team roster.
+    Requires `?confirm=true` on top of super_admin, since this is
+    irreversible. Never call this without the user explicitly asking for it.
     """
     if user.get("role") != "super_admin":
         raise HTTPException(http_status.HTTP_403_FORBIDDEN, "super_admin only")
-    from .services.seed import merge_ui_into_engineering
+    if not confirm:
+        raise HTTPException(http_status.HTTP_400_BAD_REQUEST,
+                            "pass ?confirm=true to acknowledge this wipes all users/projects/tasks/HR data")
+    from .services.seed import reset_roster
 
-    return {"status": "merged", **merge_ui_into_engineering(database)}
+    return {"status": "reset", **reset_roster(database)}
 
 
 app.include_router(api_router)

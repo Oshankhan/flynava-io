@@ -8,14 +8,14 @@ from __future__ import annotations
 
 
 def test_leave_requires_type_dates(client, auth_header):
-    h = auth_header("employee@flynava.ai")
+    h = auth_header("manas.ankarla@flynava.ai")
     r = client.post("/api/v1/requests", headers=h,
                     json={"type": "leave", "title": "Family trip"})
     assert r.status_code == 400
 
 
 def test_leave_days_computed(client, auth_header):
-    h = auth_header("employee@flynava.ai")
+    h = auth_header("manas.ankarla@flynava.ai")
     r = client.post("/api/v1/requests", headers=h, json={
         "type": "leave", "title": "Family trip", "leave_type": "Casual",
         "from_date": "2030-01-01", "to_date": "2030-01-03"})
@@ -26,8 +26,8 @@ def test_leave_days_computed(client, auth_header):
 
 
 def test_leave_approve_writes_through_to_hr(client, auth_header):
-    h_emp = auth_header("employee@flynava.ai")
-    h_tl = auth_header("python.tl@flynava.ai")
+    h_emp = auth_header("manas.ankarla@flynava.ai")
+    h_tl = auth_header("murugan.p@flynava.ai")
 
     before = client.get("/api/v1/hr/me", headers=h_emp).json()
     before_balance = before["leave_balance"]["Casual"]
@@ -53,8 +53,8 @@ def test_leave_approve_writes_through_to_hr(client, auth_header):
 
 
 def test_leave_reject_does_not_mutate_hr(client, auth_header):
-    h_emp = auth_header("employee@flynava.ai")
-    h_tl = auth_header("python.tl@flynava.ai")
+    h_emp = auth_header("manas.ankarla@flynava.ai")
+    h_tl = auth_header("murugan.p@flynava.ai")
 
     before = client.get("/api/v1/hr/me", headers=h_emp).json()
 
@@ -73,8 +73,8 @@ def test_leave_reject_does_not_mutate_hr(client, auth_header):
 
 
 def test_non_leave_request_unaffected(client, auth_header):
-    h_emp = auth_header("employee@flynava.ai")
-    h_tl = auth_header("python.tl@flynava.ai")
+    h_emp = auth_header("manas.ankarla@flynava.ai")
+    h_tl = auth_header("murugan.p@flynava.ai")
 
     before = client.get("/api/v1/hr/me", headers=h_emp).json()
 
@@ -92,9 +92,9 @@ def test_non_leave_request_unaffected(client, auth_header):
 
 
 def test_leave_insufficient_balance_still_approves_floored_at_zero(client, auth_header, db):
-    h_emp = auth_header("employee@flynava.ai")
-    h_tl = auth_header("python.tl@flynava.ai")
-    db.employees.update_one({"email": "employee@flynava.ai"},
+    h_emp = auth_header("manas.ankarla@flynava.ai")
+    h_tl = auth_header("murugan.p@flynava.ai")
+    db.employees.update_one({"email": "manas.ankarla@flynava.ai"},
                             {"$set": {"leave_balance.Earned": 1}})
 
     req = client.post("/api/v1/requests", headers=h_emp, json={

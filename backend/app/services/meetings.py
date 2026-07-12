@@ -87,23 +87,22 @@ def seed_meetings(db: Database) -> int:
         return f"{day.isoformat()}T{hhmm}"
 
     team_python = [u["user_id"] for u in db.users.find({"team_id": "team_python"})]
-    team_fin = [u["user_id"] for u in db.users.find({"team_id": "team_fin"})]
     heads = [u["user_id"] for u in db.users.find({"level": {"$gte": 3}})]
     rows = [
         {"title": "Python Stand-up", "start": iso(today, "10:30"),
-         "end": iso(today, "10:45"), "organizer_id": "u_tl_python",
+         "end": iso(today, "10:45"), "organizer_id": "u_murugan",
          "attendee_ids": team_python, "location": "Meet"},
-        {"title": "Finance Stand-up", "start": iso(today, "10:30"),
-         "end": iso(today, "11:00"), "organizer_id": "u_tl_fin",
-         "attendee_ids": team_fin, "location": "Meet"},
+        {"title": "Finance Sync", "start": iso(today, "10:30"),
+         "end": iso(today, "11:00"), "organizer_id": "u_rakshitha",
+         "attendee_ids": sorted(set(["u_rakshitha"] + heads)), "location": "Meet"},
         {"title": "Budget Review", "start": iso(today, "14:00"),
-         "end": iso(today, "15:00"), "organizer_id": "u_fin_head",
-         "attendee_ids": sorted(set(team_fin + heads)), "location": "Board Room"},
+         "end": iso(today, "15:00"), "organizer_id": "u_rakshitha",
+         "attendee_ids": sorted(set(["u_rakshitha"] + heads)), "location": "Board Room"},
         {"title": "Monthly Reporting", "start": iso(tomorrow, "11:00"),
-         "end": iso(tomorrow, "12:00"), "organizer_id": "u_admin",
+         "end": iso(tomorrow, "12:00"), "organizer_id": "u_ceo",
          "attendee_ids": heads, "location": "Meet"},
         {"title": "Team Training", "start": iso(tomorrow, "15:30"),
-         "end": iso(tomorrow, "16:30"), "organizer_id": "u_tl_python",
+         "end": iso(tomorrow, "16:30"), "organizer_id": "u_murugan",
          "attendee_ids": team_python, "location": "Training Room"},
     ]
     for r in rows:

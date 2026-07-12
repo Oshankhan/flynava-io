@@ -8,7 +8,7 @@ def _upload(client, headers, title="Q2 Board MOM", kind="mom"):
 
 
 def test_upload_creates_pending_doc_and_notifies_approvers(client, auth_header):
-    r = _upload(client, auth_header("employee@flynava.ai"))
+    r = _upload(client, auth_header("manas.ankarla@flynava.ai"))
     assert r.status_code == 200, r.text
     doc = r.json()
     assert doc["status"] == "pending"
@@ -21,7 +21,7 @@ def test_upload_creates_pending_doc_and_notifies_approvers(client, auth_header):
 
 
 def test_approval_flow_notifies_uploader_and_audits(client, auth_header, db):
-    doc_id = _upload(client, auth_header("employee@flynava.ai")).json()["doc_id"]
+    doc_id = _upload(client, auth_header("manas.ankarla@flynava.ai")).json()["doc_id"]
     r = client.post(f"/api/v1/documents/{doc_id}/approve",
                     headers=auth_header("leadership@flynava.ai"),
                     json={"comment": "Looks good"})
@@ -29,7 +29,7 @@ def test_approval_flow_notifies_uploader_and_audits(client, auth_header, db):
     assert r.json()["status"] == "approved"
     # uploader notified
     notes = client.get("/api/v1/notifications",
-                       headers=auth_header("employee@flynava.ai")).json()
+                       headers=auth_header("manas.ankarla@flynava.ai")).json()
     assert any(n["type"] == "approval_decision" for n in notes)
     # audit trail written
     assert db.audit_logs.count_documents({"action": "document_approved"}) == 1
@@ -40,9 +40,9 @@ def test_approval_flow_notifies_uploader_and_audits(client, auth_header, db):
 
 
 def test_employee_cannot_approve(client, auth_header):
-    doc_id = _upload(client, auth_header("manager@flynava.ai")).json()["doc_id"]
+    doc_id = _upload(client, auth_header("harsha.varlani@flynava.ai")).json()["doc_id"]
     r = client.post(f"/api/v1/documents/{doc_id}/approve",
-                    headers=auth_header("employee@flynava.ai"), json={})
+                    headers=auth_header("manas.ankarla@flynava.ai"), json={})
     assert r.status_code == 403
 
 

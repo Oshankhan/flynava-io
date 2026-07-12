@@ -68,8 +68,9 @@ DASHBOARD_ROLES: dict[str, set[str]] = {
 }
 
 
-def can_view(role: str, key: str) -> bool:
-    return role in DASHBOARD_ROLES.get(key, set())
+def can_view(user: dict, key: str) -> bool:
+    allowed = DASHBOARD_ROLES.get(key, set())
+    return any(r in allowed for r in rbac.user_roles(user))
 
 
 def _bug_breakdown(db: Database) -> list[dict]:
@@ -93,9 +94,9 @@ def _series(db: Database, kpis: list[dict]) -> list[dict]:
     return out
 
 
-def build(db: Database, key: str, role: str) -> dict:
+def build(db: Database, key: str, user: dict) -> dict:
     spec = DASHBOARDS[key]
-    accessible = set(rbac.accessible_modules(role))
+    accessible = set(rbac.accessible_modules_for_user(user))
     modules = [m for m in spec["modules"] if m in accessible]
     kpis = engine.latest_snapshot(db, modules) if modules else []
 

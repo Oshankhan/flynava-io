@@ -14,16 +14,16 @@ def test_password_hash_roundtrip():
 
 def test_login_success_returns_tokens_and_user(client):
     r = client.post("/api/v1/auth/login",
-                    json={"email": "leadership@flynava.ai", "password": "Passw0rd!"})
+                    json={"email": "harsha.varlani@flynava.ai", "password": "Passw0rd!"})
     assert r.status_code == 200
     body = r.json()
     assert body["access_token"] and body["refresh_token"]
-    assert body["user"]["role"] == "leadership"
+    assert body["user"]["role"] == "manager"
 
 
 def test_login_wrong_password_401(client):
     r = client.post("/api/v1/auth/login",
-                    json={"email": "leadership@flynava.ai", "password": "nope"})
+                    json={"email": "harsha.varlani@flynava.ai", "password": "nope"})
     assert r.status_code == 401
 
 
@@ -32,7 +32,7 @@ def test_me_requires_auth(client):
 
 
 def test_me_returns_modules_for_role(client, auth_header):
-    r = client.get("/api/v1/auth/me", headers=auth_header("marketing@flynava.ai"))
+    r = client.get("/api/v1/auth/me", headers=auth_header("tanvi.gupta@flynava.ai"))
     assert r.status_code == 200
     mods = r.json()["modules"]
     assert mods.get("marketing_sales") == "full"
@@ -48,7 +48,7 @@ def test_refresh_issues_new_access_token(client):
 
 def test_access_token_rejected_as_refresh(client):
     login = client.post("/api/v1/auth/login",
-                        json={"email": "leadership@flynava.ai", "password": "Passw0rd!"})
+                        json={"email": "harsha.varlani@flynava.ai", "password": "Passw0rd!"})
     access = login.json()["access_token"]
     r = client.post("/api/v1/auth/refresh", json={"refresh_token": access})
     assert r.status_code == 401

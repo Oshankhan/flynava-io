@@ -53,10 +53,10 @@ def test_render_html_contains_rows_and_links(db):
 def test_projects_endpoint_requires_sender_role(client, auth_header, db):
     _seed_bugs(db)
     denied = client.get("/api/v1/reports/projects",
-                        headers=auth_header("employee@flynava.ai"))
+                        headers=auth_header("manas.ankarla@flynava.ai"))
     assert denied.status_code == 403
     ok = client.get("/api/v1/reports/projects",
-                    headers=auth_header("manager@flynava.ai"))
+                    headers=auth_header("harsha.varlani@flynava.ai"))
     assert ok.status_code == 200
     assert ok.json()[0]["bug_count"] == 3
 
@@ -64,7 +64,7 @@ def test_projects_endpoint_requires_sender_role(client, auth_header, db):
 def test_generate_report_returns_html(client, auth_header, db):
     _seed_bugs(db)
     r = client.post("/api/v1/reports/generate",
-                    headers=auth_header("manager@flynava.ai"),
+                    headers=auth_header("harsha.varlani@flynava.ai"),
                     json={"bug_ids": ["7014", "7577"], "title": "Re-Opens Compilation"})
     assert r.status_code == 200
     body = r.json()
@@ -75,7 +75,7 @@ def test_generate_report_returns_html(client, auth_header, db):
 def test_send_report_preview_mode_without_smtp(client, auth_header, db):
     _seed_bugs(db)
     r = client.post("/api/v1/reports/send",
-                    headers=auth_header("manager@flynava.ai"),
+                    headers=auth_header("harsha.varlani@flynava.ai"),
                     json={"bug_ids": ["7014"], "recipients": ["boss@flynava.ai"],
                           "title": "Daily Bugs"})
     assert r.status_code == 200
@@ -127,6 +127,6 @@ def test_send_with_smtp_configured(client, auth_header, db, monkeypatch):
 
 def test_generate_empty_selection_400(client, auth_header):
     r = client.post("/api/v1/reports/generate",
-                    headers=auth_header("manager@flynava.ai"),
+                    headers=auth_header("harsha.varlani@flynava.ai"),
                     json={"bug_ids": []})
     assert r.status_code == 400

@@ -18,6 +18,7 @@ class UserOut(BaseModel):
     name: str
     email: EmailStr
     role: str
+    roles: list[str] = []
     department: str | None = None
     status: str = "active"
     # Org hierarchy (L4 CEO → L3 dept head → L2 team lead → L1 executive)

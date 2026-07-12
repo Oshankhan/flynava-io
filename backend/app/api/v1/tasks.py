@@ -20,6 +20,8 @@ class TaskCreate(BaseModel):
     assignee_id: str = ""  # empty → self
     due_date: str | None = None
     priority: str = "Normal"
+    project_id: str | None = None
+    stage: str | None = None
 
 
 @router.get("/tasks/my")
@@ -58,12 +60,12 @@ def team_tasks(user: dict = Depends(get_current_user),
 @router.post("/tasks")
 def create_task(body: TaskCreate, user: dict = Depends(get_current_user),
                 db: Database = Depends(get_db)) -> dict:
+    if user_level(user) < 2 and user.get("role") != "super_admin":
+        raise HTTPException(status.HTTP_403_FORBIDDEN,
+                            "task creation requires team lead level or above")
     assignee_id = body.assignee_id or user["user_id"]
     if assignee_id != user["user_id"]:
         # only leads+ may assign work to someone else, and only to their reports/team
-        if user_level(user) < 2:
-            raise HTTPException(status.HTTP_403_FORBIDDEN,
-                                "executives can only create tasks for themselves")
         assignee = db.users.find_one({"user_id": assignee_id, "status": "active"})
         if not assignee:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "assignee not found")
@@ -76,7 +78,7 @@ def create_task(body: TaskCreate, user: dict = Depends(get_current_user),
     task = tasks_svc.create_task(
         db, creator=user, title=body.title, assignee_id=assignee_id,
         description=body.description, due_date=body.due_date,
-        priority=body.priority)
+        priority=body.priority, project_id=body.project_id, stage=body.stage)
     if assignee_id != user["user_id"]:
         notif.create(db, recipient_id=assignee_id, type="task_assigned",
                      title=f"New task: {body.title}",

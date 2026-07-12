@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo.database import Database
 
 from ...core import audit
-from ...core.rbac import accessible_modules, user_level
+from ...core.rbac import accessible_modules_for_user, user_level, user_roles
 from ...core.security import (
     create_access_token,
     create_refresh_token,
@@ -28,7 +28,7 @@ router = APIRouter(tags=["auth"])
 def _user_out(user: dict) -> UserOut:
     return UserOut(
         user_id=user["user_id"], name=user["name"], email=user["email"],
-        role=user["role"], department=user.get("department"),
+        role=user["role"], roles=user_roles(user), department=user.get("department"),
         status=user.get("status", "active"),
         level=user_level(user), designation=user.get("designation"),
         team_id=user.get("team_id"), reports_to=user.get("reports_to"),
@@ -72,4 +72,4 @@ def refresh(body: RefreshRequest, db: Database = Depends(get_db)) -> TokenRespon
 
 @router.get("/auth/me", response_model=MeResponse)
 def me(user: dict = Depends(get_current_user)) -> MeResponse:
-    return MeResponse(user=_user_out(user), modules=accessible_modules(user["role"]))
+    return MeResponse(user=_user_out(user), modules=accessible_modules_for_user(user))

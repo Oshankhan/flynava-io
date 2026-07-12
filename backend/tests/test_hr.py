@@ -13,14 +13,14 @@ SAMPLE_CSV = (
 def test_seed_hr_creates_employees_payslips_leaves(db):
     # conftest seed() already runs seed_hr; every login user has an employee record
     assert db.employees.count_documents({}) >= 8
-    emp = db.employees.find_one({"email": "employee@flynava.ai"})
+    emp = db.employees.find_one({"email": "manas.ankarla@flynava.ai"})
     assert emp and emp["salary"]["net"] < emp["salary"]["gross"]
     assert db.payslips.count_documents({"emp_id": emp["emp_id"]}) == 3
     assert emp["leave_balance"]["Casual"] >= 0
 
 
 def test_employee_by_email_returns_payslips_and_leaves(db):
-    rec = hr.employee_by_email(db, "employee@flynava.ai")
+    rec = hr.employee_by_email(db, "manas.ankarla@flynava.ai")
     assert rec is not None
     assert len(rec["payslips"]) == 3
     assert isinstance(rec["leaves"], list)
@@ -45,16 +45,16 @@ def test_summary_counts_by_status():
 
 
 def test_my_record_endpoint_self_service(client, auth_header):
-    r = client.get("/api/v1/hr/me", headers=auth_header("employee@flynava.ai"))
+    r = client.get("/api/v1/hr/me", headers=auth_header("manas.ankarla@flynava.ai"))
     assert r.status_code == 200
     body = r.json()
-    assert body["email"] == "employee@flynava.ai"
+    assert body["email"] == "manas.ankarla@flynava.ai"
     assert "payslips" in body and "leave_balance" in body
 
 
 def test_directory_requires_hr_role(client, auth_header):
     denied = client.get("/api/v1/hr/employees",
-                        headers=auth_header("employee@flynava.ai"))
+                        headers=auth_header("manas.ankarla@flynava.ai"))
     assert denied.status_code == 403
     ok = client.get("/api/v1/hr/employees", headers=auth_header("hr@flynava.ai"))
     assert ok.status_code == 200

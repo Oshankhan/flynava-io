@@ -8,6 +8,9 @@ from app.kpi import engine
 
 
 def _seed_bugs(db):
+    # the real roster's seed already carries ~40 synthetic KQ bugs, so clear
+    # those out first — these tests want an exact, known bug population.
+    db.tasks.delete_many({"wp_type": {"$regex": "bug", "$options": "i"}})
     bugs = [
         ("b1", "Closed", "Normal"), ("b2", "Closed", "Immediate"),
         ("b3", "Replica Done", "Normal"), ("b4", "In progress", "High"),
@@ -31,6 +34,9 @@ def test_bug_kpis_computed_from_openproject_tasks(db):
 
 
 def test_bug_kpis_grey_without_bug_data(db):
+    # the real roster's seed always carries synthetic KQ bugs — clear them to
+    # exercise the "no bug data yet" state.
+    db.tasks.delete_many({"wp_type": {"$regex": "bug", "$options": "i"}})
     snap = {r["kpi_id"]: r for r in engine.run_all(db, "product_dev")}
     assert snap["pd_open_bugs"]["value"] is None
     assert snap["pd_open_bugs"]["rag"] == "grey"
@@ -38,9 +44,9 @@ def test_bug_kpis_grey_without_bug_data(db):
 
 def test_all_eight_dashboards_render(client, auth_header):
     cases = {
-        "leadership": "leadership@flynava.ai", "manager": "manager@flynava.ai",
+        "leadership": "leadership@flynava.ai", "manager": "harsha.varlani@flynava.ai",
         "hr": "hr@flynava.ai", "finance": "leadership@flynava.ai",
-        "marketing": "marketing@flynava.ai", "employee": "employee@flynava.ai",
+        "marketing": "tanvi.gupta@flynava.ai", "employee": "manas.ankarla@flynava.ai",
         "investor": "investor@flynava.ai", "partner": "partner@flynava.ai",
     }
     for key, email in cases.items():
@@ -65,7 +71,7 @@ def test_dashboard_series_and_change_pct(client, auth_header):
 def test_bug_breakdown_on_manager_dashboard(client, auth_header, db):
     _seed_bugs(db)
     r = client.get("/api/v1/dashboards/manager",
-                   headers=auth_header("manager@flynava.ai"))
+                   headers=auth_header("harsha.varlani@flynava.ai"))
     breakdown = {row["status"]: row["count"] for row in r.json()["bug_breakdown"]}
     assert breakdown["Closed"] == 2
     assert breakdown["Replica Done"] == 1

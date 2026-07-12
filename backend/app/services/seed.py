@@ -1,11 +1,15 @@
-"""Seed demo departments, users (one per role), projects, tasks, KPI defs.
+"""Seed the real FlyNava roster, org tree, client projects, and demo data.
 
 Idempotent: upserts by natural key. Demo password for every seeded user is
-`Passw0rd!` — dev only.
+`Passw0rd!` — dev only. Two logins are preserved from the earlier demo seed
+so existing bookmarks/muscle-memory keep working: `admin@flynava.ai` (now
+Mahesh Shastry, CEO) and `hr@flynava.ai` (now Shammi YK, HR head).
 """
 from __future__ import annotations
 
 import datetime as dt
+import random
+import uuid
 
 from pymongo.database import Database
 
@@ -16,106 +20,371 @@ DEMO_PASSWORD = "Passw0rd!"
 
 DEPARTMENTS = [
     {"dept_id": "eng", "name": "Engineering"},
+    {"dept_id": "product", "name": "Product"},
+    {"dept_id": "mkt", "name": "Marketing"},
     {"dept_id": "hr", "name": "Human Resources"},
     {"dept_id": "fin", "name": "Finance"},
-    {"dept_id": "mkt", "name": "Marketing"},
     {"dept_id": "exec", "name": "Leadership"},
 ]
 
 # Teams are generic units: any department can have one, each led by an L2
 # team lead. Members (L1) carry team_id + reports_to → the approval chain.
-# UI is a team inside Engineering, not its own department — it has no
-# separate L3 head; its lead reports straight to the eng dept head like
-# every other engineering team lead.
 TEAMS = [
-    {"team_id": "team_java", "name": "Java Team", "department": "eng", "lead_id": "u_tl_java"},
-    {"team_id": "team_python", "name": "Python Team", "department": "eng", "lead_id": "u_tl_python"},
-    {"team_id": "team_qa", "name": "QA Team", "department": "eng", "lead_id": "u_tl_qa"},
-    {"team_id": "team_ui", "name": "UI Team", "department": "eng", "lead_id": "u_tl_ui"},
-    {"team_id": "team_fin", "name": "Finance Team", "department": "fin", "lead_id": "u_tl_fin"},
-    {"team_id": "team_hr", "name": "HR Team", "department": "hr", "lead_id": "u_tl_hr"},
-    {"team_id": "team_mkt", "name": "Marketing Team", "department": "mkt", "lead_id": "u_tl_mkt"},
+    {"team_id": "team_ui", "name": "UI Team", "department": "eng", "lead_id": "u_birbal"},
+    {"team_id": "team_python", "name": "Python Team", "department": "eng", "lead_id": "u_murugan"},
+    {"team_id": "team_qa", "name": "QA Team", "department": "eng", "lead_id": "u_prathima"},
+    {"team_id": "team_java", "name": "Java Team", "department": "eng", "lead_id": "u_deepashree"},
+    {"team_id": "team_devops", "name": "DevOps Team", "department": "eng", "lead_id": "u_kalaiarasan"},
+    {"team_id": "team_marketing", "name": "Marketing Team", "department": "mkt", "lead_id": "u_tanvi"},
+    {"team_id": "team_product", "name": "Product Team", "department": "product", "lead_id": "u_soochana"},
+    {"team_id": "team_hr", "name": "HR Team", "department": "hr", "lead_id": "u_shammi"},
 ]
 
 # Org tree (level 4 → 1). reports_to builds the approval chain: every request
 # goes to the direct lead first; leads forward upward when needed.
-# (user_id, name, email, role, dept, level, designation, team_id, reports_to)
-USERS = [
-    # L4 — Super Admin / CEO / Founder
-    ("u_admin", "Ada Admin", "admin@flynava.ai", "super_admin", "exec", 4,
-     "CEO", None, None),
-    ("u_lead", "Leo Lead", "leadership@flynava.ai", "leadership", "exec", 4,
-     "Founder", None, None),
-    # L3 — Department heads
-    ("u_mgr", "Mia Manager", "manager@flynava.ai", "manager", "eng", 3,
-     "Engineering Manager", None, "u_admin"),
-    ("u_hr", "Hana HR", "hr@flynava.ai", "hr", "hr", 3,
-     "HR Manager", None, "u_admin"),
-    ("u_fin_head", "Farah Fintch", "finance.head@flynava.ai", "manager", "fin", 3,
-     "Finance Manager", None, "u_admin"),
-    ("u_mkt", "Marco Marketing", "marketing@flynava.ai", "marketing", "mkt", 3,
-     "Marketing Manager", None, "u_admin"),
-    # L2 — Team leads
-    ("u_tl_java", "Arjun Rao", "java.tl@flynava.ai", "team_lead", "eng", 2,
-     "Java Team Lead", "team_java", "u_mgr"),
-    ("u_tl_python", "Priya Nair", "python.tl@flynava.ai", "team_lead", "eng", 2,
-     "Python Team Lead", "team_python", "u_mgr"),
-    ("u_tl_qa", "Vikram Shah", "qa.tl@flynava.ai", "team_lead", "eng", 2,
-     "QA Team Lead", "team_qa", "u_mgr"),
-    ("u_tl_fin", "Tanya Kapoor", "finance.tl@flynava.ai", "team_lead", "fin", 2,
-     "Finance Team Lead", "team_fin", "u_fin_head"),
-    ("u_tl_hr", "Rahul Verma", "hr.tl@flynava.ai", "team_lead", "hr", 2,
-     "HR Team Lead", "team_hr", "u_hr"),
-    ("u_tl_mkt", "Meera Joshi", "marketing.tl@flynava.ai", "team_lead", "mkt", 2,
-     "Marketing Team Lead", "team_mkt", "u_mkt"),
-    ("u_tl_ui", "Nisha Kapadia", "ui.tl@flynava.ai", "team_lead", "eng", 2,
-     "UI Team Lead", "team_ui", "u_mgr"),
-    # L1 — Executives / developers / QA / recruiters
-    ("u_emp", "Evan Employee", "employee@flynava.ai", "employee", "eng", 1,
-     "Python Developer", "team_python", "u_tl_python"),
-    ("u_dev_java", "Kiran Kumar", "java.dev@flynava.ai", "employee", "eng", 1,
-     "Java Developer", "team_java", "u_tl_java"),
-    ("u_qa1", "Sneha Patil", "qa.eng@flynava.ai", "employee", "eng", 1,
-     "QA Engineer", "team_qa", "u_tl_qa"),
-    ("u_fin1", "Rohit Menon", "finance.exec@flynava.ai", "employee", "fin", 1,
-     "Finance Executive", "team_fin", "u_tl_fin"),
-    ("u_rec1", "Anita Das", "recruiter@flynava.ai", "employee", "hr", 1,
-     "Recruiter", "team_hr", "u_tl_hr"),
-    ("u_mkt1", "Dev Sharma", "marketing.exec@flynava.ai", "employee", "mkt", 1,
-     "Marketing Executive", "team_mkt", "u_tl_mkt"),
-    ("u_ui1", "Aditi Rao", "ui.dev1@flynava.ai", "employee", "eng", 1,
-     "UI Designer", "team_ui", "u_tl_ui"),
-    ("u_ui2", "Rehan Sheikh", "ui.dev2@flynava.ai", "employee", "eng", 1,
-     "UX Designer", "team_ui", "u_tl_ui"),
-    # External (outside the ladder)
-    ("u_inv", "Ivy Investor", "investor@flynava.ai", "investor", "exec", 0,
-     "Investor", None, None),
-    ("u_partner", "Pat Partner", "partner@flynava.ai", "partner", "exec", 0,
-     "Partner", None, None),
+# Fields: user_id, name, email, role, department, level, designation,
+#         team_id, reports_to, extra_roles (optional, for multi-role people).
+#
+# Tree shape: CEO → {Harsha (all delivery teams), Meghna (product+marketing,
+# multi-role), Shammi (HR, reports straight to CEO), Rakshitha (Finance,
+# reports straight to CEO)}. UI has an extra layer: Harsha → Birbal (UI
+# Manager) → Mushaheed (UI Lead) → UI devs — both Birbal and Mushaheed are
+# level 2 in the schema (only 4 levels exist app-wide); the reports_to chain
+# is what actually encodes the extra hop, and org drill-down walks that chain
+# regardless of level number.
+USERS: list[dict] = [
+    # --- L4 ---
+    {"user_id": "u_ceo", "name": "Mahesh Shastry", "email": "admin@flynava.ai",
+     "role": "super_admin", "department": "exec", "level": 4,
+     "designation": "CEO", "team_id": None, "reports_to": None},
+
+    # --- L3 ---
+    {"user_id": "u_harsha", "name": "Harsha Varlani", "email": "harsha.varlani@flynava.ai",
+     "role": "manager", "department": "eng", "level": 3,
+     "designation": "Head of Engineering", "team_id": None, "reports_to": "u_ceo"},
+    {"user_id": "u_meghna", "name": "Meghna Mehra", "email": "meghna.mehra@flynava.ai",
+     "role": "manager", "department": "product", "level": 3,
+     "designation": "Product & Marketing Manager", "team_id": None, "reports_to": "u_ceo",
+     "extra_roles": ["marketing"]},
+    {"user_id": "u_shammi", "name": "Shammi YK", "email": "hr@flynava.ai",
+     "role": "hr", "department": "hr", "level": 3,
+     "designation": "HR Head", "team_id": "team_hr", "reports_to": "u_ceo"},
+    {"user_id": "u_rakshitha", "name": "Rakshitha S", "email": "rakshitha.s@flynava.ai",
+     "role": "manager", "department": "fin", "level": 3,
+     "designation": "Finance Manager", "team_id": None, "reports_to": "u_ceo"},
+
+    # --- L2: team leads (+ Birbal, the UI sub-manager) ---
+    {"user_id": "u_birbal", "name": "Birbal Kumar", "email": "birbal.kumar@flynava.ai",
+     "role": "manager", "department": "eng", "level": 2,
+     "designation": "UI Manager", "team_id": "team_ui", "reports_to": "u_harsha"},
+    {"user_id": "u_mushaheed", "name": "Mushaheed Khan N", "email": "mushaheed.khan@flynava.ai",
+     "role": "team_lead", "department": "eng", "level": 2,
+     "designation": "UI Lead", "team_id": "team_ui", "reports_to": "u_birbal"},
+    {"user_id": "u_murugan", "name": "Murugan P", "email": "murugan.p@flynava.ai",
+     "role": "team_lead", "department": "eng", "level": 2,
+     "designation": "Python Team Lead", "team_id": "team_python", "reports_to": "u_harsha"},
+    {"user_id": "u_prathima", "name": "Prathima DS", "email": "prathima.ds@flynava.ai",
+     "role": "team_lead", "department": "eng", "level": 2,
+     "designation": "QA Lead", "team_id": "team_qa", "reports_to": "u_harsha"},
+    {"user_id": "u_deepashree", "name": "Deepashree HI", "email": "deepashree.hi@flynava.ai",
+     "role": "team_lead", "department": "eng", "level": 2,
+     "designation": "Java Team Lead", "team_id": "team_java", "reports_to": "u_harsha"},
+    {"user_id": "u_kalaiarasan", "name": "Kalaiarasan D", "email": "kalaiarasan.d@flynava.ai",
+     "role": "team_lead", "department": "eng", "level": 2,
+     "designation": "DevOps Lead", "team_id": "team_devops", "reports_to": "u_harsha"},
+    {"user_id": "u_tanvi", "name": "Tanvi Gupta", "email": "tanvi.gupta@flynava.ai",
+     "role": "marketing", "department": "mkt", "level": 2,
+     "designation": "Marketing Lead", "team_id": "team_marketing", "reports_to": "u_meghna"},
+    {"user_id": "u_soochana", "name": "Soochana Byaravalli", "email": "soochana.byaravalli@flynava.ai",
+     "role": "team_lead", "department": "product", "level": 2,
+     "designation": "Product Lead", "team_id": "team_product", "reports_to": "u_meghna"},
+
+    # --- L1: UI team ---
+    {"user_id": "u_animesh", "name": "Animesh Singh", "email": "animesh.singh@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "UI Designer", "team_id": "team_ui", "reports_to": "u_mushaheed"},
+    {"user_id": "u_dinesh", "name": "Dinesh Pandia", "email": "dinesh.pandia@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "UX Designer", "team_id": "team_ui", "reports_to": "u_mushaheed"},
+    {"user_id": "u_saghir", "name": "Md Saghir Alam", "email": "saghir.alam@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "UI Developer", "team_id": "team_ui", "reports_to": "u_mushaheed"},
+    {"user_id": "u_nagaraj", "name": "Nagaraj Biradar", "email": "nagaraj.biradar@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "UI Designer", "team_id": "team_ui", "reports_to": "u_mushaheed"},
+    {"user_id": "u_nayana", "name": "Nayana Anaji", "email": "nayana.anaji@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "UX Designer", "team_id": "team_ui", "reports_to": "u_mushaheed"},
+    {"user_id": "u_oshan", "name": "Oshan Khan", "email": "oshan.khan@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "UI Developer", "team_id": "team_ui", "reports_to": "u_mushaheed"},
+
+    # --- L1: Python team ---
+    {"user_id": "u_manas", "name": "Manas Ankarla", "email": "manas.ankarla@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "Python Developer", "team_id": "team_python", "reports_to": "u_murugan"},
+    {"user_id": "u_sharana", "name": "Sharanabasava SK", "email": "sharanabasava.sk@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "Python Developer", "team_id": "team_python", "reports_to": "u_murugan"},
+    {"user_id": "u_pawan", "name": "Pawan Kalyan", "email": "pawan.kalyan@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "Python Developer", "team_id": "team_python", "reports_to": "u_murugan"},
+    {"user_id": "u_jashwanth", "name": "Jashwanth Reddy", "email": "jashwanth.reddy@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "Python Developer", "team_id": "team_python", "reports_to": "u_murugan"},
+    {"user_id": "u_abhinav", "name": "Abhinav Bonagiri", "email": "abhinav.bonagiri@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "Python Developer", "team_id": "team_python", "reports_to": "u_murugan"},
+    {"user_id": "u_rithik", "name": "Rithik Sharma", "email": "rithik.sharma@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "Python Developer", "team_id": "team_python", "reports_to": "u_murugan"},
+    {"user_id": "u_jaiveer", "name": "Jaiveer Singh", "email": "jaiveer.singh@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "Python Developer", "team_id": "team_python", "reports_to": "u_murugan"},
+    {"user_id": "u_anuvrat", "name": "Anuvrat Gautam", "email": "anuvrat.gautam@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "Python Developer", "team_id": "team_python", "reports_to": "u_murugan"},
+
+    # --- L1: QA team ---
+    {"user_id": "u_akshaya", "name": "Akshaya G", "email": "akshaya.g@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "QA Engineer", "team_id": "team_qa", "reports_to": "u_prathima"},
+    {"user_id": "u_rahul", "name": "Rahul Kumar", "email": "rahul.kumar@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "QA Engineer", "team_id": "team_qa", "reports_to": "u_prathima"},
+    {"user_id": "u_devireddy", "name": "Devireddy Guruvardhanreddy", "email": "devireddy.g@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "QA Engineer", "team_id": "team_qa", "reports_to": "u_prathima"},
+    {"user_id": "u_tanuja", "name": "Tanuja Talwar", "email": "tanuja.talwar@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "QA Engineer", "team_id": "team_qa", "reports_to": "u_prathima"},
+    {"user_id": "u_nikshitha", "name": "Nikshitha TB", "email": "nikshitha.tb@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "QA Engineer", "team_id": "team_qa", "reports_to": "u_prathima"},
+
+    # --- L1: Java team ---
+    {"user_id": "u_mohamed", "name": "Mohamed Absar", "email": "mohamed.absar@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "Java Developer", "team_id": "team_java", "reports_to": "u_deepashree"},
+
+    # --- L1: DevOps team ---
+    {"user_id": "u_praveen", "name": "Praveen Jayavel", "email": "praveen.jayavel@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "DevOps Engineer", "team_id": "team_devops", "reports_to": "u_kalaiarasan"},
+    {"user_id": "u_aravind", "name": "Aravind Krishnan", "email": "aravind.krishnan@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "DevOps Engineer", "team_id": "team_devops", "reports_to": "u_kalaiarasan"},
+    {"user_id": "u_tamilselvan", "name": "Tamil Selvan S", "email": "tamil.selvan@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "DevOps Engineer", "team_id": "team_devops", "reports_to": "u_kalaiarasan"},
+    {"user_id": "u_kambam", "name": "Kambam Mythri", "email": "kambam.mythri@flynava.ai",
+     "role": "employee", "department": "eng", "level": 1,
+     "designation": "DevOps Engineer", "team_id": "team_devops", "reports_to": "u_kalaiarasan"},
+
+    # --- L1: Marketing team ---
+    {"user_id": "u_arnav", "name": "Arnav Jain", "email": "arnav.jain@flynava.ai",
+     "role": "marketing", "department": "mkt", "level": 1,
+     "designation": "Marketing Executive", "team_id": "team_marketing", "reports_to": "u_tanvi"},
+    {"user_id": "u_aadhira", "name": "Aadhira S", "email": "aadhira.s@flynava.ai",
+     "role": "marketing", "department": "mkt", "level": 1,
+     "designation": "Marketing Executive", "team_id": "team_marketing", "reports_to": "u_tanvi"},
+    {"user_id": "u_gunnika", "name": "Gunnika Singh", "email": "gunnika.singh@flynava.ai",
+     "role": "marketing", "department": "mkt", "level": 1,
+     "designation": "Marketing Executive", "team_id": "team_marketing", "reports_to": "u_tanvi"},
+
+    # --- L1: Product team ---
+    {"user_id": "u_ronaly", "name": "Ronaly Bojamma", "email": "ronaly.bojamma@flynava.ai",
+     "role": "employee", "department": "product", "level": 1,
+     "designation": "Product Analyst", "team_id": "team_product", "reports_to": "u_soochana"},
+    {"user_id": "u_akasapu", "name": "Akasapu Suma Sri", "email": "akasapu.sumasri@flynava.ai",
+     "role": "employee", "department": "product", "level": 1,
+     "designation": "Product Analyst", "team_id": "team_product", "reports_to": "u_soochana"},
+    {"user_id": "u_ranveer", "name": "Ranveer Singh Panda", "email": "ranveer.panda@flynava.ai",
+     "role": "employee", "department": "product", "level": 1,
+     "designation": "Business Analyst", "team_id": "team_product", "reports_to": "u_soochana"},
+    {"user_id": "u_nikkitha", "name": "Nikkitha Ann Bobby", "email": "nikkitha.bobby@flynava.ai",
+     "role": "employee", "department": "product", "level": 1,
+     "designation": "Product Analyst", "team_id": "team_product", "reports_to": "u_soochana"},
+    {"user_id": "u_akhila", "name": "N Akhila Sri Krishna", "email": "akhila.srikrishna@flynava.ai",
+     "role": "employee", "department": "product", "level": 1,
+     "designation": "Business Analyst", "team_id": "team_product", "reports_to": "u_soochana"},
+
+    # --- L1: HR team ---
+    {"user_id": "u_chandrakala", "name": "Chandrakala Thallapalli", "email": "chandrakala.t@flynava.ai",
+     "role": "employee", "department": "hr", "level": 1,
+     "designation": "HR Executive", "team_id": "team_hr", "reports_to": "u_shammi"},
+
+    # --- Non-org stakeholder logins (not part of the delivery roster —
+    # kept for the roles' distinct RBAC matrix behavior: leadership/investor/
+    # partner see materially different module access than any employee role). ---
+    {"user_id": "u_lead", "name": "Leo Lead", "email": "leadership@flynava.ai",
+     "role": "leadership", "department": "exec", "level": 4,
+     "designation": "Founder", "team_id": None, "reports_to": None},
+    {"user_id": "u_inv", "name": "Ivy Investor", "email": "investor@flynava.ai",
+     "role": "investor", "department": "exec", "level": 0,
+     "designation": "Investor", "team_id": None, "reports_to": None},
+    {"user_id": "u_partner", "name": "Pat Partner", "email": "partner@flynava.ai",
+     "role": "partner", "department": "exec", "level": 0,
+     "designation": "Partner", "team_id": None, "reports_to": None},
 ]
+
+
+# Generic cross-functional pipeline every client project moves through.
+# `owner_team` is a hint for which team typically drives that stage (not
+# enforced) — marketing opens a project, product/engineering build it, QA
+# signs off, then it settles into steady-state production support.
+STAGE_PIPELINE = [
+    {"key": "client_acquisition", "name": "Client Acquisition", "owner_team": "marketing"},
+    {"key": "rfp_proposal", "name": "RFP / Proposal", "owner_team": "marketing"},
+    {"key": "requirements", "name": "Requirements", "owner_team": "product"},
+    {"key": "design", "name": "Design", "owner_team": "ui"},
+    {"key": "development", "name": "Development", "owner_team": "engineering"},
+    {"key": "qa_testing", "name": "QA / Testing", "owner_team": "qa"},
+    {"key": "uat_training", "name": "UAT / Training", "owner_team": "product"},
+    {"key": "production_maintenance", "name": "Production / Maintenance", "owner_team": "qa"},
+]
+_STAGE_KEYS = [s["key"] for s in STAGE_PIPELINE]
+
+
+def _stages_up_to(current_key: str) -> list[dict]:
+    idx = _STAGE_KEYS.index(current_key)
+    out = []
+    for i, s in enumerate(STAGE_PIPELINE):
+        status = "done" if i < idx else "active" if i == idx else "pending"
+        out.append({**s, "status": status})
+    return out
+
+
+PROJECTS = [
+    {
+        "project_id": "proj_kq", "code": "KQ", "name": "Kenya Airways",
+        "client": "Kenya Airways", "status": "maintenance",
+        "current_stage": "production_maintenance",
+        "stages": _stages_up_to("production_maintenance"),
+        "owner_id": "u_harsha",
+        "team_ids": ["team_python", "team_qa", "team_devops", "team_ui"],
+        "member_ids": ["u_murugan", "u_manas", "u_sharana", "u_pawan",
+                       "u_prathima", "u_akshaya", "u_rahul",
+                       "u_kalaiarasan", "u_praveen",
+                       "u_mushaheed", "u_animesh"],
+        "progress": 100, "expected_progress": 100,
+    },
+    {
+        "project_id": "proj_om", "code": "OM", "name": "Oman Airways",
+        "client": "Oman Airways", "status": "pipeline",
+        "current_stage": "client_acquisition",
+        "stages": _stages_up_to("client_acquisition"),
+        "owner_id": "u_meghna",
+        "team_ids": ["team_marketing"],
+        "member_ids": ["u_meghna", "u_tanvi", "u_arnav", "u_aadhira"],
+        "progress": 10, "expected_progress": 20,
+    },
+    {
+        "project_id": "proj_sv", "code": "SV", "name": "Saudia",
+        "client": "Saudia", "status": "active",
+        "current_stage": "uat_training",
+        "stages": _stages_up_to("uat_training"),
+        "owner_id": "u_meghna",
+        "team_ids": ["team_product", "team_qa"],
+        "member_ids": ["u_soochana", "u_ronaly", "u_akasapu", "u_ranveer",
+                       "u_prathima", "u_tanuja"],
+        "progress": 65, "expected_progress": 75,
+    },
+]
+
+_BUG_TITLES = [
+    ("Booking", "Seat map fails to load for round-trip fares"),
+    ("Booking", "Fare rules not refreshed after currency switch"),
+    ("Booking", "Duplicate booking created on payment retry"),
+    ("Checkin", "Boarding pass QR code renders blank on iOS"),
+    ("Checkin", "Baggage allowance not reflecting frequent-flyer tier"),
+    ("Checkin", "Kiosk check-in timeout on slow network"),
+    ("Payments", "Refund stuck in pending after gateway timeout"),
+    ("Payments", "Wallet top-up double-charges on retry"),
+    ("Payments", "Tax computed incorrectly for multi-city fares"),
+    ("Reports", "Daily revenue report missing cancelled-fare adjustments"),
+    ("Reports", "Ops dashboard shows stale load-factor numbers"),
+    ("Reports", "Compliance export fails for date ranges > 90 days"),
+    ("Notifications", "Flight-delay SMS sent twice to same passenger"),
+    ("Notifications", "Push notification missing for gate change"),
+    ("Loyalty", "Miles not credited for codeshare flights"),
+    ("Loyalty", "Tier upgrade email sent to wrong passenger"),
+]
+_BUG_STATUSES = ["Open", "In progress", "Reopen", "Closed", "Resolved"]
+_BUG_PRIORITIES = ["Immediate", "High", "Normal", "Low"]
+
+
+def _kq_bugs(now: dt.datetime, assignee_ids: list[str], names: dict[str, str]) -> list[dict]:
+    """~40 synthetic prod-support bugs for KQ, spread across real assignees."""
+    rng = random.Random(20260712)
+    out = []
+    n = 40
+    for i in range(n):
+        module, title = _BUG_TITLES[i % len(_BUG_TITLES)]
+        assignee_id = assignee_ids[i % len(assignee_ids)]
+        # weight toward closed/resolved so bug_closure_rate looks realistic
+        status = rng.choices(_BUG_STATUSES, weights=[30, 20, 10, 25, 15])[0]
+        priority = rng.choices(_BUG_PRIORITIES, weights=[15, 30, 40, 15])[0]
+        due = (now - dt.timedelta(days=rng.randint(-10, 30))).date().isoformat()
+        out.append({
+            "task_id": f"bug_kq_{i + 1:03d}", "project_id": "proj_kq",
+            "title": f"[{module}] {title} (#{i + 1})", "wp_type": "Bug",
+            "status": status, "priority": priority,
+            "assignee_id": assignee_id, "assignee": names.get(assignee_id),
+            "progress": 100 if status in ("Closed", "Resolved") else rng.choice([0, 25, 50, 75]),
+            "due_date": due, "stage": "production_maintenance",
+        })
+    return out
+
+
+def _project_tasks(now: dt.datetime, names: dict[str, str]) -> list[dict]:
+    """A handful of normal (non-bug) tasks per project, tied to a stage."""
+    rng = random.Random(20260712)
+    defs = [
+        ("proj_kq", "production_maintenance", "u_murugan", "Rotate API keys for booking service", "In progress"),
+        ("proj_kq", "production_maintenance", "u_kalaiarasan", "Patch prod DB replica lag alerting", "Open"),
+        ("proj_om", "client_acquisition", "u_tanvi", "Prepare Oman Airways pitch deck", "In progress"),
+        ("proj_om", "client_acquisition", "u_arnav", "Competitor pricing research", "Open"),
+        ("proj_om", "rfp_proposal", "u_meghna", "Draft RFP response outline", "Open"),
+        ("proj_sv", "uat_training", "u_soochana", "Schedule Saudia UAT sessions", "In progress"),
+        ("proj_sv", "uat_training", "u_ronaly", "Write training manual — booking module", "In progress"),
+        ("proj_sv", "qa_testing", "u_prathima", "Sign off SV regression suite", "Done"),
+        ("proj_sv", "requirements", "u_akasapu", "Finalize SV loyalty requirements doc", "Done"),
+    ]
+    out = []
+    for i, (pid, stage, uid, title, status) in enumerate(defs):
+        due = (now + dt.timedelta(days=rng.randint(-5, 20))).date().isoformat()
+        out.append({
+            "task_id": f"proj_task_{i + 1:03d}", "project_id": pid, "stage": stage,
+            "title": title, "status": status, "assignee_id": uid,
+            "assignee": names.get(uid),
+            "progress": 100 if status == "Done" else (50 if status == "In progress" else 0),
+            "due_date": due,
+        })
+    return out
 
 
 AUTOMATION_SCRIPTS = [
     {"script_id": "as1", "title": "Booking flow regression", "module": "Booking",
-     "owner": "Sneha Patil", "status": "pending"},
+     "owner": "Prathima DS", "status": "pending"},
     {"script_id": "as2", "title": "Seat selection smoke test", "module": "Booking",
-     "owner": "Sneha Patil", "status": "in_review"},
+     "owner": "Akshaya G", "status": "in_review"},
     {"script_id": "as3", "title": "Check-in kiosk E2E", "module": "Checkin",
-     "owner": "Vikram Shah", "status": "pending"},
+     "owner": "Rahul Kumar", "status": "pending"},
     {"script_id": "as4", "title": "Boarding pass scan test", "module": "Checkin",
-     "owner": "Vikram Shah", "status": "done"},
+     "owner": "Devireddy Guruvardhanreddy", "status": "done"},
     {"script_id": "as5", "title": "Payment gateway retry logic", "module": "Payments",
-     "owner": "Sneha Patil", "status": "pending"},
+     "owner": "Tanuja Talwar", "status": "pending"},
     {"script_id": "as6", "title": "Refund workflow automation", "module": "Payments",
-     "owner": "Vikram Shah", "status": "pending"},
+     "owner": "Nikshitha TB", "status": "pending"},
     {"script_id": "as7", "title": "Wallet top-up regression", "module": "Payments",
-     "owner": "Sneha Patil", "status": "in_review"},
+     "owner": "Prathima DS", "status": "in_review"},
     {"script_id": "as8", "title": "Monthly revenue report validation", "module": "Reports",
-     "owner": "Vikram Shah", "status": "pending"},
+     "owner": "Akshaya G", "status": "pending"},
     {"script_id": "as9", "title": "Ops dashboard data-accuracy check", "module": "Reports",
-     "owner": "Sneha Patil", "status": "done"},
+     "owner": "Rahul Kumar", "status": "done"},
     {"script_id": "as10", "title": "Compliance report export test", "module": "Reports",
-     "owner": "Vikram Shah", "status": "pending"},
+     "owner": "Prathima DS", "status": "pending"},
 ]
 
 
@@ -161,43 +430,34 @@ def _seed_core(db: Database, now: dt.datetime) -> None:
         )
 
     pw = hash_password(DEMO_PASSWORD)
-    for uid, name, email, role, dept, level, designation, team_id, reports_to in USERS:
+    names: dict[str, str] = {}
+    for u in USERS:
+        roles = [u["role"]] + u.get("extra_roles", [])
+        team_ids = [u["team_id"]] if u.get("team_id") else []
+        names[u["user_id"]] = u["name"]
         db.users.update_one(
-            {"user_id": uid},
+            {"user_id": u["user_id"]},
             {"$set": {
-                "user_id": uid, "name": name, "email": email, "role": role,
-                "department": dept, "status": "active", "password_hash": pw,
-                "level": level, "designation": designation, "team_id": team_id,
-                "reports_to": reports_to, "created_at": now,
+                "user_id": u["user_id"], "name": u["name"], "email": u["email"],
+                "role": u["role"], "roles": roles, "department": u["department"],
+                "status": "active", "password_hash": pw, "level": u["level"],
+                "designation": u["designation"], "team_id": u["team_id"],
+                "team_ids": team_ids, "reports_to": u["reports_to"],
+                "created_at": now,
             }},
             upsert=True,
         )
 
-    # demo projects + tasks (also seeded by OpenProject connector in Phase 2)
-    projects = [
-        {"project_id": "p_alpha", "name": "Project Alpha", "status": "active",
-         "owner_id": "u_mgr", "dept_id": "eng", "source_system": "seed",
-         "progress": 42, "expected_progress": 70},
-        {"project_id": "p_beta", "name": "Project Beta", "status": "active",
-         "owner_id": "u_mgr", "dept_id": "eng", "source_system": "seed",
-         "progress": 88, "expected_progress": 80},
-    ]
-    for p in projects:
+    for p in PROJECTS:
         db.projects.update_one({"project_id": p["project_id"]},
                                {"$set": {**p, "created_at": now}}, upsert=True)
 
-    tasks = [
-        {"task_id": "t1", "project_id": "p_alpha", "title": "Design schema",
-         "assignee_id": "u_emp", "status": "Done", "progress": 100,
-         "due_date": "2020-01-01"},
-        {"task_id": "t2", "project_id": "p_alpha", "title": "Build ingestion",
-         "assignee_id": "u_emp", "status": "In progress", "progress": 30,
-         "due_date": "2020-01-01"},  # overdue
-        {"task_id": "t3", "project_id": "p_alpha", "title": "Write docs",
-         "assignee_id": "u_mgr", "status": "Open", "progress": 0,
-         "due_date": "2030-01-01"},
-    ]
-    for t in tasks:
+    for t in _kq_bugs(now, PROJECTS[0]["member_ids"], names):
+        db.tasks.update_one({"task_id": t["task_id"]},
+                            {"$set": {**t, "source_system": "seed", "created_at": now}},
+                            upsert=True)
+
+    for t in _project_tasks(now, names):
         db.tasks.update_one({"task_id": t["task_id"]},
                             {"$set": {**t, "source_system": "seed", "created_at": now}},
                             upsert=True)
@@ -286,21 +546,19 @@ def seed_demo_extras(db: Database) -> dict:
     }
 
 
-def merge_ui_into_engineering(db: Database) -> dict:
-    """One-off org correction, safe to rerun against a live database.
-
-    UI was originally seeded as its own department with Birbal Singh as its
-    L3 head; it's actually a team inside Engineering, same as Java/Python/QA.
-    `_seed_core` already upserts team_ui and its lead/members onto "eng" per
-    the corrected canonical seed data — upserting can't remove the two docs
-    that are no longer part of that data, so this deletes them explicitly:
-    Birbal's now-retired user record and the standalone "ui" department doc.
+def reset_roster(db: Database) -> dict:
+    """Destructive rebuild: wipe every seed-owned collection and reseed from
+    scratch with the current roster/projects. Use when the roster itself has
+    changed (not just refreshing demo values) — e.g. replacing the old
+    placeholder people with the real FlyNava team. Never call this against a
+    database with real, non-demo data you care about.
     """
-    now = dt.datetime.now(dt.timezone.utc)
-    _seed_core(db, now)
-    removed_head = db.users.delete_one({"user_id": "u_birbal"}).deleted_count
-    removed_dept = db.departments.delete_one({"dept_id": "ui"}).deleted_count
-    return {"removed_head": removed_head, "removed_dept": removed_dept}
+    for coll in ("users", "teams", "departments", "projects", "tasks",
+                 "attendance", "leaves", "payslips", "employees", "meetings",
+                 "notifications", "automation_scripts", "product_docs"):
+        db[coll].delete_many({})
+    seed(db)
+    return {"users": len(USERS), "teams": len(TEAMS), "projects": len(PROJECTS)}
 
 
 def seed(db: Database) -> None:

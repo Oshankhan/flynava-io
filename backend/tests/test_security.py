@@ -26,5 +26,5 @@ def test_rate_limit_returns_429_when_exceeded(client):
 
 def test_audit_trail_written_on_login(client, db):
     client.post("/api/v1/auth/login",
-                json={"email": "leadership@flynava.ai", "password": "Passw0rd!"})
+                json={"email": "harsha.varlani@flynava.ai", "password": "Passw0rd!"})
     assert db.audit_logs.count_documents({"action": "login"}) >= 1

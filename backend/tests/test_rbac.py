@@ -23,7 +23,7 @@ def test_users_endpoint_allows_hr_denies_employee(client, auth_header):
     ok = client.get("/api/v1/users", headers=auth_header("hr@flynava.ai"))
     assert ok.status_code == 200
     assert len(ok.json()) == len(USERS)
-    denied = client.get("/api/v1/users", headers=auth_header("employee@flynava.ai"))
+    denied = client.get("/api/v1/users", headers=auth_header("manas.ankarla@flynava.ai"))
     assert denied.status_code == 403
 
 
@@ -31,5 +31,5 @@ def test_rbac_matrix_endpoint_super_admin_only(client, auth_header):
     ok = client.get("/api/v1/rbac/matrix", headers=auth_header("admin@flynava.ai"))
     assert ok.status_code == 200
     assert ok.json()["matrix"]["finance"]["investor"] == "summary"
-    denied = client.get("/api/v1/rbac/matrix", headers=auth_header("leadership@flynava.ai"))
+    denied = client.get("/api/v1/rbac/matrix", headers=auth_header("harsha.varlani@flynava.ai"))
     assert denied.status_code == 403

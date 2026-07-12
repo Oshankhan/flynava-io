@@ -67,6 +67,11 @@ export function levelOf(user: User | null): number {
   return typeof user.level === "number" ? user.level : ROLE_LEVEL[user.role] ?? 1;
 }
 
+export function rolesOf(user: User | null): string[] {
+  if (!user) return [];
+  return user.roles && user.roles.length > 0 ? user.roles : [user.role];
+}
+
 export default function Layout() {
   const { user, logout } = useAuth();
   const { dark, toggle } = useTheme();
@@ -136,8 +141,11 @@ export default function Layout() {
 
   const items = useMemo(() => {
     if (!user) return [];
-    const canReports = ["super_admin", "leadership", "manager", "team_lead"].includes(user.role);
-    const canPeople = ["super_admin", "leadership", "hr"].includes(user.role);
+    const roles = rolesOf(user);
+    const canReports = roles.some((r) =>
+      ["super_admin", "leadership", "manager", "team_lead"].includes(r)
+    );
+    const canPeople = roles.some((r) => ["super_admin", "leadership", "hr"].includes(r));
     const list: MenuProps["items"] = [
       { key: "/workspace", icon: <HomeOutlined />, label: "My Workspace" },
     ];

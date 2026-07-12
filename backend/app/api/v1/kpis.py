@@ -28,7 +28,7 @@ ELEVATED_ROLES = ("super_admin", "leadership", "manager")
 def snapshot(module: str | None = None, user: dict = Depends(get_current_user),
              db: Database = Depends(get_db)) -> list[dict]:
     """Latest KPI values, filtered to modules the caller may access."""
-    allowed = [m for m in rbac.accessible_modules(user["role"])]
+    allowed = list(rbac.accessible_modules_for_user(user))
     modules = [module] if module and module in allowed else allowed
     return engine.latest_snapshot(db, modules)
 

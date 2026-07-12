@@ -178,7 +178,7 @@ def workspace_exec(user: dict = Depends(get_current_user),
         raise HTTPException(status.HTTP_403_FORBIDDEN,
                             "super_admin/leadership only")
 
-    base = dashboards_svc.build(db, "leadership", user["role"])
+    base = dashboards_svc.build(db, "leadership", user)
 
     today = dt.date.today().isoformat()
     today_status = {r["name"]: r["status"] for r in

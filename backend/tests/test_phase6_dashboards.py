@@ -3,11 +3,11 @@ import pytest
 
 DASHBOARDS = {
     "leadership": "leadership@flynava.ai",
-    "manager": "manager@flynava.ai",
+    "manager": "harsha.varlani@flynava.ai",
     "hr": "hr@flynava.ai",
     "finance": "leadership@flynava.ai",   # finance dashboard: leadership has access
-    "marketing": "marketing@flynava.ai",
-    "employee": "employee@flynava.ai",
+    "marketing": "tanvi.gupta@flynava.ai",
+    "employee": "manas.ankarla@flynava.ai",
 }
 
 

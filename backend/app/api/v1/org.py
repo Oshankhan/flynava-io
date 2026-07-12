@@ -80,6 +80,7 @@ def reports_of(user_id: str, user: dict = Depends(get_current_user),
     drilling or to link straight to their individual dashboard)."""
     _require_viewable(db, user, user_id)
     team_names = {t["team_id"]: t["name"] for t in db.teams.find({}, {"team_id": 1, "name": 1})}
+    projects = list(db.projects.find({}, {"code": 1, "member_ids": 1}))
 
     out = []
     for m in db.users.find({"reports_to": user_id, "status": "active"}).sort("name", 1):
@@ -96,6 +97,8 @@ def reports_of(user_id: str, user: dict = Depends(get_current_user),
                 {"requester_id": m["user_id"], "status": "pending"}),
             "has_reports": db.users.count_documents(
                 {"reports_to": m["user_id"], "status": "active"}) > 0,
+            "project_codes": [p["code"] for p in projects
+                              if m["user_id"] in p.get("member_ids", [])],
         })
     return out
 
@@ -116,6 +119,12 @@ def user_overview(user_id: str, user: dict = Depends(get_current_user),
         if target.get("team_id") else None
     pending_docs = [{k: v for k, v in d.items() if k not in ("_id", "path")} for d in
                     db.documents.find({"uploaded_by": user_id, "status": "pending"})]
+    projects = [
+        {"project_id": p["project_id"], "code": p["code"], "name": p["name"],
+         "current_stage_name": next(
+             (s["name"] for s in p.get("stages", []) if s["key"] == p["current_stage"]), None)}
+        for p in db.projects.find({"member_ids": user_id})
+    ]
     activity = []
     for a in db.audit_logs.find({"actor_id": user_id, "action": {"$in": list(_FEED_VERBS)}}) \
                           .sort("created_at", -1).limit(8):
@@ -142,6 +151,7 @@ def user_overview(user_id: str, user: dict = Depends(get_current_user),
         "pending_docs": pending_docs,
         "meetings": meetings_svc.upcoming(db, user_id, limit=5),
         "activity": activity,
+        "projects": projects,
     }
 
 

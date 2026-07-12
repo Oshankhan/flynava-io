@@ -154,7 +154,8 @@ def team_tasks_bulk(db: Database, team_ids: list[str]) -> dict[str, dict]:
 
 def create_task(db: Database, *, creator: dict, title: str, assignee_id: str,
                 description: str = "", due_date: str | None = None,
-                priority: str = "Normal") -> dict:
+                priority: str = "Normal", project_id: str | None = None,
+                stage: str | None = None) -> dict:
     assignee = db.users.find_one({"user_id": assignee_id}, {"name": 1, "user_id": 1})
     task = {
         "task_id": "io_" + uuid.uuid4().hex[:10],
@@ -169,6 +170,8 @@ def create_task(db: Database, *, creator: dict, title: str, assignee_id: str,
         "assignee": assignee["name"] if assignee else assignee_id,
         "created_by": creator["user_id"],
         "source_system": "io",
+        "project_id": project_id,
+        "stage": stage,
         "created_at": dt.datetime.now(dt.timezone.utc),
     }
     db.tasks.insert_one(task)

@@ -120,6 +120,24 @@ export default function MemberDetail() {
         </Flex>
       </Card>
 
+      {data.projects.length > 0 && (
+        <Card size="small" bordered={false} title="Projects" className="mb-4">
+          <Flex gap={8} wrap>
+            {data.projects.map((p) => (
+              <Tag
+                key={p.project_id}
+                color="purple"
+                className="cursor-pointer px-2.5 py-1"
+                onClick={() => navigate(`/projects/${p.project_id}`)}
+              >
+                <b>{p.code}</b> {p.name}
+                {p.current_stage_name ? ` · ${p.current_stage_name}` : ""}
+              </Tag>
+            ))}
+          </Flex>
+        </Card>
+      )}
+
       <Row gutter={[16, 16]}>
         <Col flex="1 1 140px"><StatTile label="Total Tasks" value={b.total} tint="primary" /></Col>
         <Col flex="1 1 140px"><StatTile label="Completed" value={b.completed} tint="primary" /></Col>

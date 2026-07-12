@@ -37,6 +37,7 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  roles?: string[];
   department?: string;
   status?: string;
   level?: number;
@@ -454,6 +455,7 @@ export interface OrgReportRow extends UserLite {
   absent_7d: number;
   pending_requests: number;
   has_reports: boolean;
+  project_codes: string[];
 }
 export interface AttendanceSummary {
   rows: AttendanceRow[];
@@ -461,6 +463,12 @@ export interface AttendanceSummary {
   absent_count: number;
   present_count: number;
   avg_hours: number | null;
+}
+export interface MemberProject {
+  project_id: string;
+  code: string;
+  name: string;
+  current_stage_name?: string | null;
 }
 export interface UserOverview {
   user: UserLite;
@@ -476,6 +484,7 @@ export interface UserOverview {
   pending_docs: IoDocument[];
   meetings: Meeting[];
   activity: { action: string; text: string; at: string }[];
+  projects: MemberProject[];
 }
 export interface DeptHead {
   user_id: string;
@@ -532,6 +541,64 @@ export interface ExecWorkspaceData {
   inbox_count: number;
   meetings: Meeting[];
   activity: ActivityItem[];
+}
+
+// --- Client projects (stage pipeline) ---
+export interface ProjectStage {
+  key: string;
+  name: string;
+  owner_team: string;
+  status: "done" | "active" | "pending";
+}
+export interface ProjectMember {
+  user_id: string;
+  name: string;
+  designation?: string | null;
+  team_id?: string | null;
+}
+export interface ProjectSummary {
+  project_id: string;
+  code: string;
+  name: string;
+  client?: string;
+  status: string;
+  current_stage: string;
+  current_stage_name?: string | null;
+  progress: number;
+  expected_progress?: number | null;
+  team_ids: string[];
+  members: ProjectMember[];
+  member_count: number;
+  bug_count: number;
+  task_count: number;
+}
+export interface ProjectTaskRow {
+  task_id: string;
+  title: string;
+  status: string | null;
+  wp_type?: string | null;
+  priority?: string | null;
+  assignee_id?: string | null;
+  assignee?: string | null;
+  progress: number;
+  due_date?: string | null;
+  stage?: string | null;
+}
+export interface ProjectDetail {
+  project_id: string;
+  code: string;
+  name: string;
+  client?: string;
+  status: string;
+  current_stage: string;
+  stages: ProjectStage[];
+  progress: number;
+  expected_progress?: number | null;
+  owner: { user_id: string; name: string } | null;
+  team_ids: string[];
+  members: ProjectMember[];
+  tasks: ProjectTaskRow[];
+  bugs: ProjectTaskRow[];
 }
 
 async function uploadReq<T>(path: string, form: FormData): Promise<T> {
@@ -660,6 +727,8 @@ export const api = {
     assignee_id?: string;
     due_date?: string | null;
     priority?: string;
+    project_id?: string | null;
+    stage?: string | null;
   }) => req<TaskRow>("/tasks", { method: "POST", body: JSON.stringify(body) }),
   myMeetings: (start?: string, end?: string) => {
     const q = new URLSearchParams();
@@ -743,6 +812,27 @@ export const api = {
   orgReports: (userId: string) => req<OrgReportRow[]>(`/org/reports/${userId}`),
   userOverview: (userId: string) => req<UserOverview>(`/org/users/${userId}/overview`),
   execWorkspace: () => req<ExecWorkspaceData>("/workspace/exec"),
+  // Client projects (stage pipeline)
+  projects: () => req<ProjectSummary[]>("/projects"),
+  project: (id: string) => req<ProjectDetail>(`/projects/${id}`),
+  createProject: (body: {
+    code: string;
+    name: string;
+    client?: string;
+    team_ids?: string[];
+    member_ids?: string[];
+  }) => req<ProjectSummary>("/projects", { method: "POST", body: JSON.stringify(body) }),
+  setProjectStage: (id: string, stage: string, status?: string) =>
+    req<ProjectDetail>(`/projects/${id}/stage`, {
+      method: "PATCH",
+      body: JSON.stringify({ stage, status }),
+    }),
+  addProjectMembers: (id: string, member_ids: string[]) =>
+    req<{ added: string[] }>(`/projects/${id}/members`, {
+      method: "POST",
+      body: JSON.stringify({ member_ids }),
+    }),
+
   notificationsStreamUrl: () => {
     const token = localStorage.getItem(TOKEN_KEY);
     return `${API_BASE_URL}/api/v1/notifications/stream?token=${encodeURIComponent(token ?? "")}`;
