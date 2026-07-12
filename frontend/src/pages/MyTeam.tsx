@@ -159,7 +159,7 @@ export default function MyTeam() {
 
                   <Flex gap={4} wrap className="mb-2">
                     {m.team_name && <Tag color="geekblue">{m.team_name}</Tag>}
-                    {m.project_codes.map((code) => (
+                    {m.project_codes?.map((code) => (
                       <Tag key={code} color="purple">{code}</Tag>
                     ))}
                   </Flex>

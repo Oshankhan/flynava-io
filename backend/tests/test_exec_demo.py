@@ -139,6 +139,14 @@ def test_workspace_exec_shape(client, auth_header):
     eng = next(d for d in body["departments"] if d["dept_id"] == "eng")
     assert eng["head"]["name"] == "Harsha Varlani"
     assert eng["teams_count"] == 5  # devops, java, python, qa, ui
+
+    # Meghna is multi-role (manager + marketing) — she heads Product (her
+    # primary department) AND Marketing (via her extra role), so neither
+    # department shows up with a blank/unassigned head.
+    product = next(d for d in body["departments"] if d["dept_id"] == "product")
+    mkt = next(d for d in body["departments"] if d["dept_id"] == "mkt")
+    assert product["head"]["name"] == "Meghna Mehra"
+    assert mkt["head"]["name"] == "Meghna Mehra"
     assert eng["member_count"] >= 20
 
     assert body["automation"]["pending"] > 0

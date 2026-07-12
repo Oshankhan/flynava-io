@@ -196,13 +196,22 @@ def workspace_exec(user: dict = Depends(get_current_user),
 
     all_active_users = list(db.users.find(
         {"status": "active"}, {"user_id": 1, "name": 1, "department": 1,
-                               "level": 1, "designation": 1}))
+                               "level": 1, "designation": 1, "roles": 1}))
     users_by_dept: dict[str, list[dict]] = {}
     heads_by_dept: dict[str, dict] = {}
+    # A multi-role L3 (e.g. a manager who's also the marketing lead) heads
+    # their primary department AND any secondary department their extra
+    # role implies — otherwise that department shows no head at all.
+    _ROLE_DEPT = {"marketing": "mkt", "hr": "hr"}
     for u in all_active_users:
         users_by_dept.setdefault(u.get("department"), []).append(u)
-        if u.get("level") == 3 and u.get("department") not in heads_by_dept:
-            heads_by_dept[u["department"]] = u
+        if u.get("level") == 3:
+            if u.get("department") not in heads_by_dept:
+                heads_by_dept[u["department"]] = u
+            for r in u.get("roles") or []:
+                dept = _ROLE_DEPT.get(r)
+                if dept and dept not in heads_by_dept:
+                    heads_by_dept[dept] = u
 
     departments = []
     for d in db.departments.find({"dept_id": {"$ne": "exec"}}):
