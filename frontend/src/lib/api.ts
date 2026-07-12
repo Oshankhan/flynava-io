@@ -142,6 +142,7 @@ export interface IoDocument {
   doc_id: string;
   title: string;
   kind: string;
+  project_id?: string | null;
   filename: string;
   size: number;
   uploaded_by: string;
@@ -543,12 +544,16 @@ export interface ExecWorkspaceData {
   activity: ActivityItem[];
 }
 
-// --- Client projects (stage pipeline) ---
+// --- Client projects (editable stages) ---
 export interface ProjectStage {
   key: string;
   name: string;
-  owner_team: string;
+  description?: string;
+  owner_team?: string;
   status: "done" | "active" | "pending";
+  progress: number;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 export interface ProjectMember {
   user_id: string;
@@ -556,12 +561,22 @@ export interface ProjectMember {
   designation?: string | null;
   team_id?: string | null;
 }
+export interface ProjectManager {
+  user_id: string;
+  name: string;
+}
 export interface ProjectSummary {
   project_id: string;
   code: string;
   name: string;
   client?: string;
   status: string;
+  description?: string | null;
+  engagement?: string | null;
+  priority?: string | null;
+  start_date?: string | null;
+  due_date?: string | null;
+  project_manager?: ProjectManager | null;
   current_stage: string;
   current_stage_name?: string | null;
   progress: number;
@@ -571,6 +586,7 @@ export interface ProjectSummary {
   member_count: number;
   bug_count: number;
   task_count: number;
+  open_tasks: number;
 }
 export interface ProjectTaskRow {
   task_id: string;
@@ -584,12 +600,24 @@ export interface ProjectTaskRow {
   due_date?: string | null;
   stage?: string | null;
 }
+export interface ProjectActivityItem {
+  action: string;
+  actor_name: string;
+  meta: Record<string, unknown>;
+  at: string;
+}
 export interface ProjectDetail {
   project_id: string;
   code: string;
   name: string;
   client?: string;
   status: string;
+  description?: string | null;
+  engagement?: string | null;
+  priority?: string | null;
+  start_date?: string | null;
+  due_date?: string | null;
+  project_manager?: ProjectManager | null;
   current_stage: string;
   stages: ProjectStage[];
   progress: number;
@@ -658,11 +686,15 @@ export const api = {
     }),
 
   // Documents & approvals
-  documents: () => req<IoDocument[]>("/documents"),
-  uploadDocument: (title: string, kind: string, file: File) => {
+  documents: (projectId?: string) => {
+    const qs = projectId ? `?project_id=${encodeURIComponent(projectId)}` : "";
+    return req<IoDocument[]>(`/documents${qs}`);
+  },
+  uploadDocument: (title: string, kind: string, file: File, projectId?: string) => {
     const form = new FormData();
     form.append("title", title);
     form.append("kind", kind);
+    if (projectId) form.append("project_id", projectId);
     form.append("file", file);
     return uploadReq<IoDocument>("/documents", form);
   },
@@ -812,7 +844,7 @@ export const api = {
   orgReports: (userId: string) => req<OrgReportRow[]>(`/org/reports/${userId}`),
   userOverview: (userId: string) => req<UserOverview>(`/org/users/${userId}/overview`),
   execWorkspace: () => req<ExecWorkspaceData>("/workspace/exec"),
-  // Client projects (stage pipeline)
+  // Client projects (editable stages)
   projects: () => req<ProjectSummary[]>("/projects"),
   project: (id: string) => req<ProjectDetail>(`/projects/${id}`),
   createProject: (body: {
@@ -821,17 +853,53 @@ export const api = {
     client?: string;
     team_ids?: string[];
     member_ids?: string[];
+    description?: string;
+    engagement?: string;
+    priority?: string;
+    project_manager_id?: string | null;
+    start_date?: string | null;
+    due_date?: string | null;
   }) => req<ProjectSummary>("/projects", { method: "POST", body: JSON.stringify(body) }),
-  setProjectStage: (id: string, stage: string, status?: string) =>
-    req<ProjectDetail>(`/projects/${id}/stage`, {
-      method: "PATCH",
-      body: JSON.stringify({ stage, status }),
-    }),
+  updateProject: (id: string, body: {
+    name?: string;
+    client?: string;
+    description?: string;
+    engagement?: string;
+    priority?: string;
+    status?: string;
+    project_manager_id?: string | null;
+    start_date?: string | null;
+    due_date?: string | null;
+    team_ids?: string[];
+  }) => req<ProjectDetail>(`/projects/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  addStage: (id: string, body: {
+    key: string;
+    name: string;
+    description?: string;
+    status?: string;
+    progress?: number;
+    start_date?: string | null;
+    end_date?: string | null;
+  }) => req<ProjectDetail>(`/projects/${id}/stages`, { method: "POST", body: JSON.stringify(body) }),
+  updateStage: (id: string, stageKey: string, body: {
+    name?: string;
+    description?: string;
+    status?: string;
+    progress?: number;
+    start_date?: string | null;
+    end_date?: string | null;
+  }) => req<ProjectDetail>(`/projects/${id}/stages/${stageKey}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  }),
+  deleteStage: (id: string, stageKey: string) =>
+    req<ProjectDetail>(`/projects/${id}/stages/${stageKey}`, { method: "DELETE" }),
   addProjectMembers: (id: string, member_ids: string[]) =>
     req<{ added: string[] }>(`/projects/${id}/members`, {
       method: "POST",
       body: JSON.stringify({ member_ids }),
     }),
+  projectActivity: (id: string) => req<ProjectActivityItem[]>(`/projects/${id}/activity`),
 
   notificationsStreamUrl: () => {
     const token = localStorage.getItem(TOKEN_KEY);

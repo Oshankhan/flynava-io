@@ -45,7 +45,7 @@ def test_leadership_dashboard_has_kpis_and_projects(client, auth_header, db):
     body = r.json()
     assert body["title"] == "Leadership"
     assert len(body["kpis"]) > 0
-    assert len(body["projects"]) == 1  # only proj_sv has status="active" in the new seed
+    assert len(body["projects"]) == 2  # proj_kq and proj_sv have status="active" in the new seed
 
 
 def test_dashboard_access_denied_for_wrong_role(client, auth_header):

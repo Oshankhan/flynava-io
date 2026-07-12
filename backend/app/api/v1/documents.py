@@ -40,6 +40,7 @@ def _public(doc: dict) -> dict:
 async def upload_document(
     title: str = Form(...),
     kind: str = Form("document"),
+    project_id: str = Form(""),
     file: UploadFile = File(...),
     user: dict = Depends(get_current_user),
     db: Database = Depends(get_db),
@@ -61,6 +62,7 @@ async def upload_document(
         "doc_id": doc_id,
         "title": title,
         "kind": kind,
+        "project_id": project_id or None,
         "filename": file.filename,
         "size": len(content),
         "uploaded_by": user["user_id"],
@@ -88,9 +90,11 @@ async def upload_document(
 
 
 @router.get("/documents")
-def list_documents(user: dict = Depends(get_current_user),
+def list_documents(project_id: str | None = None,
+                   user: dict = Depends(get_current_user),
                    db: Database = Depends(get_db)) -> list[dict]:
-    return [_public(d) for d in db.documents.find().sort("created_at", -1).limit(100)]
+    query = {"project_id": project_id} if project_id else {}
+    return [_public(d) for d in db.documents.find(query).sort("created_at", -1).limit(100)]
 
 
 def _decide(db: Database, doc_id: str, user: dict, decision: str, comment: str) -> dict:

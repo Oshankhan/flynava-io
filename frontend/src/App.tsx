@@ -22,7 +22,6 @@ import MyTeam from "./pages/MyTeam";
 import Analytics from "./pages/Analytics";
 import OrgChart from "./pages/OrgChart";
 import MemberDetail from "./pages/MemberDetail";
-import ProjectDetail from "./pages/ProjectDetail";
 
 function Shell() {
   const { dark } = useTheme();
@@ -60,7 +59,7 @@ function Shell() {
               <Route path="/workspace" element={<Workspace />} />
               <Route path="/my-team" element={<MyTeam />} />
               <Route path="/tasks" element={<Tasks />} />
-              <Route path="/projects/:projectId" element={<ProjectDetail />} />
+              <Route path="/projects/:projectId" element={<Tasks />} />
               <Route path="/approvals" element={<Approvals />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/knowledge" element={<KnowledgeBase />} />

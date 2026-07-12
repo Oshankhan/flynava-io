@@ -229,19 +229,29 @@ USERS: list[dict] = [
 ]
 
 
-# Generic cross-functional pipeline every client project moves through.
+# Default template a brand-new project starts from (STAGE_PIPELINE / _stages_up_to).
+# Existing projects carry their OWN editable `stages` list (see PROJECTS below) —
+# this template only seeds new projects created via POST /projects.
 # `owner_team` is a hint for which team typically drives that stage (not
 # enforced) — marketing opens a project, product/engineering build it, QA
 # signs off, then it settles into steady-state production support.
 STAGE_PIPELINE = [
-    {"key": "client_acquisition", "name": "Client Acquisition", "owner_team": "marketing"},
-    {"key": "rfp_proposal", "name": "RFP / Proposal", "owner_team": "marketing"},
-    {"key": "requirements", "name": "Requirements", "owner_team": "product"},
-    {"key": "design", "name": "Design", "owner_team": "ui"},
-    {"key": "development", "name": "Development", "owner_team": "engineering"},
-    {"key": "qa_testing", "name": "QA / Testing", "owner_team": "qa"},
-    {"key": "uat_training", "name": "UAT / Training", "owner_team": "product"},
-    {"key": "production_maintenance", "name": "Production / Maintenance", "owner_team": "qa"},
+    {"key": "client_acquisition", "name": "Client Acquisition", "owner_team": "marketing",
+     "description": "Prospecting and initial client outreach"},
+    {"key": "rfp_proposal", "name": "RFP / Proposal", "owner_team": "marketing",
+     "description": "Proposal drafting and contract negotiation"},
+    {"key": "requirements", "name": "Requirements", "owner_team": "product",
+     "description": "Gathering and documenting client requirements"},
+    {"key": "design", "name": "Design", "owner_team": "ui",
+     "description": "UI/UX and solution design"},
+    {"key": "development", "name": "Development", "owner_team": "engineering",
+     "description": "Build and implementation"},
+    {"key": "qa_testing", "name": "QA / Testing", "owner_team": "qa",
+     "description": "Quality assurance and test cycles"},
+    {"key": "uat_training", "name": "UAT / Training", "owner_team": "product",
+     "description": "User acceptance testing and client training"},
+    {"key": "production_maintenance", "name": "Production / Maintenance", "owner_team": "qa",
+     "description": "Live support and ongoing maintenance"},
 ]
 _STAGE_KEYS = [s["key"] for s in STAGE_PIPELINE]
 
@@ -251,44 +261,96 @@ def _stages_up_to(current_key: str) -> list[dict]:
     out = []
     for i, s in enumerate(STAGE_PIPELINE):
         status = "done" if i < idx else "active" if i == idx else "pending"
-        out.append({**s, "status": status})
+        out.append({**s, "status": status, "progress": 100 if status == "done" else 0,
+                    "start_date": None, "end_date": None})
     return out
+
+
+def _stage(key: str, name: str, description: str, status: str, progress: int,
+          start: str, end: str) -> dict:
+    return {"key": key, "name": name, "description": description, "status": status,
+            "progress": progress, "start_date": start, "end_date": end, "owner_team": ""}
 
 
 PROJECTS = [
     {
         "project_id": "proj_kq", "code": "KQ", "name": "Kenya Airways",
-        "client": "Kenya Airways", "status": "maintenance",
-        "current_stage": "production_maintenance",
-        "stages": _stages_up_to("production_maintenance"),
+        "client": "Kenya Airways", "status": "active",
+        "engagement": "Existing Client - Production Support",
+        "description": "Production support and maintenance for existing modules. "
+                       "Handling bugs, patches and minor enhancements as per client requirements.",
+        "priority": "High", "project_manager_id": "u_animesh",
+        "start_date": "2026-01-01", "due_date": "2026-12-31",
+        "current_stage": "development",
+        "stages": [
+            _stage("initiation", "Initiation", "Project kickoff and requirement review",
+                  "done", 100, "2026-01-01", "2026-01-10"),
+            _stage("planning", "Planning", "Resource planning and task estimation",
+                  "done", 100, "2026-01-11", "2026-01-25"),
+            _stage("development", "Development", "Bug fixing and enhancements",
+                  "active", 70, "2026-01-26", "2026-09-30"),
+            _stage("testing", "Testing", "QA testing and UAT",
+                  "pending", 0, "2026-10-01", "2026-10-31"),
+            _stage("deployment", "Deployment", "Release to production",
+                  "pending", 0, "2026-11-01", "2026-11-15"),
+            _stage("closure", "Closure", "Project closure and handover",
+                  "pending", 0, "2026-11-16", "2026-12-31"),
+        ],
         "owner_id": "u_harsha",
         "team_ids": ["team_python", "team_qa", "team_devops", "team_ui"],
         "member_ids": ["u_murugan", "u_manas", "u_sharana", "u_pawan",
                        "u_prathima", "u_akshaya", "u_rahul",
                        "u_kalaiarasan", "u_praveen",
                        "u_mushaheed", "u_animesh"],
-        "progress": 100, "expected_progress": 100,
+        "progress": 45, "expected_progress": 50, "open_tasks_target": 12,
     },
     {
         "project_id": "proj_om", "code": "OM", "name": "Oman Airways",
-        "client": "Oman Airways", "status": "pipeline",
+        "client": "Oman Airways", "status": "planning",
+        "engagement": "New Prospect",
+        "description": "Marketing phase in progress. If the scenario moves forward, "
+                       "development teams will be allocated.",
+        "priority": "Medium", "project_manager_id": "u_nayana",
+        "start_date": "2026-06-15", "due_date": "2026-11-30",
         "current_stage": "client_acquisition",
-        "stages": _stages_up_to("client_acquisition"),
+        "stages": [
+            _stage("client_acquisition", "Client Acquisition",
+                  "Prospecting and initial client outreach",
+                  "active", 40, "2026-06-15", "2026-08-15"),
+            _stage("rfp_proposal", "RFP / Proposal",
+                  "Proposal drafting and contract negotiation",
+                  "pending", 0, "2026-08-16", "2026-11-30"),
+        ],
         "owner_id": "u_meghna",
         "team_ids": ["team_marketing"],
-        "member_ids": ["u_meghna", "u_tanvi", "u_arnav", "u_aadhira"],
-        "progress": 10, "expected_progress": 20,
+        "member_ids": ["u_meghna", "u_tanvi", "u_arnav", "u_aadhira", "u_gunnika"],
+        "progress": 20, "expected_progress": 25, "open_tasks_target": 8,
     },
     {
         "project_id": "proj_sv", "code": "SV", "name": "Saudia",
         "client": "Saudia", "status": "active",
-        "current_stage": "uat_training",
-        "stages": _stages_up_to("uat_training"),
+        "engagement": "Implementation & Training",
+        "description": "Client training ongoing for key modules and processes.",
+        "priority": "Medium", "project_manager_id": "u_mushaheed",
+        "start_date": "2026-05-10", "due_date": "2026-08-31",
+        "current_stage": "training_delivery",
+        "stages": [
+            _stage("requirements", "Requirements", "Confirming modules and rollout scope",
+                  "done", 100, "2026-05-10", "2026-05-20"),
+            _stage("configuration", "Configuration", "Environment and module setup",
+                  "done", 100, "2026-05-21", "2026-06-10"),
+            _stage("training_delivery", "Training Delivery",
+                  "Running client training sessions", "active", 0, "2026-06-11", "2026-08-10"),
+            _stage("go_live", "Go-Live", "Cutover to production usage",
+                  "pending", 0, "2026-08-11", "2026-08-20"),
+            _stage("closure", "Closure", "Project closure and handover",
+                  "pending", 0, "2026-08-21", "2026-08-31"),
+        ],
         "owner_id": "u_meghna",
         "team_ids": ["team_product", "team_qa"],
         "member_ids": ["u_soochana", "u_ronaly", "u_akasapu", "u_ranveer",
                        "u_prathima", "u_tanuja"],
-        "progress": 65, "expected_progress": 75,
+        "progress": 40, "expected_progress": 50, "open_tasks_target": 15,
     },
 ]
 
@@ -332,35 +394,64 @@ def _kq_bugs(now: dt.datetime, assignee_ids: list[str], names: dict[str, str]) -
             "status": status, "priority": priority,
             "assignee_id": assignee_id, "assignee": names.get(assignee_id),
             "progress": 100 if status in ("Closed", "Resolved") else rng.choice([0, 25, 50, 75]),
-            "due_date": due, "stage": "production_maintenance",
+            "due_date": due, "stage": "development",
         })
     return out
 
 
+# Per-project open-task title banks — themed to each engagement (KQ: prod
+# support/dev work, OM: marketing/pitch prep, SV: training/rollout) so the
+# seeded "Open Tasks" count on each project card matches the mockup exactly.
+_OPEN_TASK_TITLES: dict[str, list[str]] = {
+    "proj_kq": [
+        "Rotate API keys for booking service", "Patch prod DB replica lag alerting",
+        "Upgrade payment gateway SDK", "Add rate-limiting to check-in API",
+        "Refactor seat-map caching layer", "Migrate booking service logs to structured JSON",
+        "Add retry/backoff to loyalty sync job", "Document incident runbook for payments outage",
+        "Set up synthetic monitoring for check-in flow", "Clean up dead feature flags in booking service",
+        "Improve DB index coverage for reports queries", "Automate weekly compliance export job",
+    ],
+    "proj_om": [
+        "Prepare Oman Airways pitch deck", "Competitor pricing research",
+        "Draft RFP response outline", "Schedule stakeholder intro call",
+        "Build ROI / cost-savings one-pager", "Localize proposal deck for Arabic market",
+        "Coordinate reference-client testimonial", "Finalize pricing tiers for proposal",
+    ],
+    "proj_sv": [
+        "Schedule Saudia UAT sessions", "Write training manual — booking module",
+        "Prepare check-in module training slides", "Coordinate on-site trainer travel",
+        "Set up sandbox environment for trainees", "Translate training material to Arabic",
+        "Collect trainee feedback forms", "Draft go-live readiness checklist",
+        "Configure loyalty module for Saudia branding", "Set up helpdesk escalation path",
+        "Prepare payments module demo script", "Schedule train-the-trainer session",
+        "Draft post-go-live support plan", "Review SLA terms with client",
+        "Prepare rollback plan for go-live",
+    ],
+}
+
+
 def _project_tasks(now: dt.datetime, names: dict[str, str]) -> list[dict]:
-    """A handful of normal (non-bug) tasks per project, tied to a stage."""
+    """Seeds each project's `open_tasks_target` worth of open (non-bug) tasks,
+    cycling across its real members and stages — drives the "Open Tasks" stat
+    shown on each project card/detail."""
     rng = random.Random(20260712)
-    defs = [
-        ("proj_kq", "production_maintenance", "u_murugan", "Rotate API keys for booking service", "In progress"),
-        ("proj_kq", "production_maintenance", "u_kalaiarasan", "Patch prod DB replica lag alerting", "Open"),
-        ("proj_om", "client_acquisition", "u_tanvi", "Prepare Oman Airways pitch deck", "In progress"),
-        ("proj_om", "client_acquisition", "u_arnav", "Competitor pricing research", "Open"),
-        ("proj_om", "rfp_proposal", "u_meghna", "Draft RFP response outline", "Open"),
-        ("proj_sv", "uat_training", "u_soochana", "Schedule Saudia UAT sessions", "In progress"),
-        ("proj_sv", "uat_training", "u_ronaly", "Write training manual — booking module", "In progress"),
-        ("proj_sv", "qa_testing", "u_prathima", "Sign off SV regression suite", "Done"),
-        ("proj_sv", "requirements", "u_akasapu", "Finalize SV loyalty requirements doc", "Done"),
-    ]
     out = []
-    for i, (pid, stage, uid, title, status) in enumerate(defs):
-        due = (now + dt.timedelta(days=rng.randint(-5, 20))).date().isoformat()
-        out.append({
-            "task_id": f"proj_task_{i + 1:03d}", "project_id": pid, "stage": stage,
-            "title": title, "status": status, "assignee_id": uid,
-            "assignee": names.get(uid),
-            "progress": 100 if status == "Done" else (50 if status == "In progress" else 0),
-            "due_date": due,
-        })
+    for p in PROJECTS:
+        pid = p["project_id"]
+        titles = _OPEN_TASK_TITLES[pid]
+        member_ids = p["member_ids"]
+        stage_keys = [s["key"] for s in p["stages"]]
+        for i in range(p["open_tasks_target"]):
+            uid = member_ids[i % len(member_ids)]
+            stage = stage_keys[i % len(stage_keys)]
+            progress = rng.choice([0, 25, 50, 75])
+            status = "Open" if progress == 0 else "In progress"
+            due = (now + dt.timedelta(days=rng.randint(-5, 30))).date().isoformat()
+            out.append({
+                "task_id": f"proj_task_{pid}_{i + 1:03d}", "project_id": pid, "stage": stage,
+                "title": titles[i % len(titles)], "status": status, "assignee_id": uid,
+                "assignee": names.get(uid), "progress": progress, "due_date": due,
+            })
     return out
 
 
@@ -449,8 +540,9 @@ def _seed_core(db: Database, now: dt.datetime) -> None:
         )
 
     for p in PROJECTS:
-        db.projects.update_one({"project_id": p["project_id"]},
-                               {"$set": {**p, "created_at": now}}, upsert=True)
+        doc = {k: v for k, v in p.items() if k != "open_tasks_target"}
+        db.projects.update_one({"project_id": doc["project_id"]},
+                               {"$set": {**doc, "created_at": now}}, upsert=True)
 
     for t in _kq_bugs(now, PROJECTS[0]["member_ids"], names):
         db.tasks.update_one({"task_id": t["task_id"]},

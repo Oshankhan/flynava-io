@@ -85,5 +85,6 @@ def create_task(body: TaskCreate, user: dict = Depends(get_current_user),
                      body=f"Assigned by {user['name']}", action_link="/tasks")
     audit.record(db, actor_id=user["user_id"], action="task_created",
                  entity_type="task", entity_id=task["task_id"],
-                 meta={"title": body.title, "assignee_id": assignee_id})
+                 meta={"title": body.title, "assignee_id": assignee_id,
+                      "project_id": body.project_id})
     return task
