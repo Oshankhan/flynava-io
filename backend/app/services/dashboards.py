@@ -81,9 +81,10 @@ def _bug_breakdown(db: Database) -> list[dict]:
 
 
 def _series(db: Database, kpis: list[dict]) -> list[dict]:
+    hist_map = engine.history_bulk(db, [k["kpi_id"] for k in kpis])
     out = []
     for k in kpis:
-        hist = engine.history(db, k["kpi_id"])
+        hist = hist_map.get(k["kpi_id"], [])
         if len(hist) >= 3:
             out.append({"kpi_id": k["kpi_id"], "name": k["name"],
                         "unit": k.get("unit"), "points": hist})

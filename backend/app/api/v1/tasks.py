@@ -40,11 +40,12 @@ def team_tasks(user: dict = Depends(get_current_user),
         teams = [t["team_id"] for t in
                  db.teams.find({"department": user.get("department")})] or \
                 [t["team_id"] for t in db.teams.find()]
+        bulk = tasks_svc.team_tasks_bulk(db, teams)
         merged = {"rows": [], "buckets": {"total": 0, "completed": 0,
                   "in_progress": 0, "pending": 0, "overdue": 0},
                   "reopened": [], "members": []}
         for tid in teams:
-            part = tasks_svc.team_tasks(db, tid)
+            part = bulk[tid]
             merged["rows"] += part["rows"]
             merged["reopened"] += part["reopened"]
             merged["members"] += part["members"]

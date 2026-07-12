@@ -150,6 +150,31 @@ def history(db: Database, kpi_id: str, n: int = 12) -> list[dict]:
             for r in rows if r.get("value") is not None]
 
 
+def history_bulk(db: Database, kpi_ids: list[str], n: int = 12) -> dict[str, list[dict]]:
+    """Batched `history()` for many KPI ids in a single query.
+
+    Dashboards scan several KPIs' history looking for the first few with
+    enough points for a trend chart (see dashboards.py's `_series`) — doing
+    that one `history()` call at a time means one query per KPI checked.
+    """
+    if not kpi_ids:
+        return {}
+    buckets: dict[str, list[dict]] = {kid: [] for kid in kpi_ids}
+    cursor = db.kpi_values.find(
+        {"kpi_id": {"$in": kpi_ids}}, {"kpi_id": 1, "value": 1, "calculated_at": 1}
+    ).sort("calculated_at", -1)
+    for v in cursor:
+        bucket = buckets[v["kpi_id"]]
+        if len(bucket) < n:
+            bucket.append(v)
+    out: dict[str, list[dict]] = {}
+    for kid, rows in buckets.items():
+        rows = list(reversed(rows))
+        out[kid] = [{"t": r["calculated_at"].strftime("%Y-%m-%d"), "v": r["value"]}
+                    for r in rows if r.get("value") is not None]
+    return out
+
+
 def _row(db: Database, d: dict, value) -> dict:
     # Only trend KPIs (monthly history) get a change arrow. Computed KPIs
     # (ops/bugs) recalc many times a day, so a run-to-run delta is noise.
