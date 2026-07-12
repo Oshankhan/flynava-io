@@ -52,8 +52,15 @@ const STATUS_TAG: Record<string, string> = {
   completed: "default",
 };
 
+// Brand-accurate accents so the card's left edge matches each airline's logo.
+const BRAND_COLORS: Record<string, string> = {
+  KQ: "#C8102E", // Kenya Airways red
+  OM: "#0F7B4A", // Oman Air green
+  SV: "#006C35", // Saudia green
+};
 const ACCENT_COLORS = ["#dc2626", "#d97706", "#059669", "#2563eb", "#7c3aed", "#db2777"];
 function accentFor(code: string): string {
+  if (BRAND_COLORS[code]) return BRAND_COLORS[code];
   const idx = code.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % ACCENT_COLORS.length;
   return ACCENT_COLORS[idx];
 }
@@ -232,8 +239,8 @@ function ProjectsTab({ canCreate }: { canCreate: boolean }) {
                       </Avatar>
                     )}
                     <div className="min-w-0 flex-1">
-                      <Flex align="center" gap={8} wrap>
-                        <Text strong className="text-lg">({p.code}) {p.name}</Text>
+                      <Flex vertical gap={4} align="start">
+                        <Text strong className="text-[15px]">({p.code}) {p.name}</Text>
                         <Tag color={STATUS_TAG[p.status] ?? "default"} className="capitalize">
                           {p.status.replace("_", " ")}
                         </Tag>

@@ -144,7 +144,7 @@ export default function InayaChat() {
       <Button
         shape="circle"
         onClick={() => setOpen((o) => !o)}
-        className="fixed bottom-6 right-6 w-14 h-14 z-[1000] p-0 shadow-xl border-2 border-io-600"
+        className="fixed bottom-6 right-6 w-11 h-11 z-[1000] p-0 shadow-xl border-2 border-io-600"
       >
         <img src={inayaImg} alt="Inaya" className="w-full h-full object-cover rounded-full" />
       </Button>
