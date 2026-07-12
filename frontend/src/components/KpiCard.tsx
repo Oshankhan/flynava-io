@@ -54,29 +54,31 @@ export default function KpiCard({ kpi, series }: { kpi: Kpi; series?: KpiSeries 
 
   return (
     <Card size="small" bordered={false} className="h-full shadow-sm">
-      <Flex justify="space-between" align="flex-start" gap={8}>
-        <Flex align="center" gap={8} className="min-w-0">
-          <span
-            className="flex items-center justify-center w-8 h-8 rounded-lg text-[15px] shrink-0"
-            style={{ backgroundColor: `${accent}1a`, color: accent }}
-          >
-            {iconFor(kpi)}
-          </span>
-          <Text type="secondary" className="text-[13px] font-medium leading-tight">
-            {kpi.name}
-          </Text>
-        </Flex>
+      <Flex justify="space-between" align="center" gap={8}>
+        <span
+          className="flex items-center justify-center w-8 h-8 rounded-lg text-[15px] shrink-0"
+          style={{ backgroundColor: `${accent}1a`, color: accent }}
+        >
+          {iconFor(kpi)}
+        </span>
         <RagBadge rag={kpi.rag} />
       </Flex>
 
-      <Flex align="baseline" gap={8} className="mt-2">
-        <span className="text-[26px] font-bold text-io-900 leading-none">
+      <Text
+        type="secondary"
+        className="block text-[12px] font-medium leading-snug mt-2 break-words min-h-[2.4em]"
+      >
+        {kpi.name}
+      </Text>
+
+      <Flex align="baseline" gap={6} wrap className="mt-1">
+        <span className="text-[22px] font-bold text-io-900 leading-none">
           {formatValue(kpi.value, kpi.unit)}
         </span>
         {change != null && change !== 0 && (
           <span
             data-testid="kpi-change"
-            className={`text-[13px] font-semibold ${good ? "text-io-600" : "text-red-600"}`}
+            className={`text-[12px] font-semibold ${good ? "text-io-600" : "text-red-600"}`}
           >
             {change > 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />} {Math.abs(change)}%
           </span>
@@ -84,14 +86,14 @@ export default function KpiCard({ kpi, series }: { kpi: Kpi; series?: KpiSeries 
       </Flex>
 
       {kpi.target != null && (
-        <Text type="secondary" className="text-xs">
+        <Text type="secondary" className="block text-[11px] leading-tight mt-0.5">
           Target {formatValue(kpi.target, kpi.unit)} ·{" "}
-          {kpi.direction === "higher" ? "higher is better" : "lower is better"}
+          {kpi.direction === "higher" ? "higher" : "lower"} is better
         </Text>
       )}
 
       {points.length >= 3 && (
-        <div className="w-full h-9 mt-2 -mx-1">
+        <div className="w-full h-8 mt-2 -mx-1">
           <ResponsiveContainer>
             <AreaChart data={points} margin={{ top: 2, bottom: 0, left: 0, right: 0 }}>
               <defs>
