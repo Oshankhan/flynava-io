@@ -223,11 +223,11 @@ function ProjectsTab({ canCreate }: { canCreate: boolean }) {
                 <Flex justify="space-between" gap={16} wrap>
                   <Flex gap={12} className="min-w-0 flex-1">
                     {p.logo ? (
-                      <div className="w-10 h-10 shrink-0 rounded-lg bg-white border border-black/10 flex items-center justify-center p-1 overflow-hidden">
+                      <div className="w-16 h-16 shrink-0 flex items-center justify-center overflow-hidden">
                         <img src={p.logo} alt={p.code} className="max-w-full max-h-full object-contain" />
                       </div>
                     ) : (
-                      <Avatar size={40} style={{ backgroundColor: accent, flexShrink: 0 }}>
+                      <Avatar size={56} style={{ backgroundColor: accent, flexShrink: 0 }}>
                         {p.code}
                       </Avatar>
                     )}
@@ -239,7 +239,7 @@ function ProjectsTab({ canCreate }: { canCreate: boolean }) {
                         </Tag>
                       </Flex>
                       {p.engagement && (
-                        <Text type="secondary" className="text-[12px]">{p.engagement}</Text>
+                        <Text strong className="text-[12px]">{p.engagement}</Text>
                       )}
                       {p.description && (
                         <div>

@@ -419,11 +419,11 @@ export default function ProjectDrawer({
           <Flex justify="space-between" align="center" wrap gap={8}>
             <Flex align="center" gap={10}>
               {data.logo ? (
-                <div className="w-9 h-9 shrink-0 rounded-lg bg-white border border-black/10 flex items-center justify-center p-1 overflow-hidden">
+                <div className="w-14 h-14 shrink-0 flex items-center justify-center overflow-hidden">
                   <img src={data.logo} alt={data.code} className="max-w-full max-h-full object-contain" />
                 </div>
               ) : (
-                <Avatar className="bg-io-600">{data.code}</Avatar>
+                <Avatar size={48} className="bg-io-600">{data.code}</Avatar>
               )}
               <div>
                 <Flex align="center" gap={8}>
@@ -432,7 +432,7 @@ export default function ProjectDrawer({
                     {data.status.replace("_", " ")}
                   </Tag>
                 </Flex>
-                {data.engagement && <Text type="secondary" className="text-[12px]">{data.engagement}</Text>}
+                {data.engagement && <Text strong className="text-[12px]">{data.engagement}</Text>}
               </div>
             </Flex>
             <Flex gap={8}>

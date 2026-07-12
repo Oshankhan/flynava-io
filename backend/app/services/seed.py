@@ -275,7 +275,7 @@ def _stage(key: str, name: str, description: str, status: str, progress: int,
 PROJECTS = [
     {
         "project_id": "proj_kq", "code": "KQ", "name": "Kenya Airways",
-        "client": "Kenya Airways", "status": "active", "logo": "/logos/kq.svg",
+        "client": "Kenya Airways", "status": "active", "logo": "/logos/kq.png",
         "engagement": "Existing Client - Production Support",
         "description": "Production support and maintenance for existing modules. "
                        "Handling bugs, patches and minor enhancements as per client requirements.",
