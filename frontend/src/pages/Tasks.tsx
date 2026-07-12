@@ -239,39 +239,37 @@ function ProjectsTab({ canCreate }: { canCreate: boolean }) {
                       </Avatar>
                     )}
                     <div className="min-w-0 flex-1">
-                      <Flex vertical gap={4} align="start">
-                        <Text strong className="text-[15px]">({p.code}) {p.name}</Text>
-                        <Tag color={STATUS_TAG[p.status] ?? "default"} className="capitalize">
+                      <Text strong className="text-[15px] block">({p.code}) {p.name}</Text>
+                      <Flex align="center" gap={8} wrap className="mt-1">
+                        <Tag color={STATUS_TAG[p.status] ?? "default"} className="capitalize m-0">
                           {p.status.replace("_", " ")}
                         </Tag>
+                        {p.engagement && <Text strong className="text-sm">{p.engagement}</Text>}
                       </Flex>
-                      {p.engagement && (
-                        <Text strong className="text-sm block">{p.engagement}</Text>
-                      )}
                       {p.description && (
-                        <div>
+                        <div className="mt-1">
                           <Text type="secondary" className="text-[12px]">{p.description}</Text>
                         </div>
                       )}
                       <Flex gap={16} wrap className="mt-2">
                         {p.client && (
-                          <Text type="secondary" className="text-[13px]">
-                            <TeamOutlined className="mr-1" />Client: <Text strong className="text-[13px]">{p.client}</Text>
+                          <Text type="secondary" className="text-[15px]">
+                            <TeamOutlined className="mr-1" />Client: <Text strong className="text-[15px]">{p.client}</Text>
                           </Text>
                         )}
                         {p.project_manager && (
-                          <Text type="secondary" className="text-[13px]">
-                            <UserOutlined className="mr-1" />PM: <Text strong className="text-[13px]">{p.project_manager.name}</Text>
+                          <Text type="secondary" className="text-[15px]">
+                            <UserOutlined className="mr-1" />PM: <Text strong className="text-[15px]">{p.project_manager.name}</Text>
                           </Text>
                         )}
                         {p.start_date && (
-                          <Text type="secondary" className="text-[13px]">
-                            <CalendarOutlined className="mr-1" />Start: <Text strong className="text-[13px]">{p.start_date}</Text>
+                          <Text type="secondary" className="text-[15px]">
+                            <CalendarOutlined className="mr-1" />Start: <Text strong className="text-[15px]">{p.start_date}</Text>
                           </Text>
                         )}
                         {p.due_date && (
-                          <Text type="secondary" className="text-[13px]">
-                            <CalendarOutlined className="mr-1" />Due: <Text strong className="text-[13px]">{p.due_date}</Text>
+                          <Text type="secondary" className="text-[15px]">
+                            <CalendarOutlined className="mr-1" />Due: <Text strong className="text-[15px]">{p.due_date}</Text>
                           </Text>
                         )}
                       </Flex>
