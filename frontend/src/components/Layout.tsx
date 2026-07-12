@@ -18,7 +18,6 @@ import {
   ApartmentOutlined,
   AuditOutlined,
   BarChartOutlined,
-  BellOutlined,
   BookOutlined,
   BulbOutlined,
   CalendarOutlined,
@@ -43,6 +42,7 @@ import { useTheme } from "../lib/theme";
 import { BRAND } from "../lib/brand";
 import AskIO from "./AskIO";
 import NotificationBell from "./NotificationBell";
+import InayaChat, { INAYA_OPEN_EVENT } from "./InayaChat";
 
 const { Sider, Header, Content } = AntLayout;
 const { Text, Title } = Typography;
@@ -71,7 +71,6 @@ export default function Layout() {
   const navigate = useNavigate();
   const [dashboards, setDashboards] = useState<DashboardLink[]>([]);
   const [collapsed, setCollapsed] = useState(false);
-  const [unread, setUnread] = useState(0);
   const [inbox, setInbox] = useState(0);
   const lastUnread = useRef<number | null>(null);
 
@@ -98,7 +97,6 @@ export default function Layout() {
         );
       }
       lastUnread.current = count;
-      setUnread(count);
       if (levelOf(user) >= 2) setInbox((await api.requestInbox()).length);
     } catch {
       /* ignore */
@@ -108,8 +106,26 @@ export default function Layout() {
   useEffect(() => {
     if (!user) return;
     poll();
-    const t = setInterval(poll, 30000);
+    const t = setInterval(poll, 10000);
     return () => clearInterval(t);
+  }, [user, poll]);
+
+  // Real-time push via SSE, layered on top of the poll above. If the stream
+  // never connects or drops, we simply keep relying on the interval poll —
+  // this effect must never surface an error or otherwise affect the UI.
+  useEffect(() => {
+    if (!user) return;
+    let es: EventSource | null = null;
+    try {
+      es = new EventSource(api.notificationsStreamUrl());
+      es.onmessage = () => poll();
+      es.onerror = () => {
+        es?.close();
+      };
+    } catch {
+      /* SSE unsupported or failed to init — poll interval above still covers us */
+    }
+    return () => es?.close();
   }, [user, poll]);
 
   const items = useMemo(() => {
@@ -143,18 +159,7 @@ export default function Layout() {
     list.push(
       { key: "/calendar", icon: <CalendarOutlined />, label: "Calendar" },
       { key: "/documents", icon: <FileProtectOutlined />, label: "Documents" },
-      { key: "/ai", icon: <CommentOutlined />, label: "AI Workspace" },
       { key: "/knowledge", icon: <BookOutlined />, label: "Knowledge Base" },
-      {
-        key: "/notifications",
-        icon: <BellOutlined />,
-        label: (
-          <Flex align="center" justify="space-between">
-            Notifications
-            {unread > 0 && <Badge count={unread} size="small" />}
-          </Flex>
-        ),
-      },
       { type: "divider" }
     );
     if (dashboards.length > 0)
@@ -180,7 +185,7 @@ export default function Layout() {
     if (user.role === "super_admin")
       list.push({ key: "/admin", icon: <SettingOutlined />, label: "Admin" });
     return list;
-  }, [user, level, dashboards, unread, inbox]);
+  }, [user, level, dashboards, inbox]);
 
   if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
 
@@ -207,16 +212,14 @@ export default function Layout() {
     "/tasks": level >= 2 ? "Team Tasks" : "My Tasks",
     "/approvals": "Approvals",
     "/calendar": "Calendar",
-    "/ai": "AI Workspace",
     "/knowledge": "Knowledge Base",
-    "/notifications": "Notifications",
   };
   const title = titles[active?.key ?? ""] ?? active?.label ?? "IO";
 
   const quick = [
     { icon: <PlusOutlined />, label: "Create Task", to: "/tasks?new=1" },
     { icon: <UploadOutlined />, label: "Upload Document", to: "/documents" },
-    { icon: <CommentOutlined />, label: "Ask IO", to: "/ai" },
+    { icon: <CommentOutlined />, label: "Ask Inaya", to: null },
     { icon: <DashboardOutlined />, label: "View Reports", to: dashboards[0] ? `/dashboard/${dashboards[0].key}` : "/documents" },
   ];
 
@@ -289,7 +292,9 @@ export default function Layout() {
                   type="text"
                   size="small"
                   icon={q.icon}
-                  onClick={() => navigate(q.to)}
+                  onClick={() =>
+                    q.to ? navigate(q.to) : window.dispatchEvent(new Event(INAYA_OPEN_EVENT))
+                  }
                   style={{
                     display: "flex",
                     width: "100%",
@@ -373,6 +378,7 @@ export default function Layout() {
           <Outlet />
         </Content>
       </AntLayout>
+      <InayaChat />
     </AntLayout>
   );
 }

@@ -168,7 +168,7 @@ export default function Tasks() {
   if (!data)
     return (
       <Flex justify="center" style={{ paddingTop: 80 }}>
-        <Spin size="large" />
+        <Spin />
       </Flex>
     );
 

@@ -19,6 +19,7 @@ DEPARTMENTS = [
     {"dept_id": "hr", "name": "Human Resources"},
     {"dept_id": "fin", "name": "Finance"},
     {"dept_id": "mkt", "name": "Marketing"},
+    {"dept_id": "ui", "name": "UI/UX"},
     {"dept_id": "exec", "name": "Leadership"},
 ]
 
@@ -31,6 +32,7 @@ TEAMS = [
     {"team_id": "team_fin", "name": "Finance Team", "department": "fin", "lead_id": "u_tl_fin"},
     {"team_id": "team_hr", "name": "HR Team", "department": "hr", "lead_id": "u_tl_hr"},
     {"team_id": "team_mkt", "name": "Marketing Team", "department": "mkt", "lead_id": "u_tl_mkt"},
+    {"team_id": "team_ui", "name": "UI Team", "department": "ui", "lead_id": "u_tl_ui"},
 ]
 
 # Org tree (level 4 → 1). reports_to builds the approval chain: every request
@@ -51,6 +53,8 @@ USERS = [
      "Finance Manager", None, "u_admin"),
     ("u_mkt", "Marco Marketing", "marketing@flynava.ai", "marketing", "mkt", 3,
      "Marketing Manager", None, "u_admin"),
+    ("u_birbal", "Birbal Singh", "birbal@flynava.ai", "manager", "ui", 3,
+     "UI Manager", None, "u_admin"),
     # L2 — Team leads
     ("u_tl_java", "Arjun Rao", "java.tl@flynava.ai", "team_lead", "eng", 2,
      "Java Team Lead", "team_java", "u_mgr"),
@@ -64,6 +68,8 @@ USERS = [
      "HR Team Lead", "team_hr", "u_hr"),
     ("u_tl_mkt", "Meera Joshi", "marketing.tl@flynava.ai", "team_lead", "mkt", 2,
      "Marketing Team Lead", "team_mkt", "u_mkt"),
+    ("u_tl_ui", "Nisha Kapadia", "ui.tl@flynava.ai", "team_lead", "ui", 2,
+     "UI Team Lead", "team_ui", "u_birbal"),
     # L1 — Executives / developers / QA / recruiters
     ("u_emp", "Evan Employee", "employee@flynava.ai", "employee", "eng", 1,
      "Python Developer", "team_python", "u_tl_python"),
@@ -77,12 +83,114 @@ USERS = [
      "Recruiter", "team_hr", "u_tl_hr"),
     ("u_mkt1", "Dev Sharma", "marketing.exec@flynava.ai", "employee", "mkt", 1,
      "Marketing Executive", "team_mkt", "u_tl_mkt"),
+    ("u_ui1", "Aditi Rao", "ui.dev1@flynava.ai", "employee", "ui", 1,
+     "UI Designer", "team_ui", "u_tl_ui"),
+    ("u_ui2", "Rehan Sheikh", "ui.dev2@flynava.ai", "employee", "ui", 1,
+     "UX Designer", "team_ui", "u_tl_ui"),
     # External (outside the ladder)
     ("u_inv", "Ivy Investor", "investor@flynava.ai", "investor", "exec", 0,
      "Investor", None, None),
     ("u_partner", "Pat Partner", "partner@flynava.ai", "partner", "exec", 0,
      "Partner", None, None),
 ]
+
+
+AUTOMATION_SCRIPTS = [
+    {"script_id": "as1", "title": "Booking flow regression", "module": "Booking",
+     "owner": "Sneha Patil", "status": "pending"},
+    {"script_id": "as2", "title": "Seat selection smoke test", "module": "Booking",
+     "owner": "Sneha Patil", "status": "in_review"},
+    {"script_id": "as3", "title": "Check-in kiosk E2E", "module": "Checkin",
+     "owner": "Vikram Shah", "status": "pending"},
+    {"script_id": "as4", "title": "Boarding pass scan test", "module": "Checkin",
+     "owner": "Vikram Shah", "status": "done"},
+    {"script_id": "as5", "title": "Payment gateway retry logic", "module": "Payments",
+     "owner": "Sneha Patil", "status": "pending"},
+    {"script_id": "as6", "title": "Refund workflow automation", "module": "Payments",
+     "owner": "Vikram Shah", "status": "pending"},
+    {"script_id": "as7", "title": "Wallet top-up regression", "module": "Payments",
+     "owner": "Sneha Patil", "status": "in_review"},
+    {"script_id": "as8", "title": "Monthly revenue report validation", "module": "Reports",
+     "owner": "Vikram Shah", "status": "pending"},
+    {"script_id": "as9", "title": "Ops dashboard data-accuracy check", "module": "Reports",
+     "owner": "Sneha Patil", "status": "done"},
+    {"script_id": "as10", "title": "Compliance report export test", "module": "Reports",
+     "owner": "Vikram Shah", "status": "pending"},
+]
+
+
+def _product_docs(now: dt.datetime) -> list[dict]:
+    return [
+        {"pdoc_id": "pd1", "title": "Booking Module — PRD v2", "module": "Booking",
+         "status": "pending", "created_at": now - dt.timedelta(days=6)},
+        {"pdoc_id": "pd2", "title": "Check-in Module — Spec Update", "module": "Checkin",
+         "status": "pending", "created_at": now - dt.timedelta(days=3)},
+        {"pdoc_id": "pd3", "title": "Payments Module — PRD v2", "module": "Payments",
+         "status": "pending", "created_at": now - dt.timedelta(days=10)},
+        {"pdoc_id": "pd4", "title": "Reports Module — Analytics Spec", "module": "Reports",
+         "status": "pending", "created_at": now - dt.timedelta(days=1)},
+    ]
+
+
+UI_DEMO_USER_IDS = {"u_birbal", "u_tl_ui", "u_ui1", "u_ui2"}
+
+
+def seed_demo_extras(db: Database) -> dict:
+    """Additive-only refresh of the CEO-demo data, safe to rerun against an
+    already-seeded (live) database.
+
+    Every write here is either an upsert by natural key or a delete scoped to
+    rows this function itself tagged — it never touches other users,
+    payslips, or real leave/attendance records. Use this (not `seed()`) to
+    backfill the UI department/Birbal chain, automation scripts, product
+    docs, and the attendance window into a database that's already live,
+    since `seed_hr()` (called by `seed()`) unconditionally wipes and rebuilds
+    all employees/payslips/leaves and would destroy any real submissions.
+    """
+    now = dt.datetime.now(dt.timezone.utc)
+
+    for d in DEPARTMENTS:
+        if d["dept_id"] == "ui":
+            db.departments.update_one({"dept_id": d["dept_id"]},
+                                      {"$set": {**d, "created_at": now}}, upsert=True)
+
+    for t in TEAMS:
+        if t["team_id"] == "team_ui":
+            db.teams.update_one({"team_id": t["team_id"]},
+                                {"$set": {**t, "created_at": now}}, upsert=True)
+
+    pw = hash_password(DEMO_PASSWORD)
+    for uid, name, email, role, dept, level, designation, team_id, reports_to in USERS:
+        if uid not in UI_DEMO_USER_IDS:
+            continue
+        db.users.update_one(
+            {"user_id": uid},
+            {"$set": {
+                "user_id": uid, "name": name, "email": email, "role": role,
+                "department": dept, "status": "active", "password_hash": pw,
+                "level": level, "designation": designation, "team_id": team_id,
+                "reports_to": reports_to, "created_at": now,
+            }},
+            upsert=True,
+        )
+
+    for a in AUTOMATION_SCRIPTS:
+        db.automation_scripts.update_one({"script_id": a["script_id"]},
+                                         {"$set": {**a, "updated_at": now}}, upsert=True)
+
+    docs = _product_docs(now)
+    for p in docs:
+        db.product_docs.update_one({"pdoc_id": p["pdoc_id"]}, {"$set": p}, upsert=True)
+
+    from .hr import seed_attendance
+    attendance_rows = seed_attendance(db)
+
+    return {
+        "users": len(UI_DEMO_USER_IDS),
+        "automation_scripts": len(AUTOMATION_SCRIPTS),
+        "product_docs": len(docs),
+        "attendance_rows": attendance_rows,
+    }
 
 
 def seed(db: Database) -> None:
@@ -194,12 +302,27 @@ def seed(db: Database) -> None:
 
     # HR: employees (harvests OpenProject assignee names if synced), payslips,
     # leave balances. Rebuilt each seed run.
-    from .hr import seed_hr
+    from .hr import seed_attendance, seed_hr
     seed_hr(db)
+
+    # 7 weekdays of biometric-style attendance for every employee (CEO
+    # dashboard "who's late/absent today" + individual attendance cards).
+    seed_attendance(db)
 
     # Demo meetings around today (calendar + "upcoming" widget).
     from .meetings import seed_meetings
     seed_meetings(db)
+
+    # QA automation-script backlog (CEO "pending automation scripts" panel).
+    for a in AUTOMATION_SCRIPTS:
+        db.automation_scripts.update_one({"script_id": a["script_id"]},
+                                         {"$set": {**a, "updated_at": now}}, upsert=True)
+
+    # Product-doc backlog per module (CEO "pending product documents" panel).
+    # Kept separate from the real `documents` upload/approval collection so
+    # this demo data can never interfere with actual uploads/downloads.
+    for p in _product_docs(now):
+        db.product_docs.update_one({"pdoc_id": p["pdoc_id"]}, {"$set": p}, upsert=True)
 
 
 if __name__ == "__main__":  # python -m app.services.seed

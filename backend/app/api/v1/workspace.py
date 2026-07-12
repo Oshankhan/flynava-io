@@ -6,6 +6,8 @@ L3 their department's, L4 everything.
 """
 from __future__ import annotations
 
+import datetime as dt
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pymongo.database import Database
 
@@ -13,6 +15,7 @@ from ...core import rbac
 from ...core.rbac import user_level
 from ...kpi import engine
 from ...services import approvals
+from ...services import dashboards as dashboards_svc
 from ...services import meetings as meetings_svc
 from ...services import notifications as notif
 from ...services import tasks as tasks_svc
@@ -29,6 +32,7 @@ DEPT_KPI_MODULES = {
     "fin": ["finance", "compliance"],
     "hr": ["hr", "recruitment"],
     "mkt": ["marketing_sales"],
+    "ui": ["operations", "product_dev"],
 }
 
 # audit actions that read well in a human feed (auto API audit rows excluded)
@@ -157,3 +161,76 @@ def workspace_department(user: dict = Depends(get_current_user),
 
     return {"department": dept, "teams": teams, "dept_kpis": dept_kpis,
             "positions": positions}
+
+
+@router.get("/workspace/exec")
+def workspace_exec(user: dict = Depends(get_current_user),
+                   db: Database = Depends(get_db)) -> dict:
+    """CEO-grade org overview: company KPIs/projects/bugs (reuses the
+    leadership dashboard payload), a department-by-department rollup with
+    drill-in anchors, QA automation backlog, pending product docs, today's
+    attendance, and escalations awaiting the CEO."""
+    if user_level(user) < 4:
+        raise HTTPException(status.HTTP_403_FORBIDDEN,
+                            "super_admin/leadership only")
+
+    base = dashboards_svc.build(db, "leadership", user["role"])
+
+    today = dt.date.today().isoformat()
+    today_status = {r["name"]: r["status"] for r in
+                    db.attendance.find({"date": today}, {"name": 1, "status": 1})}
+
+    departments = []
+    for d in db.departments.find({"dept_id": {"$ne": "exec"}}):
+        dept_id = d["dept_id"]
+        head = db.users.find_one({"department": dept_id, "level": 3},
+                                 {"user_id": 1, "name": 1, "designation": 1})
+        dept_users = list(db.users.find({"department": dept_id, "status": "active"},
+                                        {"name": 1}))
+        teams = list(db.teams.find({"department": dept_id}))
+        agg = {"total": 0, "completed": 0, "in_progress": 0, "pending": 0, "overdue": 0}
+        reopened = 0
+        for t in teams:
+            info = tasks_svc.team_tasks(db, t["team_id"])
+            for k in agg:
+                agg[k] += info["buckets"][k]
+            reopened += len(info["reopened"])
+        late_today = sum(1 for u in dept_users if today_status.get(u["name"]) == "Late")
+        departments.append({
+            "dept_id": dept_id, "name": d["name"],
+            "head": {"user_id": head["user_id"], "name": head["name"],
+                     "designation": head.get("designation")} if head else None,
+            "teams_count": len(teams), "member_count": len(dept_users),
+            "buckets": agg, "reopened_count": reopened, "late_today": late_today,
+        })
+
+    automation_rows = [{k: v for k, v in a.items() if k != "_id"}
+                       for a in db.automation_scripts.find()]
+    by_module: dict[str, dict[str, int]] = {}
+    for a in automation_rows:
+        bucket = by_module.setdefault(a["module"], {"pending": 0, "in_review": 0, "done": 0})
+        bucket[a["status"]] = bucket.get(a["status"], 0) + 1
+
+    pending_docs = [{k: v for k, v in p.items() if k != "_id"} for p in
+                    db.product_docs.find({"status": "pending"}).sort("created_at", 1)]
+
+    attendance_today = {
+        "present": sum(1 for s in today_status.values() if s == "Present"),
+        "late": sum(1 for s in today_status.values() if s == "Late"),
+        "absent": sum(1 for s in today_status.values() if s == "Absent"),
+        "late_names": [n for n, s in today_status.items() if s == "Late"][:5],
+    }
+
+    return {
+        **base,
+        "departments": departments,
+        "automation": {
+            "pending": sum(1 for a in automation_rows if a["status"] == "pending"),
+            "by_module": by_module, "rows": automation_rows,
+        },
+        "pending_docs": pending_docs,
+        "attendance_today": attendance_today,
+        "inbox_count": len(approvals.inbox(db, user["user_id"])),
+        "meetings": meetings_svc.upcoming(db, user["user_id"], limit=5),
+        "activity": recent_activity(db, user, limit=8),
+    }

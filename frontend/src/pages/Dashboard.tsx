@@ -33,7 +33,7 @@ export default function Dashboard() {
   if (!data)
     return (
       <Flex align="center" justify="center" style={{ minHeight: 240 }}>
-        <Spin size="large" tip="Loading…">
+        <Spin tip="Loading…">
           <div style={{ height: 60 }} />
         </Spin>
       </Flex>

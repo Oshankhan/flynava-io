@@ -445,6 +445,95 @@ export interface AnalyticsSummary {
   integrations: IntegrationStatus[];
 }
 
+// --- CEO demo build: org drill-down + exec workspace ---
+export interface OrgReportRow extends UserLite {
+  team_name?: string | null;
+  buckets: TaskBuckets;
+  reopened_count: number;
+  late_7d: number;
+  absent_7d: number;
+  pending_requests: number;
+  has_reports: boolean;
+}
+export interface AttendanceSummary {
+  rows: AttendanceRow[];
+  late_count: number;
+  absent_count: number;
+  present_count: number;
+  avg_hours: number | null;
+}
+export interface UserOverview {
+  user: UserLite;
+  team: TeamInfo | null;
+  lead: UserLite | null;
+  buckets: TaskBuckets;
+  tasks: TaskRow[];
+  reopened: TaskRow[];
+  authored: TaskRow[];
+  attendance: AttendanceSummary;
+  leave_balance: Record<string, number> | null;
+  recent_leaves: Leave[];
+  pending_docs: IoDocument[];
+  meetings: Meeting[];
+  activity: { action: string; text: string; at: string }[];
+}
+export interface DeptHead {
+  user_id: string;
+  name: string;
+  designation?: string | null;
+}
+export interface DeptRollup {
+  dept_id: string;
+  name: string;
+  head: DeptHead | null;
+  teams_count: number;
+  member_count: number;
+  buckets: TaskBuckets;
+  reopened_count: number;
+  late_today: number;
+}
+export interface AutomationScript {
+  script_id: string;
+  title: string;
+  module: string;
+  owner: string;
+  status: "pending" | "in_review" | "done";
+  updated_at: string;
+}
+export interface AutomationSummary {
+  pending: number;
+  by_module: Record<string, { pending: number; in_review: number; done: number }>;
+  rows: AutomationScript[];
+}
+export interface ProductDoc {
+  pdoc_id: string;
+  title: string;
+  module: string;
+  status: string;
+  created_at: string;
+}
+export interface AttendanceToday {
+  present: number;
+  late: number;
+  absent: number;
+  late_names: string[];
+}
+export interface ExecWorkspaceData {
+  key: string;
+  title: string;
+  kpis: Kpi[];
+  projects: ProjectRow[];
+  series?: KpiSeries[];
+  bug_breakdown?: BugSlice[];
+  departments: DeptRollup[];
+  automation: AutomationSummary;
+  pending_docs: ProductDoc[];
+  attendance_today: AttendanceToday;
+  inbox_count: number;
+  meetings: Meeting[];
+  activity: ActivityItem[];
+}
+
 async function uploadReq<T>(path: string, form: FormData): Promise<T> {
   const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch(`${API_BASE_URL}/api/v1${path}`, {
@@ -649,4 +738,13 @@ export const api = {
   // Phase D — L4 analytics + org chart
   analyticsSummary: (days = 30) =>
     req<AnalyticsSummary>(`/analytics/summary?days=${days}`),
+
+  // CEO demo build — org drill-down + exec workspace
+  orgReports: (userId: string) => req<OrgReportRow[]>(`/org/reports/${userId}`),
+  userOverview: (userId: string) => req<UserOverview>(`/org/users/${userId}/overview`),
+  execWorkspace: () => req<ExecWorkspaceData>("/workspace/exec"),
+  notificationsStreamUrl: () => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    return `${API_BASE_URL}/api/v1/notifications/stream?token=${encodeURIComponent(token ?? "")}`;
+  },
 };

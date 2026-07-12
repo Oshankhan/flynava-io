@@ -20,6 +20,7 @@ DEPT_MODULES = {
     "fin": {"finance"},
     "hr": {"hr", "recruitment"},
     "mkt": {"marketing_sales"},
+    "ui": {"operations", "product_dev"},
 }
 ELEVATED_ROLES = ("super_admin", "leadership", "manager")
 

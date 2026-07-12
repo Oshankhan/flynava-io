@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  Badge,
   Button,
   Calendar,
   Card,
@@ -15,6 +14,7 @@ import {
   Modal,
   Row,
   Select,
+  Tag,
   TimePicker,
   Typography,
 } from "antd";
@@ -94,27 +94,72 @@ export default function CalendarPage() {
   }
 
   const dayList = byDay(selected);
+  const today = dayjs();
 
   return (
     <Row gutter={[16, 16]}>
       <Col xs={24} lg={16}>
-        <Card size="small" bordered={false}>
+        <Card size="small" bordered={false} styles={{ body: { paddingTop: 4 } }}>
           <Calendar
             value={selected}
             onSelect={setSelected}
-            cellRender={(d, info) => {
-              if (info.type !== "date") return null;
-              const ms = byDay(d as Dayjs);
+            fullCellRender={(d, info) => {
+              const day = d as Dayjs;
+              if (info.type !== "date") return info.originNode;
+              const isToday = day.isSame(today, "day");
+              const isSelected = day.isSame(selected, "day");
+              const inMonth = day.isSame(selected, "month");
+              const ms = byDay(day);
               return (
-                <div>
-                  {ms.slice(0, 3).map((m) => (
-                    <div key={m.meeting_id} style={{ fontSize: 11, lineHeight: 1.4 }}>
-                      <Badge color={BRAND.primary} text={<span style={{ fontSize: 11 }}>{m.title}</span>} />
-                    </div>
-                  ))}
-                  {ms.length > 3 && (
-                    <Text type="secondary" style={{ fontSize: 10 }}>+{ms.length - 3} more</Text>
-                  )}
+                <div
+                  style={{
+                    minHeight: 78,
+                    borderRadius: 8,
+                    padding: "4px 6px",
+                    margin: 2,
+                    background: isSelected
+                      ? `${BRAND.primary}1f`
+                      : isToday
+                      ? `${BRAND.primary}0d`
+                      : "transparent",
+                    border: isToday ? `1px solid ${BRAND.primary}66` : "1px solid transparent",
+                    opacity: inMonth ? 1 : 0.4,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontWeight: isToday ? 700 : 400,
+                      color: isToday ? BRAND.primaryStrong : undefined,
+                    }}
+                  >
+                    {day.date()}
+                  </Text>
+                  <Flex vertical gap={2} style={{ marginTop: 2 }}>
+                    {ms.slice(0, 2).map((m) => (
+                      <div
+                        key={m.meeting_id}
+                        style={{
+                          fontSize: 11,
+                          lineHeight: "16px",
+                          padding: "0 6px",
+                          borderRadius: 6,
+                          background: `${BRAND.primary}1a`,
+                          color: BRAND.primaryStrong,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {m.title}
+                      </div>
+                    ))}
+                    {ms.length > 2 && (
+                      <Text type="secondary" style={{ fontSize: 10 }}>
+                        +{ms.length - 2} more
+                      </Text>
+                    )}
+                  </Flex>
                 </div>
               );
             }}
@@ -130,15 +175,16 @@ export default function CalendarPage() {
             size="small"
             bordered={false}
             title={selected.format("dddd, D MMMM")}
+            styles={{ body: { minHeight: 420 } }}
           >
             {dayList.length === 0 ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No meetings" />
             ) : (
               <List
-                size="small"
                 dataSource={dayList}
                 renderItem={(m) => (
                   <List.Item
+                    style={{ padding: "12px 4px" }}
                     actions={
                       m.organizer_id === user?.user_id
                         ? [
@@ -156,9 +202,12 @@ export default function CalendarPage() {
                   >
                     <List.Item.Meta
                       title={
-                        <Text style={{ fontSize: 13 }}>
-                          {m.start.slice(11, 16)}–{m.end.slice(11, 16)} · {m.title}
-                        </Text>
+                        <Flex align="center" gap={8} wrap>
+                          <Tag color={BRAND.primary} style={{ marginInlineEnd: 0 }}>
+                            {m.start.slice(11, 16)}–{m.end.slice(11, 16)}
+                          </Tag>
+                          <Text style={{ fontSize: 13 }}>{m.title}</Text>
+                        </Flex>
                       }
                       description={
                         <Text type="secondary" style={{ fontSize: 11 }}>

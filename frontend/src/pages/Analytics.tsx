@@ -47,7 +47,7 @@ export default function Analytics() {
   if (!data)
     return (
       <Flex justify="center" style={{ paddingTop: 80 }}>
-        <Spin size="large" />
+        <Spin />
       </Flex>
     );
 

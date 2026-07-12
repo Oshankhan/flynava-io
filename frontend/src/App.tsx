@@ -16,12 +16,12 @@ import Workspace from "./pages/Workspace";
 import Tasks from "./pages/Tasks";
 import Approvals from "./pages/Approvals";
 import CalendarPage from "./pages/CalendarPage";
-import AIWorkspace from "./pages/AIWorkspace";
 import KnowledgeBase from "./pages/KnowledgeBase";
 import NotificationsPage from "./pages/NotificationsPage";
 import MyTeam from "./pages/MyTeam";
 import Analytics from "./pages/Analytics";
 import OrgChart from "./pages/OrgChart";
+import MemberDetail from "./pages/MemberDetail";
 
 function Shell() {
   const { dark } = useTheme();
@@ -61,7 +61,6 @@ function Shell() {
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/approvals" element={<Approvals />} />
               <Route path="/calendar" element={<CalendarPage />} />
-              <Route path="/ai" element={<AIWorkspace />} />
               <Route path="/knowledge" element={<KnowledgeBase />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/dashboard/:key" element={<Dashboard />} />
@@ -69,6 +68,7 @@ function Shell() {
               <Route path="/documents" element={<Documents />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/people" element={<People />} />
+              <Route path="/people/:userId" element={<MemberDetail />} />
               <Route path="/my-payslip" element={<MyPayslip />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/analytics" element={<Analytics />} />

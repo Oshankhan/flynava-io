@@ -1,143 +1,174 @@
 import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Alert,
   Avatar,
+  Breadcrumb,
+  Button,
   Card,
   Col,
   Empty,
   Flex,
-  Progress,
   Row,
   Spin,
-  Table,
   Tag,
   Typography,
 } from "antd";
-import { api, ApiError, type OrgMe, type TeamTasks } from "../lib/api";
+import { RightOutlined, TeamOutlined } from "@ant-design/icons";
+import { api, ApiError, type OrgReportRow } from "../lib/api";
+import { useAuth } from "../lib/auth";
 import { BRAND } from "../lib/brand";
 
 const { Text, Title } = Typography;
 
+interface Crumb {
+  user_id: string;
+  name: string;
+  designation?: string | null;
+}
+
 export default function MyTeam() {
-  const [org, setOrg] = useState<OrgMe | null>(null);
-  const [tasks, setTasks] = useState<TeamTasks | null>(null);
+  const { user } = useAuth();
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+
+  const [stack, setStack] = useState<Crumb[] | null>(null);
+  const [reports, setReports] = useState<OrgReportRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Initialize the root of the drill (either ?root=<user_id> from a
+  // dashboard's department card, or the viewer's own direct reports).
   useEffect(() => {
-    api.orgMe().then(setOrg).catch((e) =>
-      setError(e instanceof ApiError ? e.message : "Failed to load team"));
-    api.teamTasks().then(setTasks).catch(() => setTasks(null));
-  }, []);
+    if (!user) return;
+    const rootId = params.get("root") || user.user_id;
+    api
+      .userOverview(rootId)
+      .then((o) =>
+        setStack([{ user_id: rootId, name: o.user.name, designation: o.user.designation }])
+      )
+      .catch((e) => setError(e instanceof ApiError ? e.message : "Failed to load team"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, params]);
+
+  const currentId = stack?.[stack.length - 1]?.user_id;
+
+  useEffect(() => {
+    if (!currentId) return;
+    setReports(null);
+    api
+      .orgReports(currentId)
+      .then(setReports)
+      .catch((e) => setError(e instanceof ApiError ? e.message : "Failed to load reports"));
+  }, [currentId]);
 
   if (error) return <Alert type="error" message={error} showIcon />;
-  if (!org)
+  if (!stack || !reports)
     return (
       <Flex justify="center" style={{ paddingTop: 80 }}>
-        <Spin size="large" />
+        <Spin />
       </Flex>
     );
 
-  const members = org.reports;
-  const load = tasks?.members ?? [];
-  const loadFor = (uid: string) => load.find((m) => m.user_id === uid);
+  const totals = reports.reduce(
+    (acc, r) => ({
+      total: acc.total + r.buckets.total,
+      completed: acc.completed + r.buckets.completed,
+      overdue: acc.overdue + r.buckets.overdue,
+      reopened: acc.reopened + r.reopened_count,
+    }),
+    { total: 0, completed: 0, overdue: 0, reopened: 0 }
+  );
 
-  const columns = [
-    {
-      title: "Member",
-      key: "name",
-      render: (_: unknown, r: (typeof members)[number]) => (
-        <Flex gap={10} align="center">
-          <Avatar style={{ background: BRAND.primary }}>{r.name[0]}</Avatar>
-          <div>
-            <Text strong style={{ fontSize: 13 }}>{r.name}</Text>
-            <div>
-              <Text type="secondary" style={{ fontSize: 11 }}>{r.designation ?? "—"}</Text>
-            </div>
-          </div>
-        </Flex>
-      ),
-    },
-    {
-      title: "Tasks",
-      key: "tasks",
-      width: 110,
-      render: (_: unknown, r: (typeof members)[number]) => {
-        const l = loadFor(r.user_id);
-        return l ? `${l.completed} / ${l.total}` : "—";
-      },
-    },
-    {
-      title: "Open workload",
-      key: "load",
-      width: 220,
-      render: (_: unknown, r: (typeof members)[number]) => {
-        const l = loadFor(r.user_id);
-        if (!l || l.total === 0) return <Text type="secondary">no tasks</Text>;
-        const openPct = Math.round(((l.total - l.completed) / l.total) * 100);
-        return (
-          <Progress
-            percent={openPct}
-            size="small"
-            strokeColor={openPct > 80 ? "#ef4444" : openPct > 50 ? "#f59e0b" : BRAND.primary}
-          />
-        );
-      },
-    },
-    {
-      title: "Overdue",
-      key: "overdue",
-      width: 100,
-      render: (_: unknown, r: (typeof members)[number]) => {
-        const l = loadFor(r.user_id);
-        return l && l.overdue > 0 ? <Tag color="error">{l.overdue}</Tag> : <Tag>0</Tag>;
-      },
-    },
-  ];
+  const current = stack[stack.length - 1];
 
   return (
     <div>
+      <Breadcrumb
+        style={{ marginBottom: 12 }}
+        items={stack.map((c, i) => ({
+          key: c.user_id,
+          title:
+            i === stack.length - 1 ? (
+              <Text strong>{c.name}</Text>
+            ) : (
+              <a onClick={() => setStack(stack.slice(0, i + 1))}>{c.name}</a>
+            ),
+        }))}
+      />
+
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} md={12}>
           <Card size="small" bordered={false}>
             <Title level={5} style={{ marginTop: 0 }}>
-              {org.team?.name ?? "My Team"}
+              {current.name}'s Team
             </Title>
             <Text type="secondary">
-              {members.length} member(s)
-              {org.lead ? ` · You report to ${org.lead.name}` : ""}
+              {reports.length} direct report{reports.length === 1 ? "" : "s"}
+              {current.designation ? ` · ${current.designation}` : ""}
             </Text>
           </Card>
         </Col>
-        {tasks && (
+        {reports.length > 0 && (
           <Col xs={24} md={12}>
             <Card size="small" bordered={false}>
               <Flex gap={8} wrap>
-                <Tag>{tasks.buckets.total} team tasks</Tag>
-                <Tag color="success">{tasks.buckets.completed} done</Tag>
-                <Tag color="processing">{tasks.buckets.in_progress} in progress</Tag>
-                <Tag color="error">{tasks.buckets.overdue} overdue</Tag>
-                {tasks.reopened.length > 0 && (
-                  <Tag color="orange">{tasks.reopened.length} reopened bugs</Tag>
-                )}
+                <Tag>{totals.total} tasks</Tag>
+                <Tag color="success">{totals.completed} done</Tag>
+                <Tag color="error">{totals.overdue} overdue</Tag>
+                {totals.reopened > 0 && <Tag color="orange">{totals.reopened} reopened bugs</Tag>}
               </Flex>
             </Card>
           </Col>
         )}
       </Row>
 
-      <Card size="small" bordered={false} title="Members">
-        {members.length === 0 ? (
-          <Empty description="No direct reports — this view fills in once people report to you." />
-        ) : (
-          <Table
-            size="small"
-            rowKey="user_id"
-            dataSource={members}
-            columns={columns}
-            pagination={false}
-          />
-        )}
-      </Card>
+      {reports.length === 0 ? (
+        <Card size="small" bordered={false}>
+          <Empty description="No direct reports here." />
+        </Card>
+      ) : (
+        <Row gutter={[16, 16]}>
+          {reports.map((m) => (
+            <Col key={m.user_id} xs={24} sm={12} lg={8} xl={6}>
+              <Card size="small" style={{ height: "100%" }}>
+                <Flex align="center" gap={10} style={{ marginBottom: 8 }}>
+                  <Avatar style={{ background: BRAND.primary }}>{m.name[0]}</Avatar>
+                  <div style={{ minWidth: 0 }}>
+                    <Text strong style={{ fontSize: 13 }} ellipsis>{m.name}</Text>
+                    <div>
+                      <Text type="secondary" style={{ fontSize: 11 }} ellipsis>
+                        {m.designation ?? "—"}{m.team_name ? ` · ${m.team_name}` : ""}
+                      </Text>
+                    </div>
+                  </div>
+                </Flex>
+                <Flex gap={4} wrap style={{ marginBottom: 10 }}>
+                  <Tag>{m.buckets.completed}/{m.buckets.total} tasks</Tag>
+                  {m.buckets.overdue > 0 && <Tag color="error">{m.buckets.overdue} overdue</Tag>}
+                  {m.reopened_count > 0 && <Tag color="orange">{m.reopened_count} reopened</Tag>}
+                  {m.late_7d > 0 && <Tag color="gold">{m.late_7d} late (7d)</Tag>}
+                  {m.absent_7d > 0 && <Tag color="red">{m.absent_7d} absent (7d)</Tag>}
+                  {m.pending_requests > 0 && <Tag color="blue">{m.pending_requests} pending req</Tag>}
+                </Flex>
+                <Flex gap={8}>
+                  {m.has_reports && (
+                    <Button
+                      size="small"
+                      icon={<TeamOutlined />}
+                      onClick={() => setStack([...stack, { user_id: m.user_id, name: m.name, designation: m.designation }])}
+                    >
+                      View Team <RightOutlined />
+                    </Button>
+                  )}
+                  <Button size="small" type="primary" onClick={() => navigate(`/people/${m.user_id}`)}>
+                    Dashboard
+                  </Button>
+                </Flex>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      )}
     </div>
   );
 }

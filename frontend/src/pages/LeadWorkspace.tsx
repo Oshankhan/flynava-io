@@ -8,7 +8,6 @@ import {
   Col,
   Empty,
   Flex,
-  Input,
   List,
   Progress,
   Row,
@@ -23,7 +22,6 @@ import {
   ClockCircleOutlined,
   ExclamationCircleOutlined,
   ProfileOutlined,
-  SendOutlined,
   SyncOutlined,
 } from "@ant-design/icons";
 import {
@@ -119,7 +117,6 @@ export default function LeadWorkspace() {
   const [team, setTeam] = useState<TeamTasks | null>(null);
   const [inbox, setInbox] = useState<IoRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [aiQ, setAiQ] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -146,7 +143,7 @@ export default function LeadWorkspace() {
   if (!ws)
     return (
       <Flex justify="center" style={{ paddingTop: 80 }}>
-        <Spin size="large" />
+        <Spin />
       </Flex>
     );
 
@@ -159,13 +156,6 @@ export default function LeadWorkspace() {
     meetingDays[k] = meetingDays[k] ?? [];
     meetingDays[k].push(m);
   });
-
-  const suggestions = [
-    "Show me overdue tasks",
-    "How is my team performing?",
-    "Tasks blocked for my team",
-    "Summarize pending approvals",
-  ];
 
   const perfCols = [
     {
@@ -394,38 +384,6 @@ export default function LeadWorkspace() {
         {/* Right rail */}
         <Col xs={24} xl={8}>
           <Flex vertical gap={16}>
-            <Card
-              size="small"
-              bordered={false}
-              title="AI Assistant"
-              extra={<Button type="link" size="small" onClick={() => navigate("/ai")}>Open</Button>}
-            >
-              <Flex vertical gap={8}>
-                {suggestions.map((s) => (
-                  <Button
-                    key={s}
-                    size="small"
-                    onClick={() => navigate("/ai", { state: { q: s } })}
-                    style={{ justifyContent: "flex-start", display: "flex" }}
-                  >
-                    {s}
-                  </Button>
-                ))}
-                <Input
-                  placeholder="Ask anything…"
-                  value={aiQ}
-                  onChange={(e) => setAiQ(e.target.value)}
-                  onPressEnter={() => aiQ.trim() && navigate("/ai", { state: { q: aiQ } })}
-                  suffix={
-                    <SendOutlined
-                      style={{ color: BRAND.primary, cursor: "pointer" }}
-                      onClick={() => aiQ.trim() && navigate("/ai", { state: { q: aiQ } })}
-                    />
-                  }
-                />
-              </Flex>
-            </Card>
-
             <Card
               size="small"
               bordered={false}

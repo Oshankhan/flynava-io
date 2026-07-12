@@ -8,7 +8,6 @@ import {
   Col,
   Empty,
   Flex,
-  Input,
   List,
   Progress,
   Row,
@@ -26,7 +25,6 @@ import {
   ProfileOutlined,
   RightOutlined,
   ScheduleOutlined,
-  SendOutlined,
   SyncOutlined,
 } from "@ant-design/icons";
 import { api, ApiError, type WorkspaceData } from "../lib/api";
@@ -37,6 +35,7 @@ import DeptPanel from "../components/DeptPanel";
 import { levelOf } from "../components/Layout";
 import LeadWorkspace from "./LeadWorkspace";
 import DeptWorkspace from "./DeptWorkspace";
+import ExecWorkspace from "./ExecWorkspace";
 
 const { Text, Title } = Typography;
 
@@ -97,6 +96,7 @@ function dayLabel(iso: string): string {
 export default function Workspace() {
   const { user } = useAuth();
   const level = levelOf(user);
+  if (level >= 4) return <ExecWorkspace />;
   if (level === 3) return <DeptWorkspace />;
   if (level >= 2) return <LeadWorkspace />;
   return <ExecutiveWorkspace />;
@@ -105,7 +105,6 @@ export default function Workspace() {
 function ExecutiveWorkspace() {
   const [data, setData] = useState<WorkspaceData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [aiQ, setAiQ] = useState("");
   const [leaveBalance, setLeaveBalance] = useState<Record<string, number> | null>(null);
   const navigate = useNavigate();
 
@@ -132,7 +131,7 @@ function ExecutiveWorkspace() {
   if (!data)
     return (
       <Flex justify="center" style={{ paddingTop: 80 }}>
-        <Spin size="large" />
+        <Spin />
       </Flex>
     );
 
@@ -142,13 +141,6 @@ function ExecutiveWorkspace() {
     const k = dayLabel(m.start);
     (meetingDays[k] = meetingDays[k] ?? []).push(m);
   });
-
-  const suggestions = [
-    "Show my overdue tasks",
-    "What are my reopened bugs?",
-    "Summarize my pending requests",
-    "How is my team performing?",
-  ];
 
   return (
     <div>
@@ -338,38 +330,6 @@ function ExecutiveWorkspace() {
         {/* Right rail */}
         <Col xs={24} xl={8}>
           <Flex vertical gap={16}>
-            <Card
-              size="small"
-              bordered={false}
-              title="AI Assistant"
-              extra={<Button type="link" size="small" onClick={() => navigate("/ai")}>Open</Button>}
-            >
-              <Flex vertical gap={8}>
-                {suggestions.map((s) => (
-                  <Button
-                    key={s}
-                    size="small"
-                    onClick={() => navigate("/ai", { state: { q: s } })}
-                    style={{ justifyContent: "flex-start", display: "flex" }}
-                  >
-                    {s}
-                  </Button>
-                ))}
-                <Input
-                  placeholder="Ask anything…"
-                  value={aiQ}
-                  onChange={(e) => setAiQ(e.target.value)}
-                  onPressEnter={() => aiQ.trim() && navigate("/ai", { state: { q: aiQ } })}
-                  suffix={
-                    <SendOutlined
-                      style={{ color: BRAND.primary, cursor: "pointer" }}
-                      onClick={() => aiQ.trim() && navigate("/ai", { state: { q: aiQ } })}
-                    />
-                  }
-                />
-              </Flex>
-            </Card>
-
             <Card
               size="small"
               bordered={false}

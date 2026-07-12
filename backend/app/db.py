@@ -55,3 +55,7 @@ def ensure_indexes(db: Database) -> None:
     db.tasks.create_index([("author", ASCENDING)])
     db.leaves.create_index([("status", ASCENDING)])
     db.positions.create_index([("status", ASCENDING), ("dept", ASCENDING)])
+    db.attendance.create_index([("name", ASCENDING), ("date", ASCENDING)])
+    db.attendance.create_index([("date", ASCENDING)])
+    db.automation_scripts.create_index([("module", ASCENDING), ("status", ASCENDING)])
+    db.product_docs.create_index([("status", ASCENDING)])

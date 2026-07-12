@@ -69,7 +69,7 @@ export default function OrgChart() {
   if (!users)
     return (
       <Flex justify="center" style={{ paddingTop: 80 }}>
-        <Spin size="large" />
+        <Spin />
       </Flex>
     );
 

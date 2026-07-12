@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pymongo.database import Database
 
 from . import __version__, db
-from .api.deps import get_db
+from .api.deps import get_current_user, get_db
 from .api.v1 import api_router
 from .config import settings
 from .core.middleware import AuditMiddleware, SecurityMiddleware
@@ -73,6 +73,27 @@ def bootstrap_seed(database: Database = Depends(get_db)) -> dict:
                             "already seeded (users collection is non-empty)")
     seed(database)
     return {"status": "seeded"}
+
+
+@app.post("/api/v1/bootstrap-seed/refresh-demo")
+def bootstrap_seed_refresh_demo(
+    database: Database = Depends(get_db),
+    user: dict = Depends(get_current_user),
+) -> dict:
+    """Additive-only refresh of the CEO-demo seed data against an already-
+    seeded (live) database — UI department/Birbal chain, automation
+    scripts, product docs, and the attendance window.
+
+    Unlike `seed()` (used by `/bootstrap-seed` above), this never touches
+    existing users, payslips, or leave requests — see
+    `services.seed.seed_demo_extras` for why that distinction matters.
+    Gated to super_admin since real users already exist at this point.
+    """
+    if user.get("role") != "super_admin":
+        raise HTTPException(http_status.HTTP_403_FORBIDDEN, "super_admin only")
+    from .services.seed import seed_demo_extras
+
+    return {"status": "refreshed", **seed_demo_extras(database)}
 
 
 app.include_router(api_router)
