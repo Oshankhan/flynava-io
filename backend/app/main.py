@@ -30,13 +30,12 @@ app.add_middleware(
 
 @app.on_event("startup")
 def _startup() -> None:
-    # NOTE: use_os_trust_store() is intentionally NOT called here. It patches
-    # Python's *global* default SSLContext to trust the OS cert store instead
-    # of certifi — needed only for the OpenProject connector (see
-    # core/tls.py), which calls it itself, scoped to when a sync actually
-    # runs. Calling it here affected every TLS connection in the process,
-    # including MongoDB, and a minimal deploy container's OS trust store may
-    # not have the CA that signs Atlas's certificate chain.
+    # NOTE: never patch the process-wide default SSLContext here (e.g. a
+    # global `truststore.inject_into_ssl()`) to work around one integration's
+    # TLS quirk — that once broke MongoDB's connection in prod, since it
+    # affects every TLS client in the process. The OpenProject connector's
+    # incomplete-chain issue (see core/tls.py) is fixed with a bundle scoped
+    # to just that httpx client instead.
     try:
         db.ensure_indexes(db.get_db())
     except Exception as exc:  # noqa: BLE001 - don't crash boot if Mongo is down

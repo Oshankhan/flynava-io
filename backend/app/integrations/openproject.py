@@ -11,7 +11,7 @@ import httpx
 from pymongo.database import Database
 
 from ..config import settings
-from ..core.tls import use_os_trust_store
+from ..core.tls import combined_ca_bundle
 from .base import Connector
 
 PAGE_SIZE = 200
@@ -37,12 +37,14 @@ class OpenProjectConnector(Connector):
         self.api_key = api_key or settings.openproject_api_key
 
     def _client(self) -> httpx.Client:
-        use_os_trust_store()  # verify against the OS cert store (chain fix)
         return httpx.Client(
             base_url=self.base_url,
             auth=("apikey", self.api_key),
             timeout=30.0,
             headers={"Accept": "application/json"},
+            # op.flynava.ai doesn't send its intermediate cert — certifi's
+            # roots alone can't complete the chain (see core/tls.py).
+            verify=combined_ca_bundle("godaddy_g2_intermediate.pem"),
         )
 
     def upsert(self, db: Database, data: dict) -> tuple[int, int]:
