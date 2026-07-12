@@ -132,70 +132,20 @@ def _product_docs(now: dt.datetime) -> list[dict]:
     ]
 
 
-UI_DEMO_USER_IDS = {"u_birbal", "u_tl_ui", "u_ui1", "u_ui2"}
+def _seed_core(db: Database, now: dt.datetime) -> None:
+    """Departments, teams, users, projects/tasks, KPI defs+values, compliance,
+    positions, automation scripts, product docs.
 
-
-def seed_demo_extras(db: Database) -> dict:
-    """Additive-only refresh of the CEO-demo data, safe to rerun against an
-    already-seeded (live) database.
-
-    Every write here is either an upsert by natural key or a delete scoped to
-    rows this function itself tagged — it never touches other users,
-    payslips, or real leave/attendance records. Use this (not `seed()`) to
-    backfill the UI department/Birbal chain, automation scripts, product
-    docs, and the attendance window into a database that's already live,
-    since `seed_hr()` (called by `seed()`) unconditionally wipes and rebuilds
-    all employees/payslips/leaves and would destroy any real submissions.
+    Every write is an upsert by natural key, or (for `kpi_values`) an insert
+    guarded by a `count_documents == 0` check — never a blanket delete. Safe
+    to call repeatedly, including against an already-seeded live database:
+    it can only add missing demo rows or refresh known ones back to their
+    demo values, never touch a document it doesn't recognize by these ids.
+    Split out from `seed()` so `seed_demo_extras()` can reuse it without
+    also calling `seed_hr()`, which unconditionally wipes and rebuilds all
+    employees/payslips/leaves and would destroy real submissions on a live
+    database.
     """
-    now = dt.datetime.now(dt.timezone.utc)
-
-    for d in DEPARTMENTS:
-        if d["dept_id"] == "ui":
-            db.departments.update_one({"dept_id": d["dept_id"]},
-                                      {"$set": {**d, "created_at": now}}, upsert=True)
-
-    for t in TEAMS:
-        if t["team_id"] == "team_ui":
-            db.teams.update_one({"team_id": t["team_id"]},
-                                {"$set": {**t, "created_at": now}}, upsert=True)
-
-    pw = hash_password(DEMO_PASSWORD)
-    for uid, name, email, role, dept, level, designation, team_id, reports_to in USERS:
-        if uid not in UI_DEMO_USER_IDS:
-            continue
-        db.users.update_one(
-            {"user_id": uid},
-            {"$set": {
-                "user_id": uid, "name": name, "email": email, "role": role,
-                "department": dept, "status": "active", "password_hash": pw,
-                "level": level, "designation": designation, "team_id": team_id,
-                "reports_to": reports_to, "created_at": now,
-            }},
-            upsert=True,
-        )
-
-    for a in AUTOMATION_SCRIPTS:
-        db.automation_scripts.update_one({"script_id": a["script_id"]},
-                                         {"$set": {**a, "updated_at": now}}, upsert=True)
-
-    docs = _product_docs(now)
-    for p in docs:
-        db.product_docs.update_one({"pdoc_id": p["pdoc_id"]}, {"$set": p}, upsert=True)
-
-    from .hr import seed_attendance
-    attendance_rows = seed_attendance(db)
-
-    return {
-        "users": len(UI_DEMO_USER_IDS),
-        "automation_scripts": len(AUTOMATION_SCRIPTS),
-        "product_docs": len(docs),
-        "attendance_rows": attendance_rows,
-    }
-
-
-def seed(db: Database) -> None:
-    now = dt.datetime.now(dt.timezone.utc)
-
     for d in DEPARTMENTS:
         db.departments.update_one(
             {"dept_id": d["dept_id"]},
@@ -300,6 +250,46 @@ def seed(db: Database) -> None:
     for p in positions:
         db.positions.update_one({"pos_id": p["pos_id"]}, {"$set": p}, upsert=True)
 
+    for a in AUTOMATION_SCRIPTS:
+        db.automation_scripts.update_one({"script_id": a["script_id"]},
+                                         {"$set": {**a, "updated_at": now}}, upsert=True)
+
+    for p in _product_docs(now):
+        db.product_docs.update_one({"pdoc_id": p["pdoc_id"]}, {"$set": p}, upsert=True)
+
+
+def seed_demo_extras(db: Database) -> dict:
+    """Refresh all demo seed data except HR, safe to rerun against an
+    already-seeded (live) database.
+
+    Backfills everything `_seed_core` covers (UI department/Birbal chain,
+    projects/tasks, KPI defs+values, compliance, positions, automation
+    scripts, product docs) plus the attendance window and demo meetings.
+    Deliberately skips `seed_hr()` — see `_seed_core`'s docstring — so real
+    leave requests or payslip data entered through the live app survive.
+    """
+    now = dt.datetime.now(dt.timezone.utc)
+    _seed_core(db, now)
+
+    from .hr import seed_attendance
+    attendance_rows = seed_attendance(db)
+
+    from .meetings import seed_meetings
+    meetings = seed_meetings(db)
+
+    return {
+        "users": len(USERS),
+        "automation_scripts": len(AUTOMATION_SCRIPTS),
+        "product_docs": len(_product_docs(now)),
+        "attendance_rows": attendance_rows,
+        "meetings": meetings,
+    }
+
+
+def seed(db: Database) -> None:
+    now = dt.datetime.now(dt.timezone.utc)
+    _seed_core(db, now)
+
     # HR: employees (harvests OpenProject assignee names if synced), payslips,
     # leave balances. Rebuilt each seed run.
     from .hr import seed_attendance, seed_hr
@@ -312,17 +302,6 @@ def seed(db: Database) -> None:
     # Demo meetings around today (calendar + "upcoming" widget).
     from .meetings import seed_meetings
     seed_meetings(db)
-
-    # QA automation-script backlog (CEO "pending automation scripts" panel).
-    for a in AUTOMATION_SCRIPTS:
-        db.automation_scripts.update_one({"script_id": a["script_id"]},
-                                         {"$set": {**a, "updated_at": now}}, upsert=True)
-
-    # Product-doc backlog per module (CEO "pending product documents" panel).
-    # Kept separate from the real `documents` upload/approval collection so
-    # this demo data can never interfere with actual uploads/downloads.
-    for p in _product_docs(now):
-        db.product_docs.update_one({"pdoc_id": p["pdoc_id"]}, {"$set": p}, upsert=True)
 
 
 if __name__ == "__main__":  # python -m app.services.seed

@@ -80,14 +80,14 @@ def bootstrap_seed_refresh_demo(
     database: Database = Depends(get_db),
     user: dict = Depends(get_current_user),
 ) -> dict:
-    """Additive-only refresh of the CEO-demo seed data against an already-
-    seeded (live) database — UI department/Birbal chain, automation
-    scripts, product docs, and the attendance window.
+    """Refresh of the CEO-demo seed data against an already-seeded (live)
+    database — departments/teams/users, projects/tasks, KPI values,
+    automation scripts, product docs, attendance, and meetings.
 
     Unlike `seed()` (used by `/bootstrap-seed` above), this never touches
-    existing users, payslips, or leave requests — see
-    `services.seed.seed_demo_extras` for why that distinction matters.
-    Gated to super_admin since real users already exist at this point.
+    payslips or leave requests — see `services.seed.seed_demo_extras` for
+    why that distinction matters. Gated to super_admin since real users
+    already exist at this point.
     """
     if user.get("role") != "super_admin":
         raise HTTPException(http_status.HTTP_403_FORBIDDEN, "super_admin only")

@@ -170,7 +170,7 @@ def test_refresh_demo_is_additive_and_preserves_real_leaves(client, auth_header,
     assert r.status_code == 200
     body = r.json()
     assert body["status"] == "refreshed"
-    assert body["users"] == 4
+    assert body["users"] == before_users
     assert body["automation_scripts"] > 0
     assert body["product_docs"] > 0
 
