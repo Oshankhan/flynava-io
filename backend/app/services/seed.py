@@ -303,6 +303,7 @@ PROJECTS = [
                        "u_kalaiarasan", "u_praveen",
                        "u_mushaheed", "u_animesh"],
         "progress": 45, "expected_progress": 50, "open_tasks_target": 12,
+        "contract_value": 480000,
     },
     {
         "project_id": "proj_om", "code": "WY", "name": "Oman Airways",
@@ -351,8 +352,145 @@ PROJECTS = [
         "member_ids": ["u_soochana", "u_ronaly", "u_akasapu", "u_ranveer",
                        "u_prathima", "u_tanuja"],
         "progress": 40, "expected_progress": 50, "open_tasks_target": 15,
+        "contract_value": 260000,
     },
 ]
+
+
+def _contact(contact_id: str, project_id: str, name: str, title: str, department: str,
+            email: str, phone: str, contact_type: str, status: str, last_contact: str) -> dict:
+    return {"contact_id": contact_id, "project_id": project_id, "name": name, "title": title,
+            "department": department, "email": email, "phone": phone,
+            "contact_type": contact_type, "status": status, "last_contact": last_contact,
+            "notes": "", "created_by": "u_tanvi", "seed": True}
+
+
+# Fictional airline-side contacts, SuiteCRM-style (Account -> Contacts), one
+# marketing-exclusive tab per project. Names/emails/phones are all made up.
+CRM_CONTACTS = [
+    # --- Kenya Airways (proj_kq) ---
+    _contact("con_kq_01", "proj_kq", "Animesh Sharma", "Production Support Manager", "IT Operations",
+             "animesh.sharma@kenya-airways.com", "+254 712 345 678", "primary", "active", "2026-07-12"),
+    _contact("con_kq_02", "proj_kq", "Njoroge Mwangi", "IT Infrastructure Lead", "IT Operations",
+             "njoroge.mwangi@kenya-airways.com", "+254 723 456 789", "technical", "active", "2026-07-10"),
+    _contact("con_kq_03", "proj_kq", "Faith Kamau", "Business Analyst", "Business Systems",
+             "faith.kamau@kenya-airways.com", "+254 734 567 890", "business", "active", "2026-07-09"),
+    _contact("con_kq_04", "proj_kq", "David Ochieng", "QA Manager", "Quality Assurance",
+             "david.ochieng@kenya-airways.com", "+254 745 678 901", "technical", "active", "2026-07-08"),
+    _contact("con_kq_05", "proj_kq", "Jane Mutua", "Finance Controller", "Finance",
+             "jane.mutua@kenya-airways.com", "+254 756 789 012", "finance", "active", "2026-07-05"),
+    _contact("con_kq_06", "proj_kq", "Peter Kariuki", "Training Coordinator", "Training",
+             "peter.kariuki@kenya-airways.com", "+254 768 890 123", "other", "active", "2026-07-03"),
+    _contact("con_kq_07", "proj_kq", "Lilian Otieno", "Change Manager", "Change Management",
+             "lilian.otieno@kenya-airways.com", "+254 779 901 234", "business", "inactive", "2026-06-28"),
+    _contact("con_kq_08", "proj_kq", "Ethan Kiptoo", "Vendor Manager", "Procurement",
+             "ethan.kiptoo@kenya-airways.com", "+254 780 234 567", "other", "active", "2026-06-25"),
+    _contact("con_kq_09", "proj_kq", "Grace Wanjiru", "IT Support Analyst", "IT Operations",
+             "grace.wanjiru@kenya-airways.com", "+254 791 345 678", "technical", "active", "2026-06-22"),
+    _contact("con_kq_10", "proj_kq", "Samuel Kiptum", "Network Engineer", "IT Operations",
+             "samuel.kiptum@kenya-airways.com", "+254 702 456 789", "technical", "active", "2026-06-20"),
+    _contact("con_kq_11", "proj_kq", "Mercy Achieng", "Booking Systems Analyst", "Business Systems",
+             "mercy.achieng@kenya-airways.com", "+254 713 567 890", "business", "active", "2026-06-18"),
+    _contact("con_kq_12", "proj_kq", "Brian Otieno", "Security Officer", "IT Security",
+             "brian.otieno@kenya-airways.com", "+254 724 678 901", "technical", "active", "2026-06-15"),
+    _contact("con_kq_13", "proj_kq", "Esther Nyambura", "Procurement Officer", "Procurement",
+             "esther.nyambura@kenya-airways.com", "+254 735 789 012", "other", "active", "2026-06-12"),
+    _contact("con_kq_14", "proj_kq", "Kevin Mutiso", "Data Analyst", "Business Systems",
+             "kevin.mutiso@kenya-airways.com", "+254 746 890 123", "business", "active", "2026-06-10"),
+    _contact("con_kq_15", "proj_kq", "Winnie Chebet", "HR Business Partner", "Human Resources",
+             "winnie.chebet@kenya-airways.com", "+254 757 901 234", "other", "active", "2026-06-08"),
+    _contact("con_kq_16", "proj_kq", "Dennis Wafula", "Customer Experience Lead", "Customer Service",
+             "dennis.wafula@kenya-airways.com", "+254 768 012 345", "business", "active", "2026-06-05"),
+    _contact("con_kq_17", "proj_kq", "Patrick Mwangi", "Ground Operations Director", "Ground Operations",
+             "patrick.mwangi@kenya-airways.com", "+254 779 123 456", "business", "active", "2026-06-02"),
+    _contact("con_kq_18", "proj_kq", "Caroline Njeri", "Legal & Contracts Officer", "Legal",
+             "caroline.njeri@kenya-airways.com", "+254 780 234 890", "other", "inactive", "2026-05-28"),
+
+    # --- Oman Air (proj_om) — prospect, smaller contact set ---
+    _contact("con_om_01", "proj_om", "Yousuf Al Balushi", "Digital Transformation Manager", "IT",
+             "yousuf.albalushi@omanair.example", "+968 9123 4567", "primary", "active", "2026-07-08"),
+    _contact("con_om_02", "proj_om", "Fatma Al Habsi", "Procurement Lead", "Procurement",
+             "fatma.alhabsi@omanair.example", "+968 9234 5678", "business", "active", "2026-07-04"),
+    _contact("con_om_03", "proj_om", "Salim Al Harthy", "IT Infrastructure Manager", "IT Operations",
+             "salim.alharthy@omanair.example", "+968 9345 6789", "technical", "active", "2026-06-30"),
+    _contact("con_om_04", "proj_om", "Aisha Al Rawahi", "Marketing Director", "Marketing",
+             "aisha.alrawahi@omanair.example", "+968 9456 7890", "business", "active", "2026-06-26"),
+    _contact("con_om_05", "proj_om", "Khalid Al Amri", "Revenue Management Lead", "Revenue Management",
+             "khalid.alamri@omanair.example", "+968 9567 8901", "business", "active", "2026-06-20"),
+    _contact("con_om_06", "proj_om", "Noora Al Balushi", "Business Analyst", "Business Systems",
+             "noora.albalushi@omanair.example", "+968 9678 9012", "business", "active", "2026-06-15"),
+    _contact("con_om_07", "proj_om", "Hamed Al Siyabi", "Vendor Relations Manager", "Procurement",
+             "hamed.alsiyabi@omanair.example", "+968 9789 0123", "other", "active", "2026-06-10"),
+    _contact("con_om_08", "proj_om", "Maryam Al Kindi", "Training Coordinator", "Training",
+             "maryam.alkindi@omanair.example", "+968 9890 1234", "other", "inactive", "2026-05-30"),
+
+    # --- Saudia Airlines (proj_sv) ---
+    _contact("con_sv_01", "proj_sv", "Abdullah Al-Otaibi", "IT Director", "IT",
+             "abdullah.alotaibi@saudia.example", "+966 50 123 4567", "primary", "active", "2026-07-11"),
+    _contact("con_sv_02", "proj_sv", "Sara Al-Qahtani", "Training Manager", "Training",
+             "sara.alqahtani@saudia.example", "+966 50 234 5678", "business", "active", "2026-07-09"),
+    _contact("con_sv_03", "proj_sv", "Faisal Al-Dosari", "Systems Integration Lead", "IT Operations",
+             "faisal.aldosari@saudia.example", "+966 50 345 6789", "technical", "active", "2026-07-06"),
+    _contact("con_sv_04", "proj_sv", "Noura Al-Harbi", "QA Lead", "Quality Assurance",
+             "noura.alharbi@saudia.example", "+966 50 456 7890", "technical", "active", "2026-07-02"),
+    _contact("con_sv_05", "proj_sv", "Mohammed Al-Ghamdi", "Finance Manager", "Finance",
+             "mohammed.alghamdi@saudia.example", "+966 50 567 8901", "finance", "active", "2026-06-28"),
+    _contact("con_sv_06", "proj_sv", "Huda Al-Sulaiman", "Change Management Lead", "Change Management",
+             "huda.alsulaiman@saudia.example", "+966 50 678 9012", "business", "active", "2026-06-24"),
+    _contact("con_sv_07", "proj_sv", "Khalid Al-Zahrani", "Ground Ops Manager", "Ground Operations",
+             "khalid.alzahrani@saudia.example", "+966 50 789 0123", "business", "active", "2026-06-19"),
+    _contact("con_sv_08", "proj_sv", "Reem Al-Mutairi", "Procurement Officer", "Procurement",
+             "reem.almutairi@saudia.example", "+966 50 890 1234", "other", "active", "2026-06-14"),
+    _contact("con_sv_09", "proj_sv", "Yara Al-Shehri", "Customer Experience Manager", "Customer Service",
+             "yara.alshehri@saudia.example", "+966 50 901 2345", "business", "active", "2026-06-08"),
+    _contact("con_sv_10", "proj_sv", "Turki Al-Anazi", "Vendor Manager", "Procurement",
+             "turki.alanazi@saudia.example", "+966 50 012 3456", "other", "inactive", "2026-05-25"),
+]
+
+
+def _invoice(invoice_id: str, project_id: str, number: str, date: str, due_date: str,
+            amount: float, status: str, description: str) -> dict:
+    return {"invoice_id": invoice_id, "project_id": project_id, "number": number,
+            "date": date, "due_date": due_date, "amount": amount, "currency": "USD",
+            "status": status, "description": description, "seed": True}
+
+
+# 480k/yr production-support retainer billed monthly; the current month
+# (matches "today" = 2026-07-13 in this environment) sits pending.
+PROJECT_INVOICES = [
+    _invoice("inv_kq_01", "proj_kq", "INV-KQ-2026-001", "2026-01-05", "2026-01-20",
+            40000, "paid", "Production support — January 2026"),
+    _invoice("inv_kq_02", "proj_kq", "INV-KQ-2026-002", "2026-02-05", "2026-02-20",
+            40000, "paid", "Production support — February 2026"),
+    _invoice("inv_kq_03", "proj_kq", "INV-KQ-2026-003", "2026-03-05", "2026-03-20",
+            40000, "paid", "Production support — March 2026"),
+    _invoice("inv_kq_04", "proj_kq", "INV-KQ-2026-004", "2026-04-05", "2026-04-20",
+            40000, "paid", "Production support — April 2026"),
+    _invoice("inv_kq_05", "proj_kq", "INV-KQ-2026-005", "2026-05-05", "2026-05-20",
+            40000, "paid", "Production support — May 2026"),
+    _invoice("inv_kq_06", "proj_kq", "INV-KQ-2026-006", "2026-06-05", "2026-06-20",
+            40000, "paid", "Production support — June 2026"),
+    _invoice("inv_kq_07", "proj_kq", "INV-KQ-2026-007", "2026-07-05", "2026-07-20",
+            40000, "pending", "Production support — July 2026"),
+    # Saudia: milestone billing against the implementation & training engagement.
+    _invoice("inv_sv_01", "proj_sv", "INV-SV-2026-001", "2026-05-15", "2026-05-30",
+            90000, "paid", "Kickoff & Configuration milestone"),
+    _invoice("inv_sv_02", "proj_sv", "INV-SV-2026-002", "2026-06-15", "2026-06-30",
+            100000, "overdue", "Training Delivery milestone"),
+    _invoice("inv_sv_03", "proj_sv", "INV-SV-2026-003", "2026-08-01", "2026-08-15",
+            70000, "pending", "Go-Live milestone"),
+    # Oman Air: still a prospect — no invoices yet.
+]
+
+
+def _seed_crm(db: Database, now: dt.datetime) -> None:
+    for c in CRM_CONTACTS:
+        db.crm_contacts.update_one({"contact_id": c["contact_id"]},
+                                   {"$set": {**c, "created_at": now}}, upsert=True)
+    for i in PROJECT_INVOICES:
+        db.project_invoices.update_one({"invoice_id": i["invoice_id"]},
+                                       {"$set": {**i, "created_at": now}}, upsert=True)
+
 
 _BUG_TITLES = [
     ("Booking", "Seat map fails to load for round-trip fares"),
@@ -940,6 +1078,7 @@ def _seed_core(db: Database, now: dt.datetime) -> None:
         db.documents.update_one({"doc_id": d["doc_id"]}, {"$set": d}, upsert=True)
 
     _seed_report_defs(db, now)
+    _seed_crm(db, now)
 
     from ..integrations.aws_sim import AwsSimConnector
     from .ingest import run_connector
@@ -988,7 +1127,8 @@ def reset_roster(db: Database) -> dict:
                  "notifications", "automation_scripts", "product_docs",
                  "kpi_values", "kpi_defs", "folders", "documents",
                  "report_defs", "report_runs", "report_views",
-                 "aws_costs", "aws_resources", "aws_budgets"):
+                 "aws_costs", "aws_resources", "aws_budgets",
+                 "crm_contacts", "project_invoices"):
         db[coll].delete_many({})
     seed(db)
     # Compute the live KPI values now so dashboards show real numbers (the

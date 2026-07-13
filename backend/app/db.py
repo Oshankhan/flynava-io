@@ -59,3 +59,7 @@ def ensure_indexes(db: Database) -> None:
     db.attendance.create_index([("date", ASCENDING)])
     db.automation_scripts.create_index([("module", ASCENDING), ("status", ASCENDING)])
     db.product_docs.create_index([("status", ASCENDING)])
+    db.crm_contacts.create_index([("project_id", ASCENDING)])
+    db.crm_contacts.create_index([("contact_id", ASCENDING)], unique=True)
+    db.project_invoices.create_index([("project_id", ASCENDING)])
+    db.project_invoices.create_index([("invoice_id", ASCENDING)], unique=True)

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
   Avatar,
@@ -6,7 +7,6 @@ import {
   Card,
   Col,
   DatePicker,
-  Drawer,
   Dropdown,
   Empty,
   Flex,
@@ -20,7 +20,6 @@ import {
   Row,
   Select,
   Spin,
-  Statistic,
   Table,
   Tabs,
   Tag,
@@ -30,12 +29,15 @@ import {
   Upload,
 } from "antd";
 import {
+  ArrowLeftOutlined,
+  CheckSquareOutlined,
   ClockCircleOutlined,
   DeleteOutlined,
   EditOutlined,
   FileTextOutlined,
   InboxOutlined,
   PlusOutlined,
+  TeamOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
 import {
@@ -49,7 +51,9 @@ import {
   type UserLite,
 } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { levelOf } from "./Layout";
+import { levelOf, rolesOf } from "../components/Layout";
+import ContactsTab from "../components/crm/ContactsTab";
+import BillingTab from "../components/crm/BillingTab";
 
 const { Text, Title } = Typography;
 
@@ -89,24 +93,24 @@ const ACTION_LABEL: Record<string, string> = {
   task_created: "created a task",
 };
 
-export default function ProjectDrawer({
-  projectId, onClose,
-}: {
-  projectId: string | undefined;
-  onClose: () => void;
-}) {
+export default function ProjectDetail() {
+  const navigate = useNavigate();
+  const { projectId } = useParams<{ projectId: string }>();
   const { user } = useAuth();
   const level = levelOf(user);
   const canEditProject = level >= 3;
   const canManageMembers = level >= 2;
+  const roles = rolesOf(user);
+  const canSeeContacts = roles.includes("marketing") || user?.role === "super_admin";
+  const canSeeBilling = user?.department === "fin" || user?.role === "super_admin";
+  const canDeleteContact = canSeeContacts && (level >= 2 || user?.role === "super_admin");
 
   const [data, setData] = useState<ProjectDetailData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
 
-  const [editOpen, setEditOpen] = useState(false);
-  const [editSaving, setEditSaving] = useState(false);
-  const [editForm] = Form.useForm();
+  const [settingsForm] = Form.useForm();
+  const [settingsSaving, setSettingsSaving] = useState(false);
 
   const [stageOpen, setStageOpen] = useState(false);
   const [stageMode, setStageMode] = useState<"add" | "edit">("add");
@@ -160,9 +164,21 @@ export default function ProjectDrawer({
     }
   }, [memberOpen, taskOpen, allPeople.length]);
 
-  async function saveProjectEdit(values: Record<string, unknown>) {
+  useEffect(() => {
+    if (activeTab === "settings" && data) {
+      settingsForm.setFieldsValue({
+        name: data.name, client: data.client, description: data.description,
+        engagement: data.engagement, priority: data.priority, status: data.status,
+        project_manager_id: data.project_manager?.user_id,
+        start_date: data.start_date ? undefined : undefined,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, data]);
+
+  async function saveSettings(values: Record<string, unknown>) {
     if (!projectId) return;
-    setEditSaving(true);
+    setSettingsSaving(true);
     try {
       const sd = values.start_date as { format: (f: string) => string } | null | undefined;
       const dd = values.due_date as { format: (f: string) => string } | null | undefined;
@@ -175,12 +191,11 @@ export default function ProjectDrawer({
         due_date: dd ? dd.format("YYYY-MM-DD") : undefined,
       });
       message.success("Project updated");
-      setEditOpen(false);
       load();
     } catch (e) {
       message.error(e instanceof ApiError ? e.message : "Update failed");
     } finally {
-      setEditSaving(false);
+      setSettingsSaving(false);
     }
   }
 
@@ -311,8 +326,6 @@ export default function ProjectDrawer({
     }
   }
 
-  const open = !!projectId;
-
   const stageCols = [
     {
       title: "#", key: "idx", width: 40,
@@ -417,293 +430,316 @@ export default function ProjectDrawer({
   ];
 
   return (
-    <Drawer
-      open={open}
-      onClose={onClose}
-      width="min(860px, 100vw)"
-      destroyOnClose
-      title={
-        data ? (
-          <Flex justify="space-between" align="center" wrap gap={8}>
-            <Flex align="center" gap={10}>
-              {data.logo ? (
-                <div className="w-20 h-20 shrink-0 flex items-center justify-center overflow-hidden">
-                  <img src={data.logo} alt={data.code} className="max-w-full max-h-full object-contain" />
-                </div>
-              ) : (
-                <Avatar size={64} className="bg-io-600">{data.code}</Avatar>
-              )}
-              <div>
-                <Flex align="center" gap={8}>
-                  <Title level={4} className="m-0">{data.name} ({data.code})</Title>
-                  <Tag color={STATUS_TAG[data.status] ?? "default"} className="capitalize">
-                    {data.status.replace("_", " ")}
-                  </Tag>
-                </Flex>
-                {data.engagement && <Text strong className="text-[12px]">{data.engagement}</Text>}
-              </div>
-            </Flex>
-            <Flex gap={8}>
-              {canManageMembers && (
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => setTaskOpen(true)}>
-                  Add Task
-                </Button>
-              )}
-              {canEditProject && (
-                <Button
-                  icon={<EditOutlined />}
-                  onClick={() => {
-                    editForm.setFieldsValue({
-                      name: data.name, client: data.client, description: data.description,
-                      engagement: data.engagement, priority: data.priority, status: data.status,
-                      project_manager_id: data.project_manager?.user_id,
-                    });
-                    setEditOpen(true);
-                  }}
-                >
-                  Edit Project
-                </Button>
-              )}
-            </Flex>
-          </Flex>
-        ) : "Project"
-      }
-    >
+    <div>
+      <Button type="link" icon={<ArrowLeftOutlined />} onClick={() => navigate("/tasks")} className="px-0 mb-2">
+        Projects
+      </Button>
+
       {error && <Alert type="error" message={error} showIcon />}
-      {!data && !error && (
-        <Flex justify="center" className="pt-20"><Spin /></Flex>
-      )}
+      {!data && !error && <Flex justify="center" className="pt-20"><Spin /></Flex>}
+
       {data && (
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          items={[
-            {
-              key: "overview", label: "Overview",
-              children: (
-                <div>
-                  <Row gutter={[12, 12]} className="mb-4">
-                    <Col span={12} md={6}><Card size="small"><Statistic title="Progress" value={data.progress} suffix="%" /></Card></Col>
-                    <Col span={12} md={6}><Card size="small"><Statistic title="Open Tasks" value={data.tasks.filter((t) => classify(t.status) !== "completed").length} /></Card></Col>
-                    <Col span={12} md={6}><Card size="small"><Statistic title="Team Members" value={data.members.length} /></Card></Col>
-                    <Col span={12} md={6}>
-                      <Card size="small">
-                        <Text type="secondary" className="text-xs">Due Date</Text>
-                        <div className="text-[15px] font-semibold">{data.due_date ?? "—"}</div>
-                        {daysLeft(data.due_date) && (
-                          <Text type="secondary" className="text-[11px]">{daysLeft(data.due_date)}</Text>
-                        )}
-                      </Card>
-                    </Col>
-                  </Row>
-
-                  {data.description && (
-                    <Card size="small" title="Project Description" className="mb-4">
-                      <Text>{data.description}</Text>
-                    </Card>
-                  )}
-
-                  <Card
-                    size="small"
-                    title="Project Stages"
-                    className="mb-4"
-                    extra={canEditProject && (
-                      <Button size="small" icon={<PlusOutlined />} onClick={openAddStage}>Add Stage</Button>
+        <>
+          <Card className="mb-4" style={{ borderLeft: "4px solid var(--io-600, #157f52)" }}>
+            <Flex justify="space-between" align="start" wrap gap={16}>
+              <Flex gap={14} className="min-w-0">
+                {data.logo ? (
+                  <div className="w-16 h-16 shrink-0 flex items-center justify-center overflow-hidden">
+                    <img src={data.logo} alt={data.code} className="max-w-full max-h-full object-contain" />
+                  </div>
+                ) : (
+                  <Avatar size={64} className="bg-io-600 shrink-0">{data.code}</Avatar>
+                )}
+                <div className="min-w-0">
+                  <Flex align="center" gap={8} wrap>
+                    <Title level={4} className="m-0">{data.name} ({data.code})</Title>
+                    <Tag color={STATUS_TAG[data.status] ?? "default"} className="capitalize">
+                      {data.status.replace("_", " ")}
+                    </Tag>
+                  </Flex>
+                  {data.engagement && <Text strong className="text-[13px]">{data.engagement}</Text>}
+                  <Flex gap={16} wrap className="mt-1">
+                    {data.client && (
+                      <Text type="secondary" className="text-[13px]">
+                        <TeamOutlined className="mr-1" />Client: <Text strong className="text-[13px]">{data.client}</Text>
+                      </Text>
                     )}
-                  >
-                    <Table
-                      size="small" rowKey="key" dataSource={data.stages} columns={stageCols}
-                      pagination={false} scroll={{ x: true }}
-                    />
-                  </Card>
-
-                  <Card size="small" title="Project Details">
-                    <Row gutter={[16, 12]}>
-                      <Col span={12}><Text type="secondary" className="text-xs block">Client</Text><Text>{data.client ?? "—"}</Text></Col>
-                      <Col span={12}><Text type="secondary" className="text-xs block">Project Manager</Text><Text>{data.project_manager?.name ?? "—"}</Text></Col>
-                      <Col span={12}><Text type="secondary" className="text-xs block">Start Date</Text><Text>{data.start_date ?? "—"}</Text></Col>
-                      <Col span={12}><Text type="secondary" className="text-xs block">Due Date</Text><Text>{data.due_date ?? "—"}</Text></Col>
-                      <Col span={12}><Text type="secondary" className="text-xs block">Status</Text><Text className="capitalize">{data.status.replace("_", " ")}</Text></Col>
-                      <Col span={12}>
-                        <Text type="secondary" className="text-xs block">Priority</Text>
-                        <Text type={data.priority === "High" ? "danger" : undefined}>{data.priority ?? "—"}</Text>
-                      </Col>
-                    </Row>
-                  </Card>
-                </div>
-              ),
-            },
-            {
-              key: "team", label: "Team & Members",
-              children: (
-                <div>
-                  {canManageMembers && (
-                    <Flex justify="end" className="mb-3">
-                      <Button icon={<UserAddOutlined />} onClick={() => setMemberOpen(true)}>Add Members</Button>
-                    </Flex>
-                  )}
-                  <Flex vertical gap={10}>
-                    {data.members.map((m) => (
-                      <Flex key={m.user_id} align="center" gap={10} className="p-2 rounded-lg bg-[#f7f8fa] dark:bg-white/[0.04]">
-                        <Tooltip title={m.name}><Avatar className="bg-io-600">{m.name[0]}</Avatar></Tooltip>
-                        <div className="min-w-0">
-                          <Text className="text-[13px]" ellipsis>{m.name}</Text>
-                          <div><Text type="secondary" className="text-[11px]" ellipsis>{m.designation ?? "—"}</Text></div>
-                        </div>
-                      </Flex>
-                    ))}
+                    {data.project_manager && (
+                      <Text type="secondary" className="text-[13px]">
+                        <UserAddOutlined className="mr-1" />PM: <Text strong className="text-[13px]">{data.project_manager.name}</Text>
+                      </Text>
+                    )}
                   </Flex>
                 </div>
-              ),
-            },
-            {
-              key: "tasks", label: "Tasks",
-              children: (
-                <div>
-                  <Card size="small" bordered={false} title="Tasks" className="mb-4">
-                    {data.tasks.length === 0 ? (
-                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No tasks yet" />
-                    ) : (
-                      <Table size="small" rowKey="task_id" dataSource={data.tasks} columns={taskCols}
-                        pagination={{ pageSize: 8, showSizeChanger: false }} scroll={{ x: true }} />
-                    )}
-                  </Card>
-                  {data.bugs.length > 0 && (
-                    <Card size="small" bordered={false} title={`Bugs (${data.bugs.length})`}>
-                      <Table size="small" rowKey="task_id" dataSource={data.bugs} columns={bugCols}
-                        pagination={{ pageSize: 8, showSizeChanger: false }} scroll={{ x: true }} />
-                    </Card>
+              </Flex>
+
+              <Flex gap={10} wrap>
+                <Card size="small" className="w-32" styles={{ body: { padding: 10 } }}>
+                  <Text type="secondary" className="text-[11px] block">Progress</Text>
+                  <Text strong className="text-[16px]">{data.progress}%</Text>
+                  <Progress percent={data.progress} size="small" showInfo={false} />
+                </Card>
+                <Card size="small" className="w-32" styles={{ body: { padding: 10 } }}>
+                  <Text type="secondary" className="text-[11px] block">Open Tasks</Text>
+                  <Text strong className="text-[16px]">
+                    {data.tasks.filter((t) => classify(t.status) !== "completed").length}
+                  </Text>
+                </Card>
+                <Card size="small" className="w-32" styles={{ body: { padding: 10 } }}>
+                  <Text type="secondary" className="text-[11px] block">Team Members</Text>
+                  <Text strong className="text-[16px]">{data.members.length}</Text>
+                </Card>
+                <Card size="small" className="w-32" styles={{ body: { padding: 10 } }}>
+                  <Text type="secondary" className="text-[11px] block">Due Date</Text>
+                  <Text strong className="text-[13px]">{data.due_date ?? "—"}</Text>
+                  {daysLeft(data.due_date) && (
+                    <Text type="secondary" className="text-[11px] block">{daysLeft(data.due_date)}</Text>
                   )}
-                </div>
-              ),
-            },
-            {
-              key: "timeline", label: "Timeline",
-              children: (
-                <Timeline
-                  items={[...data.stages]
-                    .sort((a, b) => (a.start_date ?? "").localeCompare(b.start_date ?? ""))
-                    .map((s) => ({
-                      color: s.status === "done" ? "green" : s.status === "active" ? "blue" : "gray",
-                      children: (
-                        <div>
-                          <Text strong>{s.name}</Text>{" "}
-                          <Tag color={STAGE_STATUS_TAG[s.status]} className="capitalize">{s.status}</Tag>
-                          <div><Text type="secondary" className="text-[12px]">{s.start_date ?? "—"} → {s.end_date ?? "—"}</Text></div>
-                          {s.description && <div><Text type="secondary" className="text-[12px]">{s.description}</Text></div>}
-                        </div>
-                      ),
-                    }))}
-                />
-              ),
-            },
-            {
-              key: "documents", label: "Documents",
-              children: (
-                <div>
-                  <Card size="small" bordered={false} title="Upload document" className="mb-4">
+                </Card>
+              </Flex>
+            </Flex>
+          </Card>
+
+          <Tabs
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            items={[
+              {
+                key: "overview", label: "Overview",
+                children: (
+                  <div>
+                    {data.description && (
+                      <Card size="small" title="Project Description" className="mb-4">
+                        <Text>{data.description}</Text>
+                      </Card>
+                    )}
+
+                    <Card
+                      size="small"
+                      title="Project Stages"
+                      className="mb-4"
+                      extra={canEditProject && (
+                        <Button size="small" icon={<PlusOutlined />} onClick={openAddStage}>Add Stage</Button>
+                      )}
+                    >
+                      <Table
+                        size="small" rowKey="key" dataSource={data.stages} columns={stageCols}
+                        pagination={false} scroll={{ x: true }}
+                      />
+                    </Card>
+
+                    <Card size="small" title="Project Details">
+                      <Row gutter={[16, 12]}>
+                        <Col span={12}><Text type="secondary" className="text-xs block">Client</Text><Text>{data.client ?? "—"}</Text></Col>
+                        <Col span={12}><Text type="secondary" className="text-xs block">Project Manager</Text><Text>{data.project_manager?.name ?? "—"}</Text></Col>
+                        <Col span={12}><Text type="secondary" className="text-xs block">Start Date</Text><Text>{data.start_date ?? "—"}</Text></Col>
+                        <Col span={12}><Text type="secondary" className="text-xs block">Due Date</Text><Text>{data.due_date ?? "—"}</Text></Col>
+                        <Col span={12}><Text type="secondary" className="text-xs block">Status</Text><Text className="capitalize">{data.status.replace("_", " ")}</Text></Col>
+                        <Col span={12}>
+                          <Text type="secondary" className="text-xs block">Priority</Text>
+                          <Text type={data.priority === "High" ? "danger" : undefined}>{data.priority ?? "—"}</Text>
+                        </Col>
+                      </Row>
+                    </Card>
+                  </div>
+                ),
+              },
+              {
+                key: "team", label: "Team & Members",
+                children: (
+                  <div>
+                    {canManageMembers && (
+                      <Flex justify="end" className="mb-3">
+                        <Button icon={<UserAddOutlined />} onClick={() => setMemberOpen(true)}>Add Members</Button>
+                      </Flex>
+                    )}
                     <Flex vertical gap={10}>
-                      <Input placeholder="Title" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} />
-                      <Select value={docKind} onChange={setDocKind} options={[
-                        { value: "document", label: "Document" },
-                        { value: "mom", label: "MOM" },
-                        { value: "policy", label: "Policy" },
-                      ]} />
-                      <Upload.Dragger
-                        beforeUpload={(f) => { setDocFile(f as unknown as File); return false; }}
-                        maxCount={1}
-                        fileList={docFile ? [{ uid: "1", name: docFile.name } as never] : []}
-                        onRemove={() => setDocFile(null)}
-                      >
-                        <p className="ant-upload-drag-icon"><InboxOutlined /></p>
-                        <p className="ant-upload-text">Click or drag a file here</p>
-                      </Upload.Dragger>
-                      <Button type="primary" loading={docUploading} disabled={!docFile || !docTitle}
-                        onClick={uploadDoc}>
-                        Upload
-                      </Button>
+                      {data.members.map((m) => (
+                        <Flex key={m.user_id} align="center" gap={10} className="p-2 rounded-lg bg-[#f7f8fa] dark:bg-white/[0.04]">
+                          <Tooltip title={m.name}><Avatar className="bg-io-600">{m.name[0]}</Avatar></Tooltip>
+                          <div className="min-w-0">
+                            <Text className="text-[13px]" ellipsis>{m.name}</Text>
+                            <div><Text type="secondary" className="text-[11px]" ellipsis>{m.designation ?? "—"}</Text></div>
+                          </div>
+                        </Flex>
+                      ))}
                     </Flex>
-                  </Card>
-                  {docs === null ? (
+                  </div>
+                ),
+              },
+              {
+                key: "tasks", label: "Tasks",
+                children: (
+                  <div>
+                    <Card
+                      size="small" bordered={false} title="Tasks" className="mb-4"
+                      extra={canManageMembers && (
+                        <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => setTaskOpen(true)}>
+                          Add Task
+                        </Button>
+                      )}
+                    >
+                      {data.tasks.length === 0 ? (
+                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No tasks yet" />
+                      ) : (
+                        <Table size="small" rowKey="task_id" dataSource={data.tasks} columns={taskCols}
+                          pagination={{ pageSize: 8, showSizeChanger: false }} scroll={{ x: true }} />
+                      )}
+                    </Card>
+                    {data.bugs.length > 0 && (
+                      <Card size="small" bordered={false} title={`Bugs (${data.bugs.length})`}>
+                        <Table size="small" rowKey="task_id" dataSource={data.bugs} columns={bugCols}
+                          pagination={{ pageSize: 8, showSizeChanger: false }} scroll={{ x: true }} />
+                      </Card>
+                    )}
+                  </div>
+                ),
+              },
+              {
+                key: "timeline", label: "Timeline",
+                children: (
+                  <Timeline
+                    items={[...data.stages]
+                      .sort((a, b) => (a.start_date ?? "").localeCompare(b.start_date ?? ""))
+                      .map((s) => ({
+                        color: s.status === "done" ? "green" : s.status === "active" ? "blue" : "gray",
+                        children: (
+                          <div>
+                            <Text strong>{s.name}</Text>{" "}
+                            <Tag color={STAGE_STATUS_TAG[s.status]} className="capitalize">{s.status}</Tag>
+                            <div><Text type="secondary" className="text-[12px]">{s.start_date ?? "—"} → {s.end_date ?? "—"}</Text></div>
+                            {s.description && <div><Text type="secondary" className="text-[12px]">{s.description}</Text></div>}
+                          </div>
+                        ),
+                      }))}
+                  />
+                ),
+              },
+              {
+                key: "documents", label: "Documents",
+                children: (
+                  <div>
+                    <Card size="small" bordered={false} title="Upload document" className="mb-4">
+                      <Flex vertical gap={10}>
+                        <Input placeholder="Title" value={docTitle} onChange={(e) => setDocTitle(e.target.value)} />
+                        <Select value={docKind} onChange={setDocKind} options={[
+                          { value: "document", label: "Document" },
+                          { value: "mom", label: "MOM" },
+                          { value: "policy", label: "Policy" },
+                        ]} />
+                        <Upload.Dragger
+                          beforeUpload={(f) => { setDocFile(f as unknown as File); return false; }}
+                          maxCount={1}
+                          fileList={docFile ? [{ uid: "1", name: docFile.name } as never] : []}
+                          onRemove={() => setDocFile(null)}
+                        >
+                          <p className="ant-upload-drag-icon"><InboxOutlined /></p>
+                          <p className="ant-upload-text">Click or drag a file here</p>
+                        </Upload.Dragger>
+                        <Button type="primary" loading={docUploading} disabled={!docFile || !docTitle}
+                          onClick={uploadDoc}>
+                          Upload
+                        </Button>
+                      </Flex>
+                    </Card>
+                    {docs === null ? (
+                      <Flex justify="center"><Spin /></Flex>
+                    ) : docs.length === 0 ? (
+                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No documents yet" />
+                    ) : (
+                      <List
+                        dataSource={docs}
+                        renderItem={(d) => (
+                          <List.Item actions={[<Tag key="s">{d.status}</Tag>]}>
+                            <List.Item.Meta
+                              avatar={<FileTextOutlined className="text-io-600 text-lg" />}
+                              title={d.title}
+                              description={d.filename}
+                            />
+                          </List.Item>
+                        )}
+                      />
+                    )}
+                  </div>
+                ),
+              },
+              {
+                key: "activity", label: "Activity",
+                children:
+                  activity === null ? (
                     <Flex justify="center"><Spin /></Flex>
-                  ) : docs.length === 0 ? (
-                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No documents yet" />
+                  ) : activity.length === 0 ? (
+                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Nothing yet" />
                   ) : (
                     <List
-                      dataSource={docs}
-                      renderItem={(d) => (
-                        <List.Item actions={[<Tag key="s">{d.status}</Tag>]}>
+                      dataSource={activity}
+                      renderItem={(a) => (
+                        <List.Item>
                           <List.Item.Meta
-                            avatar={<FileTextOutlined className="text-io-600 text-lg" />}
-                            title={d.title}
-                            description={d.filename}
+                            avatar={<ClockCircleOutlined className="text-io-600" />}
+                            title={<Text className="text-[13px]">
+                              <b>{a.actor_name}</b> {ACTION_LABEL[a.action] ?? a.action}
+                            </Text>}
+                            description={<Text type="secondary" className="text-[11px]">
+                              {new Date(a.at).toLocaleString()}
+                            </Text>}
                           />
                         </List.Item>
                       )}
                     />
-                  )}
-                </div>
-              ),
-            },
-            {
-              key: "activity", label: "Activity",
-              children:
-                activity === null ? (
-                  <Flex justify="center"><Spin /></Flex>
-                ) : activity.length === 0 ? (
-                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Nothing yet" />
-                ) : (
-                  <List
-                    dataSource={activity}
-                    renderItem={(a) => (
-                      <List.Item>
-                        <List.Item.Meta
-                          avatar={<ClockCircleOutlined className="text-io-600" />}
-                          title={<Text className="text-[13px]">
-                            <b>{a.actor_name}</b> {ACTION_LABEL[a.action] ?? a.action}
-                          </Text>}
-                          description={<Text type="secondary" className="text-[11px]">
-                            {new Date(a.at).toLocaleString()}
-                          </Text>}
-                        />
-                      </List.Item>
-                    )}
-                  />
-                ),
-            },
-          ]}
-        />
+                  ),
+              },
+              ...(canSeeContacts && projectId
+                ? [{
+                    key: "contacts", label: "Contacts",
+                    children: <ContactsTab projectId={projectId} canDelete={canDeleteContact} />,
+                  }]
+                : []),
+              ...(canSeeBilling && projectId
+                ? [{ key: "billing", label: "Billing", children: <BillingTab projectId={projectId} /> }]
+                : []),
+              ...(canEditProject
+                ? [{
+                    key: "settings", label: "Settings",
+                    children: (
+                      <Card size="small" title="Project Settings" className="max-w-2xl">
+                        <Form form={settingsForm} layout="vertical" onFinish={saveSettings}>
+                          <Form.Item name="name" label="Project name" rules={[{ required: true }]}>
+                            <Input maxLength={200} />
+                          </Form.Item>
+                          <Flex gap={12}>
+                            <Form.Item name="client" label="Client" className="flex-1"><Input maxLength={200} /></Form.Item>
+                            <Form.Item name="engagement" label="Engagement" className="flex-1"><Input maxLength={200} /></Form.Item>
+                          </Flex>
+                          <Form.Item name="description" label="Description"><Input.TextArea rows={2} /></Form.Item>
+                          <Flex gap={12}>
+                            <Form.Item name="status" label="Status" className="flex-1">
+                              <Select options={["planning", "active", "on_hold", "completed"].map((s) => ({ value: s, label: s }))} />
+                            </Form.Item>
+                            <Form.Item name="priority" label="Priority" className="flex-1">
+                              <Select options={["Low", "Medium", "High"].map((p) => ({ value: p, label: p }))} />
+                            </Form.Item>
+                          </Flex>
+                          <Form.Item name="project_manager_id" label="Project Manager">
+                            <Select showSearch allowClear optionFilterProp="label"
+                              options={allPeople.map((p) => ({ value: p.user_id, label: p.name }))} />
+                          </Form.Item>
+                          <Flex gap={12}>
+                            <Form.Item name="start_date" label="Start date" className="flex-1"><DatePicker className="w-full" /></Form.Item>
+                            <Form.Item name="due_date" label="Due date" className="flex-1"><DatePicker className="w-full" /></Form.Item>
+                          </Flex>
+                          <Button type="primary" htmlType="submit" loading={settingsSaving} icon={<CheckSquareOutlined />}>
+                            Save Changes
+                          </Button>
+                        </Form>
+                      </Card>
+                    ),
+                  }]
+                : []),
+            ]}
+          />
+        </>
       )}
-
-      <Modal title="Edit Project" open={editOpen} onCancel={() => setEditOpen(false)}
-        onOk={() => editForm.submit()} confirmLoading={editSaving} okText="Save">
-        <Form form={editForm} layout="vertical" onFinish={saveProjectEdit}>
-          <Form.Item name="name" label="Project name" rules={[{ required: true }]}>
-            <Input maxLength={200} />
-          </Form.Item>
-          <Flex gap={12}>
-            <Form.Item name="client" label="Client" className="flex-1"><Input maxLength={200} /></Form.Item>
-            <Form.Item name="engagement" label="Engagement" className="flex-1"><Input maxLength={200} /></Form.Item>
-          </Flex>
-          <Form.Item name="description" label="Description"><Input.TextArea rows={2} /></Form.Item>
-          <Flex gap={12}>
-            <Form.Item name="status" label="Status" className="flex-1">
-              <Select options={["planning", "active", "on_hold", "completed"].map((s) => ({ value: s, label: s }))} />
-            </Form.Item>
-            <Form.Item name="priority" label="Priority" className="flex-1">
-              <Select options={["Low", "Medium", "High"].map((p) => ({ value: p, label: p }))} />
-            </Form.Item>
-          </Flex>
-          <Form.Item name="project_manager_id" label="Project Manager">
-            <Select showSearch allowClear optionFilterProp="label"
-              options={allPeople.map((p) => ({ value: p.user_id, label: p.name }))} />
-          </Form.Item>
-          <Flex gap={12}>
-            <Form.Item name="start_date" label="Start date" className="flex-1"><DatePicker className="w-full" /></Form.Item>
-            <Form.Item name="due_date" label="Due date" className="flex-1"><DatePicker className="w-full" /></Form.Item>
-          </Flex>
-        </Form>
-      </Modal>
 
       <Modal title={stageMode === "add" ? "Add Stage" : "Edit Stage"} open={stageOpen}
         onCancel={() => setStageOpen(false)} onOk={() => stageForm.submit()}
@@ -760,6 +796,6 @@ export default function ProjectDrawer({
           </Form.Item>
         </Form>
       </Modal>
-    </Drawer>
+    </div>
   );
 }

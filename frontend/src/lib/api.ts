@@ -778,6 +778,44 @@ export interface ProjectDetail {
   members: ProjectMember[];
   tasks: ProjectTaskRow[];
   bugs: ProjectTaskRow[];
+  contract_value?: number | null;
+}
+
+// --- CRM: per-project airline contacts (marketing) + billing (finance) ---
+export type ContactType = "primary" | "technical" | "business" | "finance" | "other";
+export type ContactStatus = "active" | "inactive";
+export interface CrmContact {
+  contact_id: string;
+  project_id: string;
+  name: string;
+  title?: string;
+  department?: string;
+  email?: string;
+  phone?: string;
+  contact_type: ContactType;
+  status: ContactStatus;
+  last_contact?: string | null;
+  notes?: string;
+}
+export type InvoiceStatus = "paid" | "pending" | "overdue";
+export interface ProjectInvoice {
+  invoice_id: string;
+  project_id: string;
+  number: string;
+  date: string;
+  due_date?: string | null;
+  amount: number;
+  currency: string;
+  status: InvoiceStatus;
+  description?: string;
+}
+export interface ProjectBilling {
+  contract_value: number | null;
+  currency: string;
+  invoiced: number;
+  paid: number;
+  outstanding: number;
+  invoices: ProjectInvoice[];
 }
 
 async function uploadReq<T>(path: string, form: FormData): Promise<T> {
@@ -1182,6 +1220,57 @@ export const api = {
       body: JSON.stringify({ member_ids }),
     }),
   projectActivity: (id: string) => req<ProjectActivityItem[]>(`/projects/${id}/activity`),
+  // CRM: marketing-only account contacts, per project
+  projectContacts: (id: string) => req<CrmContact[]>(`/projects/${id}/contacts`),
+  createContact: (id: string, body: {
+    name: string;
+    title?: string;
+    department?: string;
+    email?: string;
+    phone?: string;
+    contact_type?: ContactType;
+    status?: ContactStatus;
+    last_contact?: string | null;
+    notes?: string;
+  }) => req<CrmContact>(`/projects/${id}/contacts`, { method: "POST", body: JSON.stringify(body) }),
+  updateContact: (id: string, contactId: string, body: Partial<{
+    name: string;
+    title: string;
+    department: string;
+    email: string;
+    phone: string;
+    contact_type: ContactType;
+    status: ContactStatus;
+    last_contact: string | null;
+    notes: string;
+  }>) => req<CrmContact>(`/projects/${id}/contacts/${contactId}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  }),
+  deleteContact: (id: string, contactId: string) =>
+    req<{ deleted: string }>(`/projects/${id}/contacts/${contactId}`, { method: "DELETE" }),
+  // CRM: finance-only billing, per project
+  projectBilling: (id: string) => req<ProjectBilling>(`/projects/${id}/billing`),
+  createInvoice: (id: string, body: {
+    number: string;
+    date: string;
+    due_date?: string | null;
+    amount: number;
+    currency?: string;
+    status?: InvoiceStatus;
+    description?: string;
+  }) => req<ProjectInvoice>(`/projects/${id}/invoices`, { method: "POST", body: JSON.stringify(body) }),
+  updateInvoice: (id: string, invoiceId: string, body: Partial<{
+    date: string;
+    due_date: string | null;
+    amount: number;
+    currency: string;
+    status: InvoiceStatus;
+    description: string;
+  }>) => req<ProjectInvoice>(`/projects/${id}/invoices/${invoiceId}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  }),
 
   notificationsStreamUrl: () => {
     const token = localStorage.getItem(TOKEN_KEY);

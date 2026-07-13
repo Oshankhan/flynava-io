@@ -144,7 +144,7 @@ export default function MyTeam() {
               : 0;
             return (
               <Col key={m.user_id} xs={24} sm={12} lg={8} xl={6}>
-                <Card size="small" className="h-full">
+                <Card size="small" className="h-full" classNames={{ body: "h-full flex flex-col" }}>
                   <Flex align="center" gap={10} className="mb-2">
                     <Avatar className="bg-io-600">{m.name[0]}</Avatar>
                     <div className="min-w-0">
@@ -184,7 +184,7 @@ export default function MyTeam() {
                     {m.pending_requests > 0 && <Tag color="blue">{m.pending_requests} pending req</Tag>}
                   </Flex>
 
-                  <Flex gap={8}>
+                  <Flex gap={8} className="mt-auto">
                     {m.has_reports && (
                       <Button
                         size="small"

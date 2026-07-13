@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Alert,
   Avatar,
@@ -41,7 +41,6 @@ import {
 } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { levelOf } from "../components/Layout";
-import ProjectDrawer from "../components/ProjectDrawer";
 
 const { Text } = Typography;
 
@@ -595,8 +594,6 @@ function TaskListPanel({ mode }: { mode: "mine" | "all" }) {
 
 export default function Tasks() {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const { projectId } = useParams<{ projectId: string }>();
   const level = levelOf(user);
   const canCreateProject = level >= 3;
   const isLead = level >= 2;
@@ -619,7 +616,6 @@ export default function Tasks() {
             : []),
         ]}
       />
-      <ProjectDrawer projectId={projectId} onClose={() => navigate("/tasks")} />
     </div>
   );
 }

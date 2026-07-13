@@ -14,6 +14,7 @@ import MyPayslip from "./pages/MyPayslip";
 import Admin from "./pages/Admin";
 import Workspace from "./pages/Workspace";
 import Tasks from "./pages/Tasks";
+import ProjectDetail from "./pages/ProjectDetail";
 import Approvals from "./pages/Approvals";
 import CalendarPage from "./pages/CalendarPage";
 import KnowledgeBase from "./pages/KnowledgeBase";
@@ -59,7 +60,7 @@ function Shell() {
               <Route path="/workspace" element={<Workspace />} />
               <Route path="/my-team" element={<MyTeam />} />
               <Route path="/tasks" element={<Tasks />} />
-              <Route path="/projects/:projectId" element={<Tasks />} />
+              <Route path="/projects/:projectId" element={<ProjectDetail />} />
               <Route path="/approvals" element={<Approvals />} />
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/knowledge" element={<KnowledgeBase />} />

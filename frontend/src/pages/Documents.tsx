@@ -439,7 +439,9 @@ export default function Documents() {
                 onClick={() => { setEditingFolder(null); folderForm.resetFields(); setFolderModalOpen(true); }} />
             )}
           >
-            {folders === null ? <Spin /> : (
+            {folders === null ? (
+              <Flex justify="center" className="py-6"><Spin /></Flex>
+            ) : (
               <Flex vertical gap={2}>
                 <Flex
                   justify="space-between" align="center"
