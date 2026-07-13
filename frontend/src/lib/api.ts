@@ -229,6 +229,113 @@ export interface SendResult {
   recipients: string[];
   preview_html: string;
 }
+// --- Reporting Hub ---
+export type ReportDomain =
+  | "development" | "qa" | "operations" | "projects" | "marketing"
+  | "sales" | "finance" | "hr" | "infrastructure";
+export type ReportType = "tabular" | "chart" | "summary" | "dashboard";
+export type ReportTab = "my" | "shared" | "all" | "scheduled" | "archived" | "confidential";
+export type ReportFrequency = "daily" | "weekly" | "monthly" | "quarterly" | "yearly" | "custom";
+export type ReportVisibility = "org" | "restricted" | "private";
+
+export interface ReportSectionSpec {
+  kind: string;
+  params?: Record<string, unknown>;
+  title?: string | null;
+}
+export interface ReportSection {
+  key: string;
+  title: string;
+  kind: "table" | "chart" | "stats" | "text";
+  columns?: { key: string; label: string }[];
+  rows?: Record<string, unknown>[];
+  series?: { name: string; points: SeriesPoint[] }[];
+  stats?: { label: string; value: unknown; unit?: string; delta?: number | null; rag?: string }[];
+  text?: string;
+}
+export interface ReportRun {
+  run_id: string;
+  report_id: string;
+  at: string;
+  version: number;
+  triggered_by: "manual" | "schedule";
+  actor_id: string;
+  status: "ok" | "error";
+  sections: ReportSection[];
+  ai_summary: string | null;
+  recipients: string[];
+  delivery: { status: "sent" | "preview" | "none"; detail: string };
+}
+export interface ReportSchedule {
+  frequency: ReportFrequency;
+  time: string;
+  weekday?: number | null;
+  day_of_month?: number | null;
+  every_n_days?: number | null;
+  recipients: string[];
+  active: boolean;
+  next_run_at: string;
+  last_run_at?: string | null;
+}
+export interface ReportDef {
+  report_id: string;
+  name: string;
+  description: string;
+  domain: ReportDomain;
+  project_id?: string | null;
+  type: ReportType;
+  sections: ReportSectionSpec[];
+  visibility: ReportVisibility;
+  access: { roles: string[]; teams: string[] };
+  confidential: boolean;
+  allowed_user_ids: string[];
+  shared_with: string[];
+  recipients: string[];
+  schedule: ReportSchedule | null;
+  owner_id: string;
+  owner_name: string;
+  is_mine: boolean;
+  archived: boolean;
+  downloads: number;
+  run_count: number;
+  created_at: string;
+  updated_at: string;
+  seed: boolean;
+  last_run_at?: string | null;
+  last_run_status?: "ok" | "error" | null;
+}
+export interface ReportStats {
+  total_reports: number;
+  total_delta_this_month: number;
+  scheduled_reports: number;
+  next_schedule: { name: string; frequency: ReportFrequency } | null;
+  shared_reports: number;
+  total_downloads: number;
+  delivery_success_pct: number;
+}
+export interface ReportTemplate {
+  template_id: string;
+  name: string;
+  description: string;
+  domain: ReportDomain;
+  type: ReportType;
+  sections: ReportSectionSpec[];
+}
+export interface ReportMeta {
+  domains: ReportDomain[];
+  types: ReportType[];
+  section_kinds: { kind: string; confidential: boolean }[];
+  projects: { project_id: string; name: string; code: string }[];
+  users: { user_id: string; name: string }[];
+}
+export interface SavedReportView {
+  view_id: string;
+  user_id: string;
+  name: string;
+  filters: Record<string, unknown>;
+  created_at: string;
+}
+
 export interface Salary {
   gross: number;
   basic: number;
@@ -842,6 +949,82 @@ export const api = {
     title: string;
     intro: string;
   }) => req<SendResult>("/reports/send", { method: "POST", body: JSON.stringify(body) }),
+
+  // Reporting Hub
+  reportMeta: () => req<ReportMeta>("/reports/meta"),
+  reportTemplates: () => req<ReportTemplate[]>("/reports/templates"),
+  reportStats: () => req<ReportStats>("/reports/stats"),
+  reportDefs: (params?: {
+    tab?: ReportTab; domain?: string; projectId?: string; type?: string; createdBy?: string;
+    q?: string; dateFrom?: string; dateTo?: string; sort?: "recent" | "name" | "last_run" | "downloads";
+  }) => {
+    const qp = new URLSearchParams();
+    if (params?.tab) qp.set("tab", params.tab);
+    if (params?.domain) qp.set("domain", params.domain);
+    if (params?.projectId) qp.set("project_id", params.projectId);
+    if (params?.type) qp.set("type", params.type);
+    if (params?.createdBy) qp.set("created_by", params.createdBy);
+    if (params?.q) qp.set("q", params.q);
+    if (params?.dateFrom) qp.set("date_from", params.dateFrom);
+    if (params?.dateTo) qp.set("date_to", params.dateTo);
+    if (params?.sort) qp.set("sort", params.sort);
+    const qs = qp.toString();
+    return req<ReportDef[]>(`/reports/defs${qs ? `?${qs}` : ""}`);
+  },
+  reportDef: (id: string) => req<ReportDef>(`/reports/defs/${id}`),
+  createReportDef: (body: {
+    name: string; description?: string; domain: ReportDomain; project_id?: string | null;
+    type: ReportType; sections: ReportSectionSpec[]; visibility?: ReportVisibility;
+    access?: { roles: string[]; teams: string[] }; confidential?: boolean;
+    allowed_user_ids?: string[]; recipients?: string[];
+  }) => req<ReportDef>("/reports/defs", { method: "POST", body: JSON.stringify(body) }),
+  updateReportDef: (id: string, body: Partial<{
+    name: string; description: string; domain: ReportDomain; project_id: string | null;
+    type: ReportType; sections: ReportSectionSpec[]; visibility: ReportVisibility;
+    access: { roles: string[]; teams: string[] }; confidential: boolean;
+    allowed_user_ids: string[]; recipients: string[]; archived: boolean;
+  }>) => req<ReportDef>(`/reports/defs/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteReportDef: (id: string) => req<{ status: string }>(`/reports/defs/${id}`, { method: "DELETE" }),
+  runReportDef: (id: string, aiSummary = false) =>
+    req<ReportRun>(`/reports/defs/${id}/run`, {
+      method: "POST", body: JSON.stringify({ ai_summary: aiSummary }),
+    }),
+  sendReportDef: (id: string, body: { recipients: string[]; message?: string; run_id?: string }) =>
+    req<{ status: "sent" | "preview"; detail: string; run_id: string; preview_html: string }>(
+      `/reports/defs/${id}/send`, { method: "POST", body: JSON.stringify(body) }),
+  shareReportDef: (id: string, userIds: string[]) =>
+    req<{ shared: string[] }>(`/reports/defs/${id}/share`, {
+      method: "POST", body: JSON.stringify({ user_ids: userIds }),
+    }),
+  setReportSchedule: (id: string, body: {
+    frequency: ReportFrequency; time: string; weekday?: number; day_of_month?: number;
+    every_n_days?: number; recipients?: string[]; active?: boolean;
+  }) => req<ReportDef>(`/reports/defs/${id}/schedule`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteReportSchedule: (id: string) =>
+    req<{ status: string }>(`/reports/defs/${id}/schedule`, { method: "DELETE" }),
+  scheduledReports: () => req<ReportDef[]>("/reports/scheduled"),
+  reportDefRuns: (id: string, limit = 20) =>
+    req<Omit<ReportRun, "sections">[]>(`/reports/defs/${id}/runs?limit=${limit}`),
+  reportRun: (runId: string) => req<ReportRun>(`/reports/runs/${runId}`),
+  exportReportRun: async (runId: string, fmt: "csv" | "xls" | "html", filename: string): Promise<void> => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const res = await fetch(`${API_BASE_URL}/api/v1/reports/runs/${runId}/export?fmt=${fmt}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new ApiError(res.status, "export failed");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+  reportViews: () => req<SavedReportView[]>("/reports/views"),
+  createReportView: (name: string, filters: Record<string, unknown>) =>
+    req<SavedReportView>("/reports/views", { method: "POST", body: JSON.stringify({ name, filters }) }),
+  deleteReportView: (id: string) =>
+    req<{ status: string }>(`/reports/views/${id}`, { method: "DELETE" }),
 
   // Workspace / org / tasks / meetings / requests
   workspaceMe: () => req<WorkspaceData>("/workspace/me"),

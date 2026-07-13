@@ -28,7 +28,6 @@ import {
   HomeOutlined,
   IdcardOutlined,
   LogoutOutlined,
-  MailOutlined,
   MenuOutlined,
   SettingOutlined,
   TeamOutlined,
@@ -165,7 +164,7 @@ export default function Layout() {
       }
     );
     if (canReports)
-      list.push({ key: "/reports", icon: <MailOutlined />, label: "Reports" });
+      list.push({ key: "/reports", icon: <BarChartOutlined />, label: "Reports" });
     list.push(
       { key: "/calendar", icon: <CalendarOutlined />, label: "Calendar" },
       { key: "/documents", icon: <FileProtectOutlined />, label: "Documents" },
@@ -228,6 +227,7 @@ export default function Layout() {
   const subtitles: Record<string, string> = {
     "/documents": "Central repository for marketing documents, assets and brand resources.",
     "/tasks": "Projects, tasks and workload across your teams.",
+    "/reports": "Create, schedule and share reports across all domains.",
   };
   const subtitle = subtitles[active?.key ?? ""];
 
