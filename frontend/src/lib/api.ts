@@ -157,15 +157,42 @@ export interface IoDocument {
   doc_id: string;
   title: string;
   kind: string;
+  folder_id?: string | null;
   project_id?: string | null;
   filename: string;
+  file_type?: string;
   size: number;
   uploaded_by: string;
-  status: "pending" | "approved" | "rejected";
+  uploaded_by_name?: string;
+  status: "draft" | "pending" | "approved" | "rejected";
   created_at: string;
+  updated_at?: string;
   decided_by?: string | null;
   comment?: string;
+  source?: "upload" | "seed";
+  shared_with?: string[];
+  starred_by?: string[];
+  downloads?: number;
 }
+export interface Folder {
+  folder_id: string;
+  name: string;
+  description: string;
+  category: string;
+  roles: string[];
+  teams: string[];
+  document_count: number;
+}
+export interface DocStats {
+  total_documents: number;
+  uploaded_this_month: number;
+  marketing_assets: number;
+  pending_approval: number;
+  total_downloads: number;
+  storage_used_bytes: number;
+  storage_quota_bytes: number;
+}
+export type DocTab = "all" | "mine" | "shared" | "starred" | "approvals";
 export interface AuditRow {
   actor_id: string | null;
   action: string;
@@ -703,24 +730,78 @@ export const api = {
       body: JSON.stringify({ type }),
     }),
 
-  // Documents & approvals
-  documents: (projectId?: string) => {
-    const qs = projectId ? `?project_id=${encodeURIComponent(projectId)}` : "";
-    return req<IoDocument[]>(`/documents${qs}`);
+  // Document Management: folders, documents, approval flow
+  folders: () => req<Folder[]>("/folders"),
+  createFolder: (body: { name: string; description?: string; category?: string;
+    roles?: string[]; teams?: string[] }) =>
+    req<Folder>("/folders", { method: "POST", body: JSON.stringify(body) }),
+  updateFolder: (id: string, body: { name?: string; description?: string;
+    category?: string; roles?: string[]; teams?: string[] }) =>
+    req<Folder>(`/folders/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  documents: (params?: {
+    folderId?: string; projectId?: string; q?: string; fileType?: string;
+    docStatus?: string; tab?: DocTab; sort?: "newest" | "oldest" | "name" | "size";
+  }) => {
+    const qp = new URLSearchParams();
+    if (params?.folderId) qp.set("folder_id", params.folderId);
+    if (params?.projectId) qp.set("project_id", params.projectId);
+    if (params?.q) qp.set("q", params.q);
+    if (params?.fileType) qp.set("file_type", params.fileType);
+    if (params?.docStatus) qp.set("doc_status", params.docStatus);
+    if (params?.tab) qp.set("tab", params.tab);
+    if (params?.sort) qp.set("sort", params.sort);
+    const qs = qp.toString();
+    return req<IoDocument[]>(`/documents${qs ? `?${qs}` : ""}`);
   },
-  uploadDocument: (title: string, kind: string, file: File, projectId?: string) => {
+  documentStats: () => req<DocStats>("/documents/stats"),
+  uploadDocument: (title: string, kind: string, file: File, opts?: {
+    folderId?: string; projectId?: string;
+  }) => {
     const form = new FormData();
     form.append("title", title);
     form.append("kind", kind);
-    if (projectId) form.append("project_id", projectId);
+    if (opts?.folderId) form.append("folder_id", opts.folderId);
+    if (opts?.projectId) form.append("project_id", opts.projectId);
     form.append("file", file);
     return uploadReq<IoDocument>("/documents", form);
   },
+  submitDocument: (id: string) => req<IoDocument>(`/documents/${id}/submit`, { method: "POST" }),
   decideDocument: (id: string, decision: "approve" | "reject", comment = "") =>
     req<IoDocument>(`/documents/${id}/${decision}`, {
       method: "POST",
       body: JSON.stringify({ comment }),
     }),
+  starDocument: (id: string) =>
+    req<{ starred: boolean }>(`/documents/${id}/star`, { method: "POST" }),
+  shareDocument: (id: string, userIds: string[]) =>
+    req<{ shared: string[] }>(`/documents/${id}/share`, {
+      method: "POST",
+      body: JSON.stringify({ user_ids: userIds }),
+    }),
+  deleteDocument: (id: string) =>
+    req<{ status: string }>(`/documents/${id}`, { method: "DELETE" }),
+  downloadDocument: async (id: string, filename: string): Promise<void> => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const res = await fetch(`${API_BASE_URL}/api/v1/documents/${id}/download`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) {
+      let msg = res.statusText;
+      try {
+        msg = (await res.json()).detail ?? msg;
+      } catch {
+        /* ignore */
+      }
+      throw new ApiError(res.status, msg);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 
   // Admin
   kpiDefs: () => req<KpiDef[]>("/admin/kpi-defs"),

@@ -146,7 +146,7 @@ export default function ProjectDrawer({
 
   useEffect(() => {
     if (activeTab === "documents" && projectId) {
-      api.documents(projectId).then(setDocs).catch(() => setDocs([]));
+      api.documents({ projectId }).then(setDocs).catch(() => setDocs([]));
     }
     if (activeTab === "activity" && projectId) {
       api.projectActivity(projectId).then(setActivity).catch(() => setActivity([]));
@@ -292,11 +292,11 @@ export default function ProjectDrawer({
     if (!projectId || !docFile || !docTitle) return;
     setDocUploading(true);
     try {
-      await api.uploadDocument(docTitle, docKind, docFile, projectId);
-      message.success("Document uploaded");
+      await api.uploadDocument(docTitle, docKind, docFile, { projectId });
+      message.success("Document saved as draft — submit it for approval when ready");
       setDocTitle("");
       setDocFile(null);
-      api.documents(projectId).then(setDocs);
+      api.documents({ projectId }).then(setDocs);
     } catch (e) {
       message.error(e instanceof ApiError ? e.message : "Upload failed");
     } finally {

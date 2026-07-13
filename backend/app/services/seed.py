@@ -492,6 +492,148 @@ def _product_docs(now: dt.datetime) -> list[dict]:
     ]
 
 
+# --- Document Management: folders + document dataset ---
+# `access` is {"roles": [...], "teams": [...]}; empty lists mean "everyone".
+# L3/L4 and super_admin always see every folder regardless of access lists —
+# these lists only widen visibility for L1/L2 people (see api/v1/documents.py
+# `_folder_visible`).
+FOLDERS = [
+    {"folder_id": "brand_guidelines", "name": "Brand & Guidelines",
+     "description": "Logos, brand colors, tone-of-voice guidelines", "category": "general",
+     "access": {"roles": [], "teams": []}, "target_count": 12},
+    {"folder_id": "marketing_collaterals", "name": "Marketing Collaterals",
+     "description": "Sales decks, one-pagers, and campaign creative", "category": "marketing",
+     "access": {"roles": ["marketing", "manager"], "teams": ["team_marketing"]}, "target_count": 28},
+    {"folder_id": "presentations", "name": "Presentations",
+     "description": "Client-facing and internal presentation decks", "category": "general",
+     "access": {"roles": [], "teams": []}, "target_count": 16},
+    {"folder_id": "campaigns", "name": "Campaigns",
+     "description": "Campaign briefs, timelines, and creative briefs", "category": "marketing",
+     "access": {"roles": ["marketing", "manager"], "teams": ["team_marketing"]}, "target_count": 24},
+    {"folder_id": "social_media", "name": "Social Media",
+     "description": "Social calendars and post creative", "category": "marketing",
+     "access": {"roles": ["marketing", "manager"], "teams": ["team_marketing"]}, "target_count": 18},
+    {"folder_id": "product_assets", "name": "Product Assets",
+     "description": "Product screenshots, UI kits, and spec docs", "category": "product",
+     "access": {"roles": ["manager", "team_lead"], "teams": ["team_product", "team_ui"]},
+     "target_count": 10},
+    {"folder_id": "events", "name": "Events",
+     "description": "Event decks, run-of-show, and attendee lists", "category": "general",
+     "access": {"roles": [], "teams": []}, "target_count": 8},
+    {"folder_id": "reports", "name": "Reports",
+     "description": "Budget trackers and performance reports", "category": "general",
+     "access": {"roles": ["manager", "team_lead", "hr"], "teams": []}, "target_count": 12},
+]
+
+_MARKETING_OWNERS = ["u_meghna", "u_tanvi", "u_arnav", "u_aadhira", "u_gunnika"]
+_PRODUCT_OWNERS = ["u_soochana", "u_ronaly", "u_akasapu", "u_ranveer", "u_nikkitha", "u_akhila"]
+_GENERAL_OWNERS = ["u_meghna", "u_soochana", "u_tanvi", "u_harsha", "u_shammi", "u_ronaly"]
+_REPORT_OWNERS = ["u_rakshitha", "u_shammi", "u_harsha", "u_meghna"]
+_FOLDER_OWNER_POOL = {
+    "brand_guidelines": _GENERAL_OWNERS, "presentations": _GENERAL_OWNERS,
+    "events": _GENERAL_OWNERS, "marketing_collaterals": _MARKETING_OWNERS,
+    "campaigns": _MARKETING_OWNERS, "social_media": _MARKETING_OWNERS,
+    "product_assets": _PRODUCT_OWNERS, "reports": _REPORT_OWNERS,
+}
+
+_FILE_TYPES = [
+    ("pdf", "PDF", 300_000, 2_500_000), ("pptx", "PPT", 1_500_000, 9_000_000),
+    ("docx", "DOCX", 150_000, 1_800_000), ("xlsx", "XLSX", 100_000, 900_000),
+    ("png", "PNG", 200_000, 4_000_000),
+]
+_TITLE_BANK = {
+    "brand_guidelines": ["Brand Guidelines v{n}", "Logo Usage Rules", "Color Palette Reference",
+                        "Tone of Voice Guide", "Letterhead Template"],
+    "marketing_collaterals": ["Sales One-Pager — {client}", "Partner Collateral Kit",
+                              "Product Fact Sheet v{n}", "Pitch Deck — {client}"],
+    "presentations": ["Quarterly Business Review Q{n}", "Board Update Deck",
+                      "Client Kickoff Presentation", "Internal All-Hands Deck"],
+    "campaigns": ["Campaign Timeline — {client}", "Creative Brief v{n}",
+                 "Launch Plan — {client}", "Campaign Performance Recap"],
+    "social_media": ["Social Post Pack v{n}", "Content Calendar — Month {n}",
+                     "Hashtag & Caption Bank", "Influencer Outreach List"],
+    "product_assets": ["UI Kit v{n}", "Feature Screenshot Pack", "Design System Reference",
+                      "Product Spec — Module {n}"],
+    "events": ["Run of Show — {client} Summit", "Attendee List v{n}", "Booth Design Deck"],
+    "reports": ["Monthly Spend Report", "Vendor Invoice Log v{n}", "Cost Center Summary"],
+}
+_HEADLINE_DOCS = [
+    {"doc_id": "doc_hl_01", "folder_id": "presentations", "title": "Product Overview Presentation",
+     "ext": "pptx", "owner_id": "u_akasapu", "project_id": "proj_kq", "status": "approved",
+     "size": 8_700_000, "days_ago": 2},
+    {"doc_id": "doc_hl_02", "folder_id": "campaigns", "title": "Campaign Brief - Q3 2026",
+     "ext": "docx", "owner_id": "u_tanvi", "project_id": "proj_om", "status": "pending",
+     "size": 1_200_000, "days_ago": 3},
+    {"doc_id": "doc_hl_03", "folder_id": "reports", "title": "Marketing Budget Tracker",
+     "ext": "xlsx", "owner_id": "u_meghna", "project_id": "proj_sv", "status": "approved",
+     "size": 520_000, "days_ago": 4},
+    {"doc_id": "doc_hl_04", "folder_id": "brand_guidelines", "title": "FlyNava Logo Pack",
+     "ext": "zip", "owner_id": "u_meghna", "project_id": None, "status": "approved",
+     "size": 12_800_000, "days_ago": 5},
+    {"doc_id": "doc_hl_05", "folder_id": "social_media", "title": "Social Media Calendar - July",
+     "ext": "pdf", "owner_id": "u_akasapu", "project_id": None, "status": "draft",
+     "size": 1_100_000, "days_ago": 6},
+    {"doc_id": "doc_hl_06", "folder_id": "events", "title": "Event Deck - Aviation Summit",
+     "ext": "pptx", "owner_id": "u_gunnika", "project_id": "proj_om", "status": "pending",
+     "size": 5_600_000, "days_ago": 7},
+]
+_DOC_STATUSES = ["approved", "approved", "approved", "pending", "draft"]
+
+
+def _seed_documents(now: dt.datetime, names: dict[str, str]) -> list[dict]:
+    """~128 documents across the 8 folders — a handful of named "headline"
+    docs matching the reference mockup exactly, the rest generated to fill
+    each folder up to its target count with real-roster owners and varied
+    file types/statuses/dates."""
+    rng = random.Random(20260713)
+    out: list[dict] = []
+    seen_by_folder: dict[str, int] = {}
+
+    for h in _HEADLINE_DOCS:
+        seen_by_folder[h["folder_id"]] = seen_by_folder.get(h["folder_id"], 0) + 1
+        updated = now - dt.timedelta(days=h["days_ago"])
+        out.append({
+            "doc_id": h["doc_id"], "title": h["title"], "kind": "document",
+            "folder_id": h["folder_id"], "project_id": h["project_id"],
+            "filename": f"{h['title']}.{h['ext']}", "file_type": h["ext"],
+            "size": h["size"], "uploaded_by": h["owner_id"],
+            "uploaded_by_name": names.get(h["owner_id"]), "status": h["status"],
+            "created_at": updated, "updated_at": updated,
+            "decided_by": "u_ceo" if h["status"] == "approved" else None,
+            "decided_at": updated if h["status"] == "approved" else None,
+            "comment": "", "path": None, "source": "seed",
+            "shared_with": [], "starred_by": [], "downloads": rng.randint(0, 40),
+        })
+
+    for folder in FOLDERS:
+        fid = folder["folder_id"]
+        owners = _FOLDER_OWNER_POOL[fid]
+        titles = _TITLE_BANK[fid]
+        remaining = folder["target_count"] - seen_by_folder.get(fid, 0)
+        for i in range(remaining):
+            ext, _label, size_min, size_max = rng.choice(_FILE_TYPES)
+            title = titles[i % len(titles)].format(n=i + 1, client=rng.choice(
+                ["Kenya Airways", "Oman Airways", "Saudia Airlines", "FlyNava"]))
+            owner_id = owners[i % len(owners)]
+            status = rng.choice(_DOC_STATUSES)
+            days_ago = rng.randint(1, 90)
+            updated = now - dt.timedelta(days=days_ago)
+            doc_id = f"doc_{fid}_{i + 1:03d}"
+            out.append({
+                "doc_id": doc_id, "title": title, "kind": "document",
+                "folder_id": fid, "project_id": None,
+                "filename": f"{title}.{ext}", "file_type": ext,
+                "size": rng.randint(size_min, size_max), "uploaded_by": owner_id,
+                "uploaded_by_name": names.get(owner_id), "status": status,
+                "created_at": updated, "updated_at": updated,
+                "decided_by": "u_ceo" if status == "approved" else None,
+                "decided_at": updated if status == "approved" else None,
+                "comment": "", "path": None, "source": "seed",
+                "shared_with": [], "starred_by": [], "downloads": rng.randint(0, 30),
+            })
+    return out
+
+
 def _seed_core(db: Database, now: dt.datetime) -> None:
     """Departments, teams, users, projects/tasks, KPI defs+values, compliance,
     positions, automation scripts, product docs.
@@ -609,6 +751,15 @@ def _seed_core(db: Database, now: dt.datetime) -> None:
     for p in _product_docs(now):
         db.product_docs.update_one({"pdoc_id": p["pdoc_id"]}, {"$set": p}, upsert=True)
 
+    for f in FOLDERS:
+        folder = {k: v for k, v in f.items() if k != "target_count"}
+        db.folders.update_one({"folder_id": folder["folder_id"]},
+                              {"$set": {**folder, "created_by": "u_ceo", "created_at": now}},
+                              upsert=True)
+
+    for d in _seed_documents(now, names):
+        db.documents.update_one({"doc_id": d["doc_id"]}, {"$set": d}, upsert=True)
+
 
 def seed_demo_extras(db: Database) -> dict:
     """Refresh all demo seed data except HR, safe to rerun against an
@@ -648,7 +799,7 @@ def reset_roster(db: Database) -> dict:
     for coll in ("users", "teams", "departments", "projects", "tasks",
                  "attendance", "leaves", "payslips", "employees", "meetings",
                  "notifications", "automation_scripts", "product_docs",
-                 "kpi_values", "kpi_defs"):
+                 "kpi_values", "kpi_defs", "folders", "documents"):
         db[coll].delete_many({})
     seed(db)
     # Compute the live KPI values now so dashboards show real numbers (the
