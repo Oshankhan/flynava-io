@@ -41,6 +41,13 @@ def _startup() -> None:
     except Exception as exc:  # noqa: BLE001 - don't crash boot if Mongo is down
         log.warning("index setup skipped: %s", exc)
 
+    try:
+        from .services.report_scheduler import start as start_report_scheduler
+
+        start_report_scheduler()
+    except Exception as exc:  # noqa: BLE001 - scheduler is best-effort, never crash boot
+        log.warning("report scheduler not started: %s", exc)
+
 
 @app.get("/api/v1/health")
 def health() -> dict:

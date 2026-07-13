@@ -90,18 +90,20 @@ def test_create_def_creation_gates_by_level(client, auth_header):
 
 
 def test_run_bug_summary_returns_table_and_versions_increment(client, auth_header):
+    # Seed already pre-populates a few historical runs per def (see
+    # `_seed_report_runs`), so version doesn't necessarily start at 1 — just
+    # check it strictly increases across two consecutive calls.
     headers = auth_header("harsha.varlani@flynava.ai")
     r1 = client.post("/api/v1/reports/defs/rep_bug_summary/run", headers=headers, json={})
     assert r1.status_code == 200
     body = r1.json()
-    assert body["version"] == 1
     table = next(s for s in body["sections"] if s["kind"] == "table")
     assert len(table["rows"]) > 0
     breakdown = next(s for s in body["sections"] if s["kind"] == "stats")
     assert len(breakdown["stats"]) > 0
 
     r2 = client.post("/api/v1/reports/defs/rep_bug_summary/run", headers=headers, json={})
-    assert r2.json()["version"] == 2
+    assert r2.json()["version"] == body["version"] + 1
 
 
 def test_run_kpi_module_returns_stats_and_chart(client, auth_header):

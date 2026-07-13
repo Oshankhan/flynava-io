@@ -775,6 +775,44 @@ def _seed_report_defs(db: Database, now: dt.datetime) -> None:
         db.report_defs.update_one({"report_id": doc["report_id"]}, {"$set": doc}, upsert=True)
 
 
+def _seed_report_runs(db: Database, now: dt.datetime) -> None:
+    """A handful of real run snapshots per seeded report — drives history/
+    versioning, the stats tiles, and a realistic (not literally 100%)
+    delivery-success rate. Guarded so this only ever runs once; it never
+    regenerates on top of real usage."""
+    if db.report_runs.count_documents({}) > 0:
+        return
+    from . import report_engine as engine
+
+    rng = random.Random("report-runs-seed")
+    users_by_id = {u["user_id"]: u for u in db.users.find({})}
+    for rd in db.report_defs.find({}):
+        owner = users_by_id.get(rd["owner_id"])
+        if not owner:
+            continue
+        n = rng.randint(2, 4)
+        # Oldest first, so later calls (higher version numbers) land closer
+        # to "now" — keeps version order consistent with chronological order.
+        for days_ago in sorted(rng.sample(range(1, 30), n), reverse=True):
+            try:
+                run = engine.run_report(db, rd, owner,
+                                        triggered_by=rng.choice(["manual", "schedule"]))
+            except Exception:  # noqa: BLE001 - one bad def shouldn't break seeding
+                continue
+            at = now - dt.timedelta(days=days_ago, hours=rng.randint(0, 23))
+            # "error" here models a historical delivery failure — send_email()
+            # itself only ever returns sent/preview; this is seed-only variety.
+            status_ = rng.choices(["sent", "preview", "error"], weights=[55, 40, 5])[0]
+            db.report_runs.update_one({"run_id": run["run_id"]}, {"$set": {
+                "at": at, "recipients": rd.get("recipients", []),
+                "delivery": {"status": status_, "detail": "seed history"},
+            }})
+            downloads_inc = rng.randint(0, 6)
+            if downloads_inc:
+                db.report_defs.update_one({"report_id": rd["report_id"]},
+                                          {"$inc": {"downloads": downloads_inc}})
+
+
 def _seed_core(db: Database, now: dt.datetime) -> None:
     """Departments, teams, users, projects/tasks, KPI defs+values, compliance,
     positions, automation scripts, product docs.
@@ -902,6 +940,12 @@ def _seed_core(db: Database, now: dt.datetime) -> None:
         db.documents.update_one({"doc_id": d["doc_id"]}, {"$set": d}, upsert=True)
 
     _seed_report_defs(db, now)
+
+    from ..integrations.aws_sim import AwsSimConnector
+    from .ingest import run_connector
+
+    run_connector(db, AwsSimConnector())
+    _seed_report_runs(db, now)
 
 
 def seed_demo_extras(db: Database) -> dict:

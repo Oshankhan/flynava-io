@@ -51,5 +51,11 @@ class Settings(BaseSettings):
     smtp_from: str = ""
     smtp_use_tls: bool = True
 
+    # Reporting hub: background scheduler for automated report delivery.
+    # Disabled in tests (see tests/conftest.py) so pytest never races a live
+    # thread against its mongomock fixtures.
+    scheduler_enabled: bool = True
+    scheduler_interval_sec: int = 30
+
 
 settings = Settings()

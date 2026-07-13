@@ -3,11 +3,13 @@ from __future__ import annotations
 
 from typing import Callable
 
+from .aws_sim import AwsSimConnector
 from .base import Connector
 from .openproject import OpenProjectConnector
 
 _REGISTRY: dict[str, Callable[[], Connector]] = {
     "openproject": OpenProjectConnector,
+    "aws": AwsSimConnector,
     # Phase 2+: jira, zoho_crm, greythr, hubspot, ga4, diib, readai, finance ...
 }
 

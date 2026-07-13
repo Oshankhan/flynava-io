@@ -21,6 +21,9 @@ settings.upload_dir = tempfile.mkdtemp(prefix="io_uploads_")
 # Tests never call live AI providers.
 settings.openai_api_key = ""
 settings.anthropic_api_key = ""
+# The report scheduler's background thread never runs under pytest — tests
+# call `report_scheduler.tick()` directly instead.
+settings.scheduler_enabled = False
 
 
 @pytest.fixture()
