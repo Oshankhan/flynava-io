@@ -72,7 +72,6 @@ export default function Reports() {
   const [tab, setTab] = useState<ReportTab | "templates">("my");
   const [domain, setDomain] = useState("all");
   const [projectId, setProjectId] = useState("all");
-  const [type, setType] = useState("all");
   const [createdBy, setCreatedBy] = useState("all");
   const [dateRange, setDateRange] = useState<[string, string] | null>(null);
   const [search, setSearch] = useState("");
@@ -104,12 +103,11 @@ export default function Reports() {
       tab: tab === "templates" ? "all" : tab,
       domain: domain !== "all" ? domain : undefined,
       projectId: projectId !== "all" ? projectId : undefined,
-      type: type !== "all" ? type : undefined,
       createdBy: createdBy !== "all" ? createdBy : undefined,
       q: search || undefined,
       dateFrom: dateRange?.[0], dateTo: dateRange?.[1], sort,
     }).then(setDefs).catch((e) => setError(e instanceof ApiError ? e.message : "Failed to load reports"));
-  }, [tab, domain, projectId, type, createdBy, search, dateRange, sort]);
+  }, [tab, domain, projectId, createdBy, search, dateRange, sort]);
   const loadStats = useCallback(() => {
     api.reportStats().then(setStats).catch(() => setStats(null));
   }, []);
@@ -121,7 +119,7 @@ export default function Reports() {
     api.reportTemplates().then(setTemplates).catch(() => setTemplates([]));
     api.reportViews().then(setSavedViews).catch(() => setSavedViews([]));
   }, []);
-  useEffect(() => setGridPage(1), [tab, domain, projectId, type, createdBy, search, dateRange, sort]);
+  useEffect(() => setGridPage(1), [tab, domain, projectId, createdBy, search, dateRange, sort]);
   useEffect(() => {
     if (shareDef) api.orgUsers().then(setPeople).catch(() => setPeople([]));
   }, [shareDef]);
@@ -208,7 +206,7 @@ export default function Reports() {
       onOk: async () => {
         if (!name.trim()) return message.warning("Give the view a name");
         const view = await api.createReportView(name.trim(), {
-          tab, domain, projectId, type, createdBy, dateRange, sort,
+          tab, domain, projectId, createdBy, dateRange, sort,
         });
         setSavedViews((v) => [view, ...v]);
         message.success("View saved");
@@ -220,7 +218,6 @@ export default function Reports() {
     if (typeof f.tab === "string") setTab(f.tab as ReportTab);
     if (typeof f.domain === "string") setDomain(f.domain);
     if (typeof f.projectId === "string") setProjectId(f.projectId);
-    if (typeof f.type === "string") setType(f.type);
     if (typeof f.createdBy === "string") setCreatedBy(f.createdBy);
     if (Array.isArray(f.dateRange)) setDateRange(f.dateRange as [string, string]);
     if (typeof f.sort === "string") setSort(f.sort as typeof sort);
@@ -248,17 +245,6 @@ export default function Reports() {
     {
       title: "Domain", dataIndex: "domain", key: "domain", width: 120,
       render: (d: ReportDomain) => <Tag color={DOMAIN_CHIP[d]} className="capitalize">{d}</Tag>,
-    },
-    {
-      title: "Project", dataIndex: "project_id", key: "project", width: 140,
-      render: (pid: string | null) => {
-        const p = meta?.projects.find((pr) => pr.project_id === pid);
-        return p ? <Text className="text-[12px]">{p.code}</Text> : <Text type="secondary">—</Text>;
-      },
-    },
-    {
-      title: "Type", dataIndex: "type", key: "type", width: 100,
-      render: (t: string) => <Tag color={TYPE_CHIP[t] ?? "default"} className="capitalize">{t}</Tag>,
     },
     {
       title: "Created By", key: "owner", width: 130,
@@ -344,10 +330,6 @@ export default function Reports() {
         <Select value={projectId} onChange={setProjectId} className="w-40" options={[
           { value: "all", label: "All Projects" },
           ...(meta?.projects ?? []).map((p) => ({ value: p.project_id, label: `${p.name} (${p.code})` })),
-        ]} />
-        <Select value={type} onChange={setType} className="w-36" options={[
-          { value: "all", label: "All Types" },
-          ...(meta?.types ?? []).map((t) => ({ value: t, label: t.charAt(0).toUpperCase() + t.slice(1) })),
         ]} />
         <Select value={createdBy} onChange={setCreatedBy} className="w-40" options={[
           { value: "all", label: "Created By: Anyone" },
