@@ -40,6 +40,8 @@ export default function Admin() {
   const [users, setUsers] = useState<User[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
   const [syncing, setSyncing] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [busyUserId, setBusyUserId] = useState<string | null>(null);
   const [form] = Form.useForm();
 
   function loadAll() {
@@ -77,6 +79,7 @@ export default function Admin() {
   }
 
   async function createUser(v: { name: string; email: string; role: string; password: string }) {
+    setCreating(true);
     try {
       await api.createUser(v);
       message.success(`Created ${v.email}`);
@@ -84,20 +87,32 @@ export default function Admin() {
       loadAll();
     } catch (err) {
       message.error(err instanceof ApiError ? err.message : "Create failed");
+    } finally {
+      setCreating(false);
     }
   }
 
   async function changeRole(u: User, role: string) {
-    await api.updateUser(u.user_id, { role });
-    message.success(`${u.name} → ${role}`);
-    loadAll();
+    setBusyUserId(u.user_id);
+    try {
+      await api.updateUser(u.user_id, { role });
+      message.success(`${u.name} → ${role}`);
+      loadAll();
+    } finally {
+      setBusyUserId(null);
+    }
   }
 
   async function toggleStatus(u: User) {
     const next = u.status === "inactive" ? "active" : "inactive";
-    await api.updateUser(u.user_id, { status: next });
-    message.success(`${u.name} ${next}`);
-    loadAll();
+    setBusyUserId(u.user_id);
+    try {
+      await api.updateUser(u.user_id, { status: next });
+      message.success(`${u.name} ${next}`);
+      loadAll();
+    } finally {
+      setBusyUserId(null);
+    }
   }
 
   const usersTab = (
@@ -116,7 +131,7 @@ export default function Admin() {
           <Form.Item name="password" rules={[{ required: true }]}>
             <Input.Password placeholder="Password" />
           </Form.Item>
-          <Button type="primary" htmlType="submit">
+          <Button type="primary" htmlType="submit" loading={creating}>
             Create
           </Button>
         </Form>
@@ -138,6 +153,8 @@ export default function Admin() {
                 size="small"
                 value={u.role}
                 className="w-[130px]"
+                loading={busyUserId === u.user_id}
+                disabled={busyUserId === u.user_id}
                 onChange={(v) => changeRole(u, v)}
                 options={ROLES.map((r) => ({ value: r, label: r }))}
               />
@@ -156,7 +173,7 @@ export default function Admin() {
             title: "Action",
             key: "action",
             render: (_, u) => (
-              <Button size="small" onClick={() => toggleStatus(u)}>
+              <Button size="small" loading={busyUserId === u.user_id} onClick={() => toggleStatus(u)}>
                 {u.status === "inactive" ? "Activate" : "Deactivate"}
               </Button>
             ),

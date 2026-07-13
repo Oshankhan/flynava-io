@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Card, Empty, Flex, Input, List, Tag, Typography } from "antd";
+import { Card, Empty, Flex, Input, List, Spin, Tag, Typography, message } from "antd";
 import { FilePdfOutlined, FileTextOutlined, SearchOutlined } from "@ant-design/icons";
-import { api, API_BASE_URL, TOKEN_KEY, type IoDocument } from "../lib/api";
+import { api, ApiError, type IoDocument } from "../lib/api";
 
 const { Text } = Typography;
 
@@ -14,6 +14,7 @@ const KIND_LABEL: Record<string, string> = {
 export default function KnowledgeBase() {
   const [docs, setDocs] = useState<IoDocument[]>([]);
   const [q, setQ] = useState("");
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
     api.documents().then(setDocs).catch(() => setDocs([]));
@@ -29,18 +30,14 @@ export default function KnowledgeBase() {
   );
 
   async function download(d: IoDocument) {
-    const token = localStorage.getItem(TOKEN_KEY);
-    const res = await fetch(`${API_BASE_URL}/api/v1/documents/${d.doc_id}/download`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-    if (!res.ok) return;
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = d.filename || d.title;
-    a.click();
-    URL.revokeObjectURL(url);
+    setDownloadingId(d.doc_id);
+    try {
+      await api.downloadDocument(d.doc_id, d.filename || d.title);
+    } catch (e) {
+      message.error(e instanceof ApiError ? e.message : "Download failed");
+    } finally {
+      setDownloadingId(null);
+    }
   }
 
   return (
@@ -72,7 +69,9 @@ export default function KnowledgeBase() {
               >
                 <List.Item.Meta
                   avatar={
-                    d.filename?.toLowerCase().endsWith(".pdf") ? (
+                    downloadingId === d.doc_id ? (
+                      <Spin size="small" />
+                    ) : d.filename?.toLowerCase().endsWith(".pdf") ? (
                       <FilePdfOutlined className="text-[22px] text-red-600" />
                     ) : (
                       <FileTextOutlined className="text-[22px] text-io-600" />

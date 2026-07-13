@@ -11,6 +11,7 @@ import {
   Modal,
   Select,
   Space,
+  Spin,
   Statistic,
   Table,
   Tabs,
@@ -40,10 +41,22 @@ const STATUS_COLOR: Record<string, string> = {
 function Directory() {
   const [rows, setRows] = useState<Employee[]>([]);
   const [detail, setDetail] = useState<EmployeeDetail | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     api.hrEmployees().then(setRows).catch(() => setRows([]));
   }, []);
+
+  async function openDetail(empId: string) {
+    setDetailOpen(true);
+    setDetailLoading(true);
+    try {
+      setDetail(await api.hrEmployee(empId));
+    } finally {
+      setDetailLoading(false);
+    }
+  }
 
   return (
     <>
@@ -55,7 +68,7 @@ function Directory() {
         scroll={{ x: true }}
         onRow={(r) => ({
           className: "cursor-pointer",
-          onClick: () => api.hrEmployee(r.emp_id).then(setDetail),
+          onClick: () => openDetail(r.emp_id),
         })}
         columns={[
           { title: "ID", dataIndex: "emp_id", key: "emp_id", width: 90 },
@@ -81,12 +94,14 @@ function Directory() {
         ]}
       />
       <Drawer
-        open={!!detail}
-        onClose={() => setDetail(null)}
+        open={detailOpen}
+        onClose={() => { setDetailOpen(false); setDetail(null); }}
         width={560}
         title={detail?.name}
       >
-        {detail && (
+        {detailLoading ? (
+          <Flex justify="center" className="pt-20"><Spin /></Flex>
+        ) : detail && (
           <Flex vertical gap={16}>
             <Descriptions column={1} size="small">
               <Descriptions.Item label="Designation">{detail.designation}</Descriptions.Item>
@@ -130,15 +145,21 @@ function Attendance() {
   const [title, setTitle] = useState("Daily Attendance Report");
   const [emailHtml, setEmailHtml] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [downloadingSample, setDownloadingSample] = useState(false);
 
   async function downloadSample() {
-    const csv = await api.hrSampleCsv();
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "biometric_sample.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+    setDownloadingSample(true);
+    try {
+      const csv = await api.hrSampleCsv();
+      const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "biometric_sample.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setDownloadingSample(false);
+    }
   }
 
   async function onUpload(file: File) {
@@ -177,7 +198,7 @@ function Attendance() {
     <Flex vertical gap={16}>
       <Card size="small" title="1 · Upload biometric attendance export (CSV)">
         <Flex vertical gap={12}>
-          <Button icon={<DownloadOutlined />} onClick={downloadSample}>
+          <Button icon={<DownloadOutlined />} loading={downloadingSample} onClick={downloadSample}>
             Download sample biometric CSV
           </Button>
           <Upload.Dragger

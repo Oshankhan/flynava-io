@@ -229,6 +229,7 @@ function FinPanel({ variant }: { variant: Variant }) {
 function HrPanel({ variant }: { variant: Variant }) {
   const [positions, setPositions] = useState<Position[]>([]);
   const [pending, setPending] = useState<PendingLeave[]>([]);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = () => {
     if (variant === "l1") api.positions().then(setPositions).catch(() => setPositions([]));
@@ -238,8 +239,13 @@ function HrPanel({ variant }: { variant: Variant }) {
   useEffect(load, [variant]);
 
   async function act(id: string, action: "approve" | "reject") {
-    await api.decideLeave(id, action).catch(() => undefined);
-    load();
+    setBusyId(id);
+    try {
+      await api.decideLeave(id, action).catch(() => undefined);
+      load();
+    } finally {
+      setBusyId(null);
+    }
   }
 
   if (variant === "l1") {
@@ -307,10 +313,12 @@ function HrPanel({ variant }: { variant: Variant }) {
             width: 170,
             render: (_: unknown, r: PendingLeave) => (
               <Flex gap={4}>
-                <Button size="small" type="primary" onClick={() => act(r.leave_id, "approve")}>
+                <Button size="small" type="primary" loading={busyId === r.leave_id}
+                  onClick={() => act(r.leave_id, "approve")}>
                   Approve
                 </Button>
-                <Button size="small" danger onClick={() => act(r.leave_id, "reject")}>
+                <Button size="small" danger loading={busyId === r.leave_id}
+                  onClick={() => act(r.leave_id, "reject")}>
                   Reject
                 </Button>
               </Flex>

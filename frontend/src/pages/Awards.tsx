@@ -31,6 +31,8 @@ export default function Awards() {
   const [awards, setAwards] = useState<Award[]>([]);
   const [board, setBoard] = useState<LeaderRow[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [reactingKey, setReactingKey] = useState<string | null>(null);
   const [form] = Form.useForm();
 
   const canCreate = user && CREATORS.includes(user.role);
@@ -50,15 +52,26 @@ export default function Awards() {
     description?: string;
     category: string;
   }) {
-    await api.createAward({ description: "", ...v });
-    message.success("Recognition sent");
-    form.resetFields();
-    load();
+    setSubmitting(true);
+    try {
+      await api.createAward({ description: "", ...v });
+      message.success("Recognition sent");
+      form.resetFields();
+      await load();
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function react(id: string, type: string) {
-    await api.reactAward(id, type);
-    load();
+    const key = `${id}:${type}`;
+    setReactingKey(key);
+    try {
+      await api.reactAward(id, type);
+      await load();
+    } finally {
+      setReactingKey(null);
+    }
   }
 
   return (
@@ -86,7 +99,7 @@ export default function Awards() {
               <Form.Item name="description" label="Description">
                 <Input.TextArea rows={2} />
               </Form.Item>
-              <Button type="primary" htmlType="submit">
+              <Button type="primary" htmlType="submit" loading={submitting}>
                 Give Recognition
               </Button>
             </Form>
@@ -119,6 +132,7 @@ export default function Awards() {
                     key={r.type}
                     size="small"
                     icon={r.icon}
+                    loading={reactingKey === `${a.award_id}:${r.type}`}
                     onClick={() => react(a.award_id, r.type)}
                   >
                     {a.reactions?.[r.type] ?? 0}

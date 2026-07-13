@@ -23,6 +23,7 @@ const TYPE_ICON: Record<string, React.ReactNode> = {
 
 export default function NotificationsPage() {
   const [items, setItems] = useState<NotificationItem[]>([]);
+  const [markingAll, setMarkingAll] = useState(false);
   const navigate = useNavigate();
 
   const load = useCallback(() => {
@@ -40,10 +41,15 @@ export default function NotificationsPage() {
   }
 
   async function markAll() {
-    await Promise.all(
-      items.filter((n) => n.status === "unread").map((n) => api.markRead(n.notif_id))
-    ).catch(() => undefined);
-    load();
+    setMarkingAll(true);
+    try {
+      await Promise.all(
+        items.filter((n) => n.status === "unread").map((n) => api.markRead(n.notif_id))
+      ).catch(() => undefined);
+      load();
+    } finally {
+      setMarkingAll(false);
+    }
   }
 
   const unread = items.filter((n) => n.status === "unread").length;
@@ -55,7 +61,7 @@ export default function NotificationsPage() {
           {unread > 0 ? `${unread} unread` : "All caught up"}
         </Text>
         {unread > 0 && (
-          <Button size="small" icon={<CheckOutlined />} onClick={markAll}>
+          <Button size="small" icon={<CheckOutlined />} loading={markingAll} onClick={markAll}>
             Mark all read
           </Button>
         )}

@@ -112,6 +112,7 @@ export default function ProjectDrawer({
   const [stageMode, setStageMode] = useState<"add" | "edit">("add");
   const [editingStage, setEditingStage] = useState<ProjectStage | null>(null);
   const [stageSaving, setStageSaving] = useState(false);
+  const [stageActionKey, setStageActionKey] = useState<string | null>(null);
   const [stageForm] = Form.useForm();
 
   const [taskOpen, setTaskOpen] = useState(false);
@@ -226,6 +227,7 @@ export default function ProjectDrawer({
   }
   async function quickStageAction(s: ProjectStage, status: "active" | "done") {
     if (!projectId) return;
+    setStageActionKey(s.key);
     try {
       await api.updateStage(projectId, s.key, {
         status, progress: status === "done" ? 100 : s.progress,
@@ -234,16 +236,21 @@ export default function ProjectDrawer({
       load();
     } catch (e) {
       message.error(e instanceof ApiError ? e.message : "Update failed");
+    } finally {
+      setStageActionKey(null);
     }
   }
   async function removeStage(s: ProjectStage) {
     if (!projectId) return;
+    setStageActionKey(s.key);
     try {
       await api.deleteStage(projectId, s.key);
       message.success("Stage deleted");
       load();
     } catch (e) {
       message.error(e instanceof ApiError ? e.message : "Delete failed");
+    } finally {
+      setStageActionKey(null);
     }
   }
 
@@ -354,6 +361,7 @@ export default function ProjectDrawer({
           title: "", key: "actions", width: 50,
           render: (_: unknown, s: ProjectStage) => (
             <Dropdown
+              disabled={stageActionKey === s.key}
               menu={{
                 items: [
                   { key: "edit", icon: <EditOutlined />, label: "Edit" },
@@ -371,7 +379,7 @@ export default function ProjectDrawer({
                 },
               }}
             >
-              <Button type="text" size="small">⋮</Button>
+              <Button type="text" size="small" loading={stageActionKey === s.key}>⋮</Button>
             </Dropdown>
           ),
         }]
