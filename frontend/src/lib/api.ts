@@ -1220,6 +1220,7 @@ export const api = {
       body: JSON.stringify({ member_ids }),
     }),
   projectActivity: (id: string) => req<ProjectActivityItem[]>(`/projects/${id}/activity`),
+  deleteProject: (id: string) => req<{ deleted: string }>(`/projects/${id}`, { method: "DELETE" }),
   // CRM: marketing-only account contacts, per project
   projectContacts: (id: string) => req<CrmContact[]>(`/projects/${id}/contacts`),
   createContact: (id: string, body: {

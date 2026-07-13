@@ -211,6 +211,20 @@ def delete_stage(db: Database, project_id: str, stage_key: str) -> dict | None:
     return updated
 
 
+def delete(db: Database, project_id: str) -> bool:
+    """Permanently removes a project and everything scoped to it (tasks,
+    documents, CRM contacts, invoices). Irreversible — callers must gate
+    this to a trusted role."""
+    if not db.projects.find_one({"project_id": project_id}, {"_id": 1}):
+        return False
+    db.tasks.delete_many({"project_id": project_id})
+    db.documents.delete_many({"project_id": project_id})
+    db.crm_contacts.delete_many({"project_id": project_id})
+    db.project_invoices.delete_many({"project_id": project_id})
+    db.projects.delete_one({"project_id": project_id})
+    return True
+
+
 def add_members(db: Database, project_id: str, member_ids: list[str]) -> list[str]:
     """Adds member_ids to the project, returning only the ones newly added
     (so the caller notifies just the new joiners, not existing members)."""

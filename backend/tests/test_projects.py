@@ -193,6 +193,25 @@ def test_project_activity_feed(client, auth_header):
     assert denied.status_code == 403
 
 
+def test_delete_project_requires_super_admin_and_cascades(client, auth_header, db):
+    denied = client.delete("/api/v1/projects/proj_om",
+                           headers=auth_header("harsha.varlani@flynava.ai"))
+    assert denied.status_code == 403
+    assert db.projects.find_one({"project_id": "proj_om"})
+
+    ok = client.delete("/api/v1/projects/proj_om", headers=auth_header("admin@flynava.ai"))
+    assert ok.status_code == 200
+    assert ok.json() == {"deleted": "proj_om"}
+    assert not db.projects.find_one({"project_id": "proj_om"})
+    assert db.crm_contacts.count_documents({"project_id": "proj_om"}) == 0
+    assert db.tasks.count_documents({"project_id": "proj_om"}) == 0
+
+
+def test_delete_project_404(client, auth_header):
+    r = client.delete("/api/v1/projects/does_not_exist", headers=auth_header("admin@flynava.ai"))
+    assert r.status_code == 404
+
+
 def test_documents_project_filter(client, auth_header):
     h = auth_header("murugan.p@flynava.ai")
     files = {"file": ("readme.txt", b"hello", "text/plain")}

@@ -111,6 +111,8 @@ export default function ProjectDetail() {
 
   const [settingsForm] = Form.useForm();
   const [settingsSaving, setSettingsSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const canDeleteProject = user?.role === "super_admin";
 
   const [stageOpen, setStageOpen] = useState(false);
   const [stageMode, setStageMode] = useState<"add" | "edit">("add");
@@ -196,6 +198,20 @@ export default function ProjectDetail() {
       message.error(e instanceof ApiError ? e.message : "Update failed");
     } finally {
       setSettingsSaving(false);
+    }
+  }
+
+  async function deleteProject() {
+    if (!projectId) return;
+    setDeleting(true);
+    try {
+      await api.deleteProject(projectId);
+      message.success("Project deleted");
+      navigate("/tasks");
+    } catch (e) {
+      message.error(e instanceof ApiError ? e.message : "Delete failed");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -702,37 +718,85 @@ export default function ProjectDetail() {
                 ? [{
                     key: "settings", label: "Settings",
                     children: (
-                      <Card size="small" title="Project Settings" className="max-w-2xl">
-                        <Form form={settingsForm} layout="vertical" onFinish={saveSettings}>
-                          <Form.Item name="name" label="Project name" rules={[{ required: true }]}>
-                            <Input maxLength={200} />
-                          </Form.Item>
-                          <Flex gap={12}>
-                            <Form.Item name="client" label="Client" className="flex-1"><Input maxLength={200} /></Form.Item>
-                            <Form.Item name="engagement" label="Engagement" className="flex-1"><Input maxLength={200} /></Form.Item>
-                          </Flex>
-                          <Form.Item name="description" label="Description"><Input.TextArea rows={2} /></Form.Item>
-                          <Flex gap={12}>
-                            <Form.Item name="status" label="Status" className="flex-1">
-                              <Select options={["planning", "active", "on_hold", "completed"].map((s) => ({ value: s, label: s }))} />
-                            </Form.Item>
-                            <Form.Item name="priority" label="Priority" className="flex-1">
-                              <Select options={["Low", "Medium", "High"].map((p) => ({ value: p, label: p }))} />
-                            </Form.Item>
-                          </Flex>
-                          <Form.Item name="project_manager_id" label="Project Manager">
-                            <Select showSearch allowClear optionFilterProp="label"
-                              options={allPeople.map((p) => ({ value: p.user_id, label: p.name }))} />
-                          </Form.Item>
-                          <Flex gap={12}>
-                            <Form.Item name="start_date" label="Start date" className="flex-1"><DatePicker className="w-full" /></Form.Item>
-                            <Form.Item name="due_date" label="Due date" className="flex-1"><DatePicker className="w-full" /></Form.Item>
-                          </Flex>
-                          <Button type="primary" htmlType="submit" loading={settingsSaving} icon={<CheckSquareOutlined />}>
-                            Save Changes
-                          </Button>
-                        </Form>
-                      </Card>
+                      <div>
+                        <Card size="small" title="Project Settings" className="mb-4">
+                          <Form form={settingsForm} layout="vertical" onFinish={saveSettings}>
+                            <Row gutter={16}>
+                              <Col xs={24} md={12}>
+                                <Form.Item name="name" label="Project name" rules={[{ required: true }]}>
+                                  <Input maxLength={200} />
+                                </Form.Item>
+                              </Col>
+                              <Col xs={24} md={12}>
+                                <Form.Item name="client" label="Client"><Input maxLength={200} /></Form.Item>
+                              </Col>
+                              <Col xs={24} md={12}>
+                                <Form.Item name="engagement" label="Engagement"><Input maxLength={200} /></Form.Item>
+                              </Col>
+                              <Col xs={24} md={12}>
+                                <Form.Item name="project_manager_id" label="Project Manager">
+                                  <Select showSearch allowClear optionFilterProp="label"
+                                    options={allPeople.map((p) => ({ value: p.user_id, label: p.name }))} />
+                                </Form.Item>
+                              </Col>
+                              <Col xs={24}>
+                                <Form.Item name="description" label="Description"><Input.TextArea rows={3} /></Form.Item>
+                              </Col>
+                              <Col xs={24} md={8}>
+                                <Form.Item name="status" label="Status">
+                                  <Select options={["planning", "active", "on_hold", "completed"].map((s) => ({ value: s, label: s }))} />
+                                </Form.Item>
+                              </Col>
+                              <Col xs={24} md={8}>
+                                <Form.Item name="priority" label="Priority">
+                                  <Select options={["Low", "Medium", "High"].map((p) => ({ value: p, label: p }))} />
+                                </Form.Item>
+                              </Col>
+                              <Col xs={24} md={8} />
+                              <Col xs={24} md={12}>
+                                <Form.Item name="start_date" label="Start date"><DatePicker className="w-full" /></Form.Item>
+                              </Col>
+                              <Col xs={24} md={12}>
+                                <Form.Item name="due_date" label="Due date"><DatePicker className="w-full" /></Form.Item>
+                              </Col>
+                            </Row>
+                            <Button type="primary" htmlType="submit" loading={settingsSaving} icon={<CheckSquareOutlined />}>
+                              Save Changes
+                            </Button>
+                          </Form>
+                        </Card>
+
+                        {canDeleteProject && (
+                          <Card size="small" title="Danger Zone" className="border-red-200">
+                            <Flex justify="space-between" align="center" wrap gap={12}>
+                              <div>
+                                <Text strong>Delete this project</Text>
+                                <div>
+                                  <Text type="secondary" className="text-[12px]">
+                                    Permanently removes {data.name} and all its tasks, documents, contacts and invoices. This cannot be undone.
+                                  </Text>
+                                </div>
+                              </div>
+                              <Button
+                                danger
+                                icon={<DeleteOutlined />}
+                                loading={deleting}
+                                onClick={() => {
+                                  Modal.confirm({
+                                    title: `Delete ${data.name}?`,
+                                    content: "This permanently deletes the project and all its tasks, documents, contacts and invoices. This cannot be undone.",
+                                    okText: "Delete Project",
+                                    okButtonProps: { danger: true },
+                                    onOk: deleteProject,
+                                  });
+                                }}
+                              >
+                                Delete Project
+                              </Button>
+                            </Flex>
+                          </Card>
+                        )}
+                      </div>
                     ),
                   }]
                 : []),

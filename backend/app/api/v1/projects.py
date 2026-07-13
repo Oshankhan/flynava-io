@@ -127,6 +127,19 @@ def patch_project(project_id: str, body: ProjectUpdate,
     return updated
 
 
+@router.delete("/projects/{project_id}")
+def delete_project(project_id: str, user: dict = Depends(get_current_user),
+                   db: Database = Depends(get_db)) -> dict:
+    if user.get("role") != "super_admin":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "requires super admin")
+    project = _get_or_404(db, project_id)
+    projects_svc.delete(db, project_id)
+    audit.record(db, actor_id=user["user_id"], action="project_deleted",
+                entity_type="project", entity_id=project_id,
+                meta={"code": project["code"], "name": project["name"]})
+    return {"deleted": project_id}
+
+
 @router.post("/projects/{project_id}/stages")
 def create_stage(project_id: str, body: StageCreate,
                  user: dict = Depends(get_current_user),
