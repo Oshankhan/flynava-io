@@ -43,7 +43,7 @@ import { useAuth } from "../lib/auth";
 import { levelOf } from "../components/Layout";
 import ProjectDrawer from "../components/ProjectDrawer";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 const STATUS_TAG: Record<string, string> = {
   planning: "blue",
@@ -605,7 +605,6 @@ export default function Tasks() {
 
   return (
     <div>
-      <Title level={4} className="mt-0 mb-3">Team Tasks</Title>
       <Tabs
         activeKey={tab}
         onChange={(key) => {

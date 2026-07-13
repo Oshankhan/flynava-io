@@ -43,7 +43,7 @@ import NotificationBell from "./NotificationBell";
 import InayaChat from "./InayaChat";
 
 const { Sider, Header, Content } = AntLayout;
-const { Text, Title } = Typography;
+const { Text } = Typography;
 const { useBreakpoint } = Grid;
 
 const ROLE_LEVEL: Record<string, number> = {
@@ -225,6 +225,11 @@ export default function Layout() {
     "/knowledge": "Knowledge Base",
   };
   const title = titles[active?.key ?? ""] ?? active?.label ?? "IO";
+  const subtitles: Record<string, string> = {
+    "/documents": "Central repository for marketing documents, assets and brand resources.",
+    "/tasks": "Projects, tasks and workload across your teams.",
+  };
+  const subtitle = subtitles[active?.key ?? ""];
 
   const navContent = (
     <Flex vertical className="h-full">
@@ -283,7 +288,7 @@ export default function Layout() {
       )}
 
       <AntLayout>
-        <Header className="flex items-center justify-between h-16 [line-height:normal] px-3 sm:px-6 border-b border-black/[0.06] dark:border-white/10 gap-3">
+        <Header className="flex items-center justify-between min-h-16 py-2 [line-height:normal] px-3 sm:px-6 border-b border-black/[0.06] dark:border-white/10 gap-3">
           <Flex align="center" gap={12} className="min-w-0">
             {isMobile && (
               <Button
@@ -293,9 +298,14 @@ export default function Layout() {
                 aria-label="Open navigation"
               />
             )}
-            <Title level={4} className="m-0 shrink-0 text-io-600">
-              {title}
-            </Title>
+            <div className="min-w-0 leading-none">
+              <div className="text-io-600 font-semibold text-lg leading-none truncate">{title}</div>
+              {subtitle && (
+                <Text type="secondary" className="text-[11px] leading-none mt-0.5 hidden sm:block" ellipsis>
+                  {subtitle}
+                </Text>
+              )}
+            </div>
           </Flex>
           <Flex align="center" gap={16} className="h-full overflow-x-auto">
             <div className="hidden sm:block">

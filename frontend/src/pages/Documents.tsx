@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Avatar,
-  Badge,
   Button,
   Card,
   Col,
@@ -13,6 +12,7 @@ import {
   Input,
   message,
   Modal,
+  Pagination,
   Row,
   Select,
   Space,
@@ -27,11 +27,9 @@ import {
 import {
   BankOutlined,
   CheckCircleOutlined,
-  DatabaseOutlined,
   DeleteOutlined,
   DownloadOutlined,
   EditOutlined,
-  EyeOutlined,
   FileExcelOutlined,
   FileImageOutlined,
   FileOutlined,
@@ -65,7 +63,7 @@ import {
 import { useAuth } from "../lib/auth";
 import { levelOf } from "../components/Layout";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 const FILE_ICON: Record<string, { icon: React.ReactNode; color: string }> = {
   pdf: { icon: <FilePdfOutlined />, color: "#dc2626" },
@@ -106,29 +104,19 @@ function StatTile({
 }) {
   const subColor = subTone === "up" ? "text-io-600" : subTone === "warn" ? "text-amber-600" : undefined;
   return (
-    <Card size="small" bordered={false} className="h-full shadow-sm">
-      <Flex gap={12} align="center">
-        <span className={`flex items-center justify-center w-11 h-11 rounded-full text-lg shrink-0 ${STAT_TINT[tint]}`}>
+    <Card size="small" bordered={false} className="h-full shadow-sm" styles={{ body: { padding: 12 } }}>
+      <Flex gap={10} align="center">
+        <span className={`flex items-center justify-center w-9 h-9 rounded-full text-base shrink-0 ${STAT_TINT[tint]}`}>
           {icon}
         </span>
         <div className="min-w-0">
-          <div className="text-2xl font-bold leading-tight">{value}</div>
+          <div className="text-xl font-bold leading-tight">{value}</div>
           <Text type="secondary" className="text-xs">{label}</Text>
           {sub && <div><Text className={`text-[11px] ${subColor ?? "text-gray-400"}`}>{sub}</Text></div>}
         </div>
       </Flex>
     </Card>
   );
-}
-
-function fmtBytes(n: number): string {
-  if (n >= 1024 ** 3) return `${(n / 1024 ** 3).toFixed(1)} GB`;
-  if (n >= 1024 ** 2) return `${(n / 1024 ** 2).toFixed(1)} MB`;
-  if (n >= 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${n} B`;
-}
-function fmtCount(n: number): string {
-  return n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n);
 }
 
 const TAB_ITEMS: { key: DocTab; label: string }[] = [
@@ -152,6 +140,8 @@ export default function Documents() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [projectFilter, setProjectFilter] = useState("all");
   const [view, setView] = useState<"list" | "grid">("list");
+  const [gridPage, setGridPage] = useState(1);
+  const GRID_PAGE_SIZE = 12;
 
   const [docs, setDocs] = useState<IoDocument[] | null>(null);
   const [stats, setStats] = useState<DocStats | null>(null);
@@ -196,6 +186,7 @@ export default function Documents() {
   useEffect(loadFolders, [loadFolders]);
   useEffect(loadStats, [loadStats]);
   useEffect(loadDocs, [loadDocs]);
+  useEffect(() => setGridPage(1), [activeFolder, tab, sort, search, typeFilter, statusFilter, projectFilter]);
   useEffect(() => {
     api.projects().then(setProjects).catch(() => setProjects([]));
   }, []);
@@ -374,10 +365,6 @@ export default function Documents() {
       ) : "—",
     },
     {
-      title: "Size", dataIndex: "size", key: "size", width: 90,
-      render: (n: number) => <Text className="text-[12px]">{fmtBytes(n)}</Text>,
-    },
-    {
       title: "", key: "actions", width: 50,
       render: (_: unknown, d: IoDocument) => {
         const isOwner = d.uploaded_by === user?.user_id;
@@ -418,13 +405,6 @@ export default function Documents() {
 
   return (
     <div>
-      <Flex justify="space-between" align="start" wrap gap={12} className="mb-4">
-        <div>
-          <Title level={3} className="m-0">Document Management</Title>
-          <Text type="secondary">Central repository for marketing documents, assets and brand resources.</Text>
-        </div>
-      </Flex>
-
       <Flex gap={8} wrap className="mb-4">
         <Input
           placeholder="Search documents..."
@@ -463,28 +443,19 @@ export default function Documents() {
       </Flex>
 
       <Row gutter={[16, 16]} className="mb-4">
-        <Col xs={12} md={8} xl={24 / 5}>
+        <Col xs={24} sm={8}>
           <StatTile icon={<FolderOpenOutlined />} tint="green" value={String(totalDocs)}
             label="Total Documents" sub={stats ? `↑ ${stats.uploaded_this_month} this month` : undefined} subTone="up" />
         </Col>
-        <Col xs={12} md={8} xl={24 / 5}>
+        <Col xs={24} sm={8}>
           <StatTile icon={<FileTextOutlined />} tint="blue" value={String(stats?.marketing_assets ?? 0)}
             label="Marketing Assets"
             sub={stats && totalDocs > 0 ? `${Math.round((stats.marketing_assets / totalDocs) * 100)}% of total` : undefined} />
         </Col>
-        <Col xs={12} md={8} xl={24 / 5}>
+        <Col xs={24} sm={8}>
           <StatTile icon={<CheckCircleOutlined />} tint="amber" value={String(pendingCount)}
             label="Pending Approval" sub={pendingCount > 0 ? `${pendingCount} requires action` : "All clear"}
             subTone={pendingCount > 0 ? "warn" : "muted"} />
-        </Col>
-        <Col xs={12} md={8} xl={24 / 5}>
-          <StatTile icon={<EyeOutlined />} tint="indigo" value={fmtCount(stats?.total_downloads ?? 0)}
-            label="Total Downloads" />
-        </Col>
-        <Col xs={12} md={8} xl={24 / 5}>
-          <StatTile icon={<DatabaseOutlined />} tint="teal"
-            value={fmtBytes(stats?.storage_used_bytes ?? 0)} label="Storage Used"
-            sub={stats ? `${Math.round((stats.storage_used_bytes / stats.storage_quota_bytes) * 100)}% of 50 GB` : undefined} />
         </Col>
       </Row>
 
@@ -505,7 +476,7 @@ export default function Documents() {
                   className={`px-2 py-1.5 rounded-lg cursor-pointer ${activeFolder === null ? "bg-io-600/10 text-io-600" : ""}`}
                   onClick={() => setActiveFolder(null)}
                 >
-                  <Text strong={activeFolder === null} className="text-[13px]">
+                  <Text strong={activeFolder === null} className="text-sm">
                     <BankOutlined className="mr-2" />All Documents
                   </Text>
                   <Text type="secondary" className="text-[12px]">{totalDocs}</Text>
@@ -516,7 +487,7 @@ export default function Documents() {
                     className={`px-2 py-1.5 rounded-lg cursor-pointer group ${activeFolder === f.folder_id ? "bg-io-600/10 text-io-600" : ""}`}
                     onClick={() => setActiveFolder(f.folder_id)}
                   >
-                    <Text strong={activeFolder === f.folder_id} className="text-[13px]" ellipsis>
+                    <Text strong={activeFolder === f.folder_id} className="text-sm" ellipsis>
                       <FolderOpenOutlined className="mr-2" />{f.name}
                     </Text>
                     <Flex align="center" gap={6}>
@@ -551,13 +522,7 @@ export default function Documents() {
               <Tabs
                 activeKey={tab}
                 onChange={(k) => setTab(k as DocTab)}
-                items={[
-                  ...TAB_ITEMS,
-                  ...(isManager ? [{
-                    key: "approvals" as DocTab,
-                    label: <Badge count={pendingCount} size="small" offset={[8, 0]}>Approvals</Badge>,
-                  }] : []),
-                ]}
+                items={TAB_ITEMS}
                 className="flex-1 min-w-0"
               />
               <Select
@@ -580,26 +545,34 @@ export default function Documents() {
                 scroll={{ x: true }}
               />
             ) : (
-              <Row gutter={[12, 12]}>
-                {docs.map((d) => {
-                  const { icon, color } = fileIcon(d.file_type);
-                  const cfg = STATUS_TAG[d.status] ?? { color: "default", label: d.status };
-                  return (
-                    <Col key={d.doc_id} xs={24} sm={12} md={8} xl={6}>
-                      <Card size="small" className="h-full">
-                        <Flex vertical gap={6}>
-                          <span style={{ color }} className="text-2xl">{icon}</span>
-                          <Text strong className="text-[13px]" ellipsis>{d.title}</Text>
-                          <Flex justify="space-between" align="center">
+              <>
+                <Row gutter={[12, 12]}>
+                  {docs.slice((gridPage - 1) * GRID_PAGE_SIZE, gridPage * GRID_PAGE_SIZE).map((d) => {
+                    const { icon, color } = fileIcon(d.file_type);
+                    const cfg = STATUS_TAG[d.status] ?? { color: "default", label: d.status };
+                    return (
+                      <Col key={d.doc_id} xs={24} sm={12} md={8} xl={6}>
+                        <Card size="small" className="h-full">
+                          <Flex vertical gap={6}>
+                            <span style={{ color }} className="text-2xl">{icon}</span>
+                            <Text strong className="text-[13px]" ellipsis>{d.title}</Text>
                             <Tag color={cfg.color}>{cfg.label}</Tag>
-                            <Text type="secondary" className="text-[11px]">{fmtBytes(d.size)}</Text>
                           </Flex>
-                        </Flex>
-                      </Card>
-                    </Col>
-                  );
-                })}
-              </Row>
+                        </Card>
+                      </Col>
+                    );
+                  })}
+                </Row>
+                <Flex justify="end" className="mt-4">
+                  <Pagination
+                    current={gridPage}
+                    pageSize={GRID_PAGE_SIZE}
+                    total={docs.length}
+                    onChange={setGridPage}
+                    showTotal={(t, r) => `Showing ${r[0]} to ${r[1]} of ${t} documents`}
+                  />
+                </Flex>
+              </>
             )}
           </Card>
         </Col>
