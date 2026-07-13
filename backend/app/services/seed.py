@@ -634,6 +634,147 @@ def _seed_documents(now: dt.datetime, names: dict[str, str]) -> list[dict]:
     return out
 
 
+# --- Enterprise Reporting Hub: report definitions ---
+# Real-roster owners; confidential defs are additionally allowlisted (everyone
+# else is filtered out by `report_store.report_visible` regardless of role).
+# Run history + AWS cost/utilization data are seeded once the simulated AWS
+# connector exists (see `_seed_report_runs` / `integrations/aws_sim.py`),
+# so historical run snapshots for the AWS-domain reports have real numbers.
+REPORT_DEFS: list[dict] = [
+    {"report_id": "rep_bug_summary", "name": "Bug Status Summary",
+     "description": "Open/closed bug breakdown for KQ production support.",
+     "domain": "development", "type": "tabular", "owner_id": "u_harsha",
+     "sections": [{"kind": "tasks_table", "params": {"bug_only": True}, "title": None},
+                  {"kind": "tasks_breakdown", "params": {"bug_only": True, "group_by": "status"}, "title": None}],
+     "visibility": "org", "access": {"roles": [], "teams": []}, "confidential": False,
+     "allowed_user_ids": [], "recipients": ["admin@flynava.ai", "harsha.varlani@flynava.ai"],
+     "schedule": {"frequency": "daily", "time": "09:00"}},
+    {"report_id": "rep_team_progress", "name": "Team Task Progress",
+     "description": "Task progress across teams and projects.",
+     "domain": "development", "type": "tabular", "owner_id": "u_murugan",
+     "sections": [{"kind": "tasks_table", "params": {}, "title": None},
+                  {"kind": "tasks_breakdown", "params": {"group_by": "status"}, "title": None}],
+     "visibility": "restricted", "access": {"roles": ["manager", "team_lead"], "teams": []},
+     "confidential": False, "allowed_user_ids": [], "recipients": ["murugan.p@flynava.ai"],
+     "schedule": {"frequency": "weekly", "time": "09:30", "weekday": 0}},
+    {"report_id": "rep_test_exec", "name": "Test Case Execution",
+     "description": "Automation test run results and pass rate.",
+     "domain": "qa", "type": "tabular", "owner_id": "u_prathima",
+     "sections": [{"kind": "test_execution", "params": {}, "title": None},
+                  {"kind": "test_execution_stats", "params": {}, "title": None}],
+     "visibility": "org", "access": {"roles": [], "teams": []}, "confidential": False,
+     "allowed_user_ids": [], "recipients": ["prathima.ds@flynava.ai"],
+     "schedule": {"frequency": "weekly", "time": "17:00", "weekday": 4}},
+    {"report_id": "rep_resource_util", "name": "Resource Utilization",
+     "description": "Operations KPI trend and snapshot.",
+     "domain": "operations", "type": "chart", "owner_id": "u_harsha",
+     "sections": [{"kind": "kpi_stats", "params": {"module": "operations"}, "title": None},
+                  {"kind": "kpi_trend", "params": {"module": "operations"}, "title": None}],
+     "visibility": "restricted", "access": {"roles": ["manager"], "teams": []}, "confidential": False,
+     "allowed_user_ids": [], "recipients": ["harsha.varlani@flynava.ai"],
+     "schedule": {"frequency": "monthly", "time": "08:00", "day_of_month": 1}},
+    {"report_id": "rep_campaign", "name": "Campaign Performance",
+     "description": "Marketing funnel KPI trend.",
+     "domain": "marketing", "type": "chart", "owner_id": "u_tanvi",
+     "sections": [{"kind": "kpi_trend", "params": {"module": "marketing_sales"}, "title": None}],
+     "visibility": "org", "access": {"roles": [], "teams": []}, "confidential": False,
+     "allowed_user_ids": [], "recipients": ["tanvi.gupta@flynava.ai"],
+     "schedule": {"frequency": "monthly", "time": "10:00", "day_of_month": 1}},
+    {"report_id": "rep_mkt_funnel", "name": "Marketing Funnel Summary",
+     "description": "Leads, conversion, pipeline snapshot.",
+     "domain": "marketing", "type": "summary", "owner_id": "u_meghna",
+     "sections": [{"kind": "kpi_stats", "params": {"module": "marketing_sales"}, "title": None}],
+     "visibility": "org", "access": {"roles": [], "teams": []}, "confidential": False,
+     "allowed_user_ids": [], "recipients": [], "schedule": None},
+    {"report_id": "rep_doc_summary", "name": "Document Upload Summary",
+     "description": "Document uploads by status and downloads.",
+     "domain": "operations", "type": "tabular", "owner_id": "u_shammi",
+     "sections": [{"kind": "documents_stats", "params": {}, "title": None}],
+     "visibility": "org", "access": {"roles": [], "teams": []}, "confidential": False,
+     "allowed_user_ids": [], "recipients": ["hr@flynava.ai"],
+     "schedule": {"frequency": "monthly", "time": "09:00", "day_of_month": 1}},
+    {"report_id": "rep_attendance", "name": "Attendance & Leave Summary",
+     "description": "Attendance and leave request snapshot.",
+     "domain": "hr", "type": "summary", "owner_id": "u_shammi",
+     "sections": [{"kind": "attendance_summary", "params": {"days": 7}, "title": None},
+                  {"kind": "leaves_summary", "params": {}, "title": None}],
+     "visibility": "restricted", "access": {"roles": ["hr", "manager"], "teams": []}, "confidential": False,
+     "allowed_user_ids": [], "recipients": ["hr@flynava.ai"],
+     "schedule": {"frequency": "monthly", "time": "09:00", "day_of_month": 1}},
+    {"report_id": "rep_payroll", "name": "Payroll Cost Summary",
+     "description": "Monthly payroll cost totals.",
+     "domain": "finance", "type": "tabular", "owner_id": "u_rakshitha",
+     "sections": [{"kind": "payroll_summary", "params": {}, "title": None}],
+     "visibility": "restricted", "access": {"roles": [], "teams": []}, "confidential": True,
+     "allowed_user_ids": ["u_ceo", "u_shammi"], "recipients": ["admin@flynava.ai"],
+     "schedule": {"frequency": "monthly", "time": "09:00", "day_of_month": 1}},
+    {"report_id": "rep_budget_actual", "name": "Budget vs Actual",
+     "description": "Revenue budget vs actual trend.",
+     "domain": "finance", "type": "chart", "owner_id": "u_rakshitha",
+     "sections": [{"kind": "finance_budget", "params": {"kpi_id": "fin_revenue_mtd"}, "title": None}],
+     "visibility": "restricted", "access": {"roles": [], "teams": []}, "confidential": True,
+     "allowed_user_ids": ["u_ceo"], "recipients": ["admin@flynava.ai"],
+     "schedule": {"frequency": "quarterly", "time": "09:00", "day_of_month": 1}},
+    {"report_id": "rep_aws_monthly", "name": "AWS Monthly Cost",
+     "description": "Total AWS spend trend.",
+     "domain": "infrastructure", "type": "chart", "owner_id": "u_kalaiarasan",
+     "sections": [{"kind": "aws_monthly_cost", "params": {}, "title": None}],
+     "visibility": "restricted", "access": {"roles": [], "teams": []}, "confidential": True,
+     "allowed_user_ids": ["u_ceo", "u_harsha"], "recipients": ["admin@flynava.ai"],
+     "schedule": {"frequency": "monthly", "time": "07:00", "day_of_month": 1}},
+    {"report_id": "rep_aws_services", "name": "AWS Cost by Service",
+     "description": "Latest-month spend by AWS service.",
+     "domain": "infrastructure", "type": "tabular", "owner_id": "u_kalaiarasan",
+     "sections": [{"kind": "aws_cost_by_service", "params": {}, "title": None}],
+     "visibility": "restricted", "access": {"roles": [], "teams": []}, "confidential": True,
+     "allowed_user_ids": ["u_ceo", "u_harsha"], "recipients": ["admin@flynava.ai"],
+     "schedule": {"frequency": "monthly", "time": "07:15", "day_of_month": 1}},
+    {"report_id": "rep_aws_health", "name": "AWS Utilization & Health",
+     "description": "Resource utilization and health dashboard.",
+     "domain": "infrastructure", "type": "dashboard", "owner_id": "u_kalaiarasan",
+     "sections": [{"kind": "aws_utilization", "params": {}, "title": None},
+                  {"kind": "aws_resource_health", "params": {}, "title": None}],
+     "visibility": "restricted", "access": {"roles": ["manager", "team_lead"], "teams": []},
+     "confidential": False, "allowed_user_ids": [], "recipients": ["kalaiarasan.d@flynava.ai"],
+     "schedule": {"frequency": "weekly", "time": "07:30", "weekday": 0}},
+    {"report_id": "rep_aws_optim", "name": "AWS Optimization Recommendations",
+     "description": "Cost-saving recommendations across AWS resources.",
+     "domain": "infrastructure", "type": "summary", "owner_id": "u_kalaiarasan",
+     "sections": [{"kind": "aws_optimization", "params": {}, "title": None},
+                  {"kind": "aws_budget_vs_actual", "params": {}, "title": None}],
+     "visibility": "restricted", "access": {"roles": [], "teams": []}, "confidential": True,
+     "allowed_user_ids": ["u_ceo", "u_harsha"], "recipients": [], "schedule": None},
+    {"report_id": "rep_my_tasks", "name": "My Task Summary",
+     "description": "Personal task breakdown.",
+     "domain": "development", "type": "summary", "owner_id": "u_oshan",
+     "sections": [{"kind": "tasks_breakdown",
+                  "params": {"assignee_id": "u_oshan", "group_by": "status"}, "title": None}],
+     "visibility": "private", "access": {"roles": [], "teams": []}, "confidential": False,
+     "allowed_user_ids": [], "recipients": [], "schedule": None},
+]
+
+
+def _seed_report_defs(db: Database, now: dt.datetime) -> None:
+    from .report_scheduler import compute_next_run
+
+    for spec in REPORT_DEFS:
+        schedule = None
+        if spec.get("schedule"):
+            schedule = {**spec["schedule"], "recipients": spec.get("recipients", []),
+                       "active": True, "last_run_at": None}
+            schedule["next_run_at"] = compute_next_run(schedule, now)
+        doc = {
+            "report_id": spec["report_id"], "name": spec["name"], "description": spec["description"],
+            "domain": spec["domain"], "project_id": spec.get("project_id"), "type": spec["type"],
+            "sections": spec["sections"], "visibility": spec["visibility"], "access": spec["access"],
+            "confidential": spec["confidential"], "allowed_user_ids": spec["allowed_user_ids"],
+            "shared_with": [], "recipients": spec.get("recipients", []), "schedule": schedule,
+            "owner_id": spec["owner_id"], "archived": False, "downloads": 0, "run_count": 0,
+            "created_at": now, "updated_at": now, "seed": True,
+        }
+        db.report_defs.update_one({"report_id": doc["report_id"]}, {"$set": doc}, upsert=True)
+
+
 def _seed_core(db: Database, now: dt.datetime) -> None:
     """Departments, teams, users, projects/tasks, KPI defs+values, compliance,
     positions, automation scripts, product docs.
@@ -760,6 +901,8 @@ def _seed_core(db: Database, now: dt.datetime) -> None:
     for d in _seed_documents(now, names):
         db.documents.update_one({"doc_id": d["doc_id"]}, {"$set": d}, upsert=True)
 
+    _seed_report_defs(db, now)
+
 
 def seed_demo_extras(db: Database) -> dict:
     """Refresh all demo seed data except HR, safe to rerun against an
@@ -799,7 +942,9 @@ def reset_roster(db: Database) -> dict:
     for coll in ("users", "teams", "departments", "projects", "tasks",
                  "attendance", "leaves", "payslips", "employees", "meetings",
                  "notifications", "automation_scripts", "product_docs",
-                 "kpi_values", "kpi_defs", "folders", "documents"):
+                 "kpi_values", "kpi_defs", "folders", "documents",
+                 "report_defs", "report_runs", "report_views",
+                 "aws_costs", "aws_resources", "aws_budgets"):
         db[coll].delete_many({})
     seed(db)
     # Compute the live KPI values now so dashboards show real numbers (the
