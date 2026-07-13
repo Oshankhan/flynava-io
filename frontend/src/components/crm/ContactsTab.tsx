@@ -3,6 +3,7 @@ import {
   Avatar,
   Button,
   Card,
+  Checkbox,
   DatePicker,
   Dropdown,
   Empty,
@@ -10,6 +11,7 @@ import {
   Form,
   Input,
   Modal,
+  Pagination,
   Popover,
   Segmented,
   Select,
@@ -23,12 +25,14 @@ import {
   AppstoreOutlined,
   BankOutlined,
   DownOutlined,
+  LinkedinOutlined,
   MailOutlined,
   MoreOutlined,
   PhoneOutlined,
   PlusOutlined,
   SaveOutlined,
   SearchOutlined,
+  SettingOutlined,
   UnorderedListOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -69,6 +73,23 @@ function initials(name: string): string {
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase();
 }
 
+interface ColumnDef {
+  key: "title" | "department" | "email" | "phone" | "linkedin" | "contact_type" | "status" | "last_contact";
+  label: string;
+  default: boolean;
+}
+const COLUMN_DEFS: ColumnDef[] = [
+  { key: "title", label: "Job Title", default: true },
+  { key: "department", label: "Department", default: true },
+  { key: "email", label: "Email", default: true },
+  { key: "phone", label: "Phone", default: true },
+  { key: "contact_type", label: "Type", default: true },
+  { key: "last_contact", label: "Last Contact", default: true },
+  { key: "status", label: "Status", default: false },
+  { key: "linkedin", label: "LinkedIn", default: false },
+];
+const COLUMNS_STORAGE_KEY = "crm_contacts_visible_columns";
+
 interface SavedView {
   name: string;
   search: string;
@@ -107,6 +128,21 @@ export default function ContactsTab({
   const [form] = Form.useForm();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const [visibleCols, setVisibleCols] = useState<Record<string, boolean>>(() => {
+    try {
+      const raw = localStorage.getItem(COLUMNS_STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch {
+      /* fall through to defaults */
+    }
+    return Object.fromEntries(COLUMN_DEFS.map((c) => [c.key, c.default]));
+  });
+  function toggleColumn(key: string) {
+    const next = { ...visibleCols, [key]: !visibleCols[key] };
+    setVisibleCols(next);
+    localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(next));
+  }
+
   const storageKey = `crm_saved_views_${projectId}`;
 
   const load = useCallback(() => {
@@ -129,12 +165,13 @@ export default function ContactsTab({
 
   const [runSave, savingContact] = useAsyncAction(async (values: {
     name: string; title?: string; department?: string; email?: string; phone?: string;
-    contact_type: ContactType; status: ContactStatus; last_contact?: dayjs.Dayjs | null;
+    linkedin?: string; contact_type: ContactType; status: ContactStatus;
+    last_contact?: dayjs.Dayjs | null;
   }) => {
     const body = {
       name: values.name, title: values.title ?? "", department: values.department ?? "",
-      email: values.email ?? "", phone: values.phone ?? "", contact_type: values.contact_type,
-      status: values.status,
+      email: values.email ?? "", phone: values.phone ?? "", linkedin: values.linkedin ?? "",
+      contact_type: values.contact_type, status: values.status,
       last_contact: values.last_contact ? values.last_contact.format("YYYY-MM-DD") : null,
     };
     try {
@@ -172,7 +209,7 @@ export default function ContactsTab({
     setEditing(c);
     form.setFieldsValue({
       name: c.name, title: c.title, department: c.department, email: c.email, phone: c.phone,
-      contact_type: c.contact_type, status: c.status,
+      linkedin: c.linkedin, contact_type: c.contact_type, status: c.status,
       last_contact: c.last_contact ? dayjs(c.last_contact) : null,
     });
     setModalOpen(true);
@@ -222,6 +259,52 @@ export default function ContactsTab({
   const pageStart = (page - 1) * PAGE_SIZE;
   const pageRows = filtered.slice(pageStart, pageStart + PAGE_SIZE);
 
+  function optionalColumn(def: ColumnDef) {
+    switch (def.key) {
+      case "title":
+        return { title: "Job Title", dataIndex: "title", key: "title", ellipsis: true,
+          render: (t?: string) => t || "—" };
+      case "department":
+        return { title: "Department", dataIndex: "department", key: "department", ellipsis: true,
+          render: (d?: string) => d || "—" };
+      case "email":
+        return { title: "Email", dataIndex: "email", key: "email", ellipsis: true,
+          render: (e?: string) => e ? <a href={`mailto:${e}`}>{e}</a> : "—" };
+      case "phone":
+        return { title: "Phone", dataIndex: "phone", key: "phone", ellipsis: true,
+          render: (p?: string) => p || "—" };
+      case "contact_type":
+        return {
+          title: "Type", key: "contact_type", width: 100,
+          render: (_: unknown, c: CrmContact) => (
+            <Tag color={TYPE_TAG[c.contact_type]}>{TYPE_LABEL[c.contact_type]}</Tag>
+          ),
+        };
+      case "status":
+        return {
+          title: "Status", key: "status", width: 90,
+          render: (_: unknown, c: CrmContact) => (
+            <Tag color={STATUS_TAG[c.status]} className="capitalize">{c.status}</Tag>
+          ),
+        };
+      case "last_contact":
+        return { title: "Last Contact", dataIndex: "last_contact", key: "last_contact", width: 110,
+          render: (d?: string | null) => d ?? "—" };
+      case "linkedin":
+        return {
+          title: "LinkedIn", key: "linkedin", width: 90,
+          render: (_: unknown, c: CrmContact) =>
+            c.linkedin ? (
+              <a href={c.linkedin} target="_blank" rel="noreferrer">
+                <LinkedinOutlined className="text-[#0a66c2] text-base" />
+              </a>
+            ) : "—",
+        };
+      default:
+        return null;
+    }
+  }
+
   const columns = [
     {
       title: "Name", key: "name",
@@ -234,28 +317,10 @@ export default function ContactsTab({
         </Flex>
       ),
     },
-    { title: "Job Title", dataIndex: "title", key: "title", ellipsis: true,
-      render: (t?: string) => t || "—" },
-    { title: "Department", dataIndex: "department", key: "department", ellipsis: true,
-      render: (d?: string) => d || "—" },
-    { title: "Email", dataIndex: "email", key: "email", ellipsis: true,
-      render: (e?: string) => e ? <a href={`mailto:${e}`}>{e}</a> : "—" },
-    { title: "Phone", dataIndex: "phone", key: "phone", ellipsis: true,
-      render: (p?: string) => p || "—" },
-    {
-      title: "Type", key: "type", width: 100,
-      render: (_: unknown, c: CrmContact) => (
-        <Tag color={TYPE_TAG[c.contact_type]}>{TYPE_LABEL[c.contact_type]}</Tag>
-      ),
-    },
-    {
-      title: "Status", key: "status", width: 90,
-      render: (_: unknown, c: CrmContact) => (
-        <Tag color={STATUS_TAG[c.status]} className="capitalize">{c.status}</Tag>
-      ),
-    },
-    { title: "Last Contact", dataIndex: "last_contact", key: "last_contact", width: 110,
-      render: (d?: string | null) => d ?? "—" },
+    ...COLUMN_DEFS.filter((d) => visibleCols[d.key]).flatMap((d) => {
+      const col = optionalColumn(d);
+      return col ? [col] : [];
+    }),
     {
       title: "Actions", key: "actions", width: 110,
       render: (_: unknown, c: CrmContact) => (
@@ -368,6 +433,25 @@ export default function ContactsTab({
           >
             <Button>Saved Views <DownOutlined /></Button>
           </Dropdown>
+          <Popover
+            trigger="click"
+            title="Show columns"
+            content={
+              <Flex vertical gap={6}>
+                {COLUMN_DEFS.map((c) => (
+                  <Checkbox
+                    key={c.key}
+                    checked={!!visibleCols[c.key]}
+                    onChange={() => toggleColumn(c.key)}
+                  >
+                    {c.label}
+                  </Checkbox>
+                ))}
+              </Flex>
+            }
+          >
+            <Button icon={<SettingOutlined />}>Columns</Button>
+          </Popover>
           <div className="flex-1" />
           <Button type="primary" icon={<PlusOutlined />} onClick={openAdd}>
             Add Contact
@@ -392,33 +476,23 @@ export default function ContactsTab({
         {filtered.length === 0 ? (
           <Empty description="No contacts match your filters." />
         ) : view === "list" ? (
-          <>
-            <Table
-              size="small"
-              rowKey="contact_id"
-              rowSelection={{}}
-              dataSource={pageRows}
-              columns={columns}
-              pagination={false}
-              scroll={{ x: true }}
-            />
-            <Flex justify="space-between" align="center" className="mt-3">
-              <Text type="secondary" className="text-[12px]">
-                Showing {filtered.length === 0 ? 0 : pageStart + 1} to{" "}
-                {Math.min(pageStart + PAGE_SIZE, filtered.length)} of {filtered.length} contacts
-              </Text>
-              <Flex gap={4}>
-                <Button size="small" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-                  Prev
-                </Button>
-                <Button size="small" disabled={pageStart + PAGE_SIZE >= filtered.length}
-                  onClick={() => setPage(page + 1)}>
-                  Next
-                </Button>
-              </Flex>
-            </Flex>
-          </>
+          <Table
+            size="small"
+            rowKey="contact_id"
+            rowSelection={{}}
+            dataSource={filtered}
+            columns={columns}
+            scroll={{ x: "max-content" }}
+            pagination={{
+              current: page,
+              pageSize: PAGE_SIZE,
+              total: filtered.length,
+              onChange: setPage,
+              showTotal: (total, range) => `Showing ${range[0]} to ${range[1]} of ${total} contacts`,
+            }}
+          />
         ) : (
+          <>
           <Flex wrap gap={12}>
             {pageRows.map((c) => (
               <Card key={c.contact_id} size="small" className="w-full sm:w-[calc(50%-6px)] lg:w-[calc(33.33%-8px)]">
@@ -446,6 +520,16 @@ export default function ContactsTab({
               </Card>
             ))}
           </Flex>
+          <Flex justify="end" className="mt-3">
+            <Pagination
+              current={page}
+              pageSize={PAGE_SIZE}
+              total={filtered.length}
+              onChange={setPage}
+              showSizeChanger={false}
+            />
+          </Flex>
+          </>
         )}
       </Card>
 
@@ -485,6 +569,9 @@ export default function ContactsTab({
               <Select options={[{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }]} />
             </Form.Item>
           </Flex>
+          <Form.Item name="linkedin" label="LinkedIn">
+            <Input prefix={<LinkedinOutlined className="text-gray-400" />} placeholder="https://linkedin.com/in/..." />
+          </Form.Item>
           <Form.Item name="last_contact" label="Last Contact">
             <DatePicker className="w-full" />
           </Form.Item>

@@ -359,8 +359,10 @@ PROJECTS = [
 
 def _contact(contact_id: str, project_id: str, name: str, title: str, department: str,
             email: str, phone: str, contact_type: str, status: str, last_contact: str) -> dict:
+    slug = name.lower().replace(".", "").replace("'", "").replace(" ", "-")
     return {"contact_id": contact_id, "project_id": project_id, "name": name, "title": title,
             "department": department, "email": email, "phone": phone,
+            "linkedin": f"https://linkedin.com/in/{slug}",
             "contact_type": contact_type, "status": status, "last_contact": last_contact,
             "notes": "", "created_by": "u_tanvi", "seed": True}
 

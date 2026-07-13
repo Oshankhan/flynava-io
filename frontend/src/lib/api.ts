@@ -792,6 +792,7 @@ export interface CrmContact {
   department?: string;
   email?: string;
   phone?: string;
+  linkedin?: string;
   contact_type: ContactType;
   status: ContactStatus;
   last_contact?: string | null;
@@ -1229,6 +1230,7 @@ export const api = {
     department?: string;
     email?: string;
     phone?: string;
+    linkedin?: string;
     contact_type?: ContactType;
     status?: ContactStatus;
     last_contact?: string | null;
@@ -1240,6 +1242,7 @@ export const api = {
     department: string;
     email: string;
     phone: string;
+    linkedin: string;
     contact_type: ContactType;
     status: ContactStatus;
     last_contact: string | null;

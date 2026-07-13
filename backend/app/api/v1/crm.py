@@ -24,6 +24,7 @@ class ContactCreate(BaseModel):
     department: str = ""
     email: str = ""
     phone: str = ""
+    linkedin: str = ""
     contact_type: str = "other"
     status: str = "active"
     last_contact: str | None = None
@@ -36,6 +37,7 @@ class ContactUpdate(BaseModel):
     department: str | None = None
     email: str | None = None
     phone: str | None = None
+    linkedin: str | None = None
     contact_type: str | None = None
     status: str | None = None
     last_contact: str | None = None
