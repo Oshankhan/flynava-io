@@ -13,11 +13,24 @@ from typing import Callable
 
 from pymongo.database import Database
 
-Computer = Callable[[Database], float | int | None]
+Computer = Callable[[Database, str | None], float | int | None]
 _COMPUTERS: dict[str, Computer] = {}
 
-_DONE_STATUSES = ["Done", "Closed", "done", "closed", "Resolved"]
-CLOSED_BUG_STATUSES = ["Closed", "Rejected", "Resolved"]
+
+# Terminal-status vocabulary, confirmed against the real OpenProject workflow
+# (2026-07-15 recalibration): a work item — task or bug — is done when its
+# status is Closed, Not a Bug, or Done. Every other status (Reopen, Retest,
+# In testing, Replica Done, PROD Retest, ...) is mid-pipeline, not done, even
+# though several of those sound terminal. One shared vocabulary for both task
+# and bug completion — there's no real distinction in this team's workflow.
+# "Resolved"/"Rejected" are kept too: unused in real OP data today (0
+# occurrences) but were already recognized as terminal in seed/demo data —
+# keeping them is a pure superset of prior behavior, nothing that used to
+# count as done stops counting as done.
+TERMINAL_STATUSES = ["Closed", "closed", "Not a Bug", "Done", "done",
+                     "Resolved", "resolved", "Rejected"]
+_DONE_STATUSES = TERMINAL_STATUSES  # kept as an alias — some callers know it by this name
+CLOSED_BUG_STATUSES = TERMINAL_STATUSES  # ditto
 _BUG_Q = {"wp_type": {"$regex": "bug", "$options": "i"}}
 
 
@@ -29,42 +42,57 @@ def computer(name: str):
     return wrap
 
 
+# Every computer takes an optional `project` (an OpenProject `source_id`) —
+# None (the default, and every existing call site) means "all projects", so
+# nothing about unscoped behavior changes. Only the operations/product_dev
+# computers below actually use it; formulas outside that set (payroll,
+# revenue, ...) aren't project-shaped and just ignore the argument.
+def _proj_q(project: str | None) -> dict:
+    return {"source_id": project} if project else {}
+
+
+def _task_q(project: str | None) -> dict:
+    return {"project_source_id": project} if project else {}
+
+
 # --- Operations computers ---
 @computer("active_project_count")
-def _active_projects(db: Database) -> int:
-    return db.projects.count_documents({"status": "active"})
+def _active_projects(db: Database, project: str | None = None) -> int:
+    return db.projects.count_documents({"status": "active", **_proj_q(project)})
 
 
 @computer("project_completion_rate")
-def _project_completion(db: Database) -> float:
-    progresses = [p.get("progress", 0) for p in db.projects.find({"status": "active"})]
+def _project_completion(db: Database, project: str | None = None) -> float:
+    progresses = [p.get("progress", 0) for p in
+                 db.projects.find({"status": "active", **_proj_q(project)})]
     return round(mean(progresses), 2) if progresses else 0.0
 
 
 @computer("task_completion_rate")
-def _task_completion(db: Database) -> float:
-    total = db.tasks.count_documents({})
+def _task_completion(db: Database, project: str | None = None) -> float:
+    scope = _task_q(project)
+    total = db.tasks.count_documents(scope)
     if not total:
         return 0.0
     done = db.tasks.count_documents(
-        {"$or": [{"status": {"$in": _DONE_STATUSES}}, {"progress": 100}]}
+        {**scope, "$or": [{"status": {"$in": _DONE_STATUSES}}, {"progress": 100}]}
     )
     return round(done / total * 100, 2)
 
 
 @computer("overdue_task_count")
-def _overdue_tasks(db: Database) -> int:
+def _overdue_tasks(db: Database, project: str | None = None) -> int:
     today = dt.date.today().isoformat()
     return db.tasks.count_documents(
-        {"due_date": {"$lt": today, "$ne": None}, "progress": {"$lt": 100}}
+        {**_task_q(project), "due_date": {"$lt": today, "$ne": None}, "progress": {"$lt": 100}}
     )
 
 
 @computer("at_risk_project_count")
-def _at_risk_projects(db: Database) -> int:
+def _at_risk_projects(db: Database, project: str | None = None) -> int:
     """Progress < 70% of expected timeline completion (PRD AI-003)."""
     n = 0
-    for p in db.projects.find({"status": "active"}):
+    for p in db.projects.find({"status": "active", **_proj_q(project)}):
         expected = p.get("expected_progress")
         if expected and p.get("progress", 0) < 0.7 * expected:
             n += 1
@@ -73,34 +101,195 @@ def _at_risk_projects(db: Database) -> int:
 
 # --- Product Development computers (real bug data from OpenProject) ---
 @computer("open_bug_count")
-def _open_bugs(db: Database) -> int | None:
-    if not db.tasks.count_documents(_BUG_Q):
+def _open_bugs(db: Database, project: str | None = None) -> int | None:
+    q = {**_BUG_Q, **_task_q(project)}
+    if not db.tasks.count_documents(q):
         return None  # no bug data ingested yet
-    return db.tasks.count_documents(
-        {**_BUG_Q, "status": {"$nin": CLOSED_BUG_STATUSES}})
+    return db.tasks.count_documents({**q, "status": {"$nin": CLOSED_BUG_STATUSES}})
 
 
 @computer("critical_bug_count")
-def _critical_bugs(db: Database) -> int | None:
-    if not db.tasks.count_documents(_BUG_Q):
+def _critical_bugs(db: Database, project: str | None = None) -> int | None:
+    q = {**_BUG_Q, **_task_q(project)}
+    if not db.tasks.count_documents(q):
         return None
     return db.tasks.count_documents(
-        {**_BUG_Q, "priority": {"$in": ["Immediate", "High"]},
+        {**q, "priority": {"$in": ["Immediate", "High"]},
          "status": {"$nin": CLOSED_BUG_STATUSES}})
 
 
 @computer("bug_closure_rate")
-def _bug_closure(db: Database) -> float | None:
-    total = db.tasks.count_documents(_BUG_Q)
+def _bug_closure(db: Database, project: str | None = None) -> float | None:
+    q = {**_BUG_Q, **_task_q(project)}
+    total = db.tasks.count_documents(q)
     if not total:
         return None
-    closed = db.tasks.count_documents(
-        {**_BUG_Q, "status": {"$in": CLOSED_BUG_STATUSES}})
+    closed = db.tasks.count_documents({**q, "status": {"$in": CLOSED_BUG_STATUSES}})
     return round(closed / total * 100, 2)
 
 
+def _as_datetime(value) -> dt.datetime | None:
+    """Normalize a mixed-type timestamp field to an aware datetime. OpenProject
+    sync writes ISO strings (`createdAt`/`updatedAt`, sometimes `Z`-suffixed);
+    seed data writes native BSON datetimes. Same tolerant parse used by the
+    critical-bug-aging detector (insights/detectors_ops.py)."""
+    if value is None:
+        return None
+    if isinstance(value, dt.datetime):
+        d = value
+    else:
+        try:
+            d = dt.datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    return d if d.tzinfo else d.replace(tzinfo=dt.timezone.utc)
+
+
+def _as_date(value) -> dt.date | None:
+    """Normalize a date-only field (`due_date`, invoice `date`, attendance
+    `date`, ...) — these are ISO date strings regardless of source, but
+    `str(x)[:10]` also tolerates a datetime accidentally landing here."""
+    if not value:
+        return None
+    try:
+        return dt.date.fromisoformat(str(value)[:10])
+    except ValueError:
+        return None
+
+
+# --- Finance computers (invoices seeded, AWS costs from the simulated
+# connector — see integrations/aws_sim.py) ---
+@computer("invoice_collections_mtd")
+def _invoice_collections_mtd(db: Database, project: str | None = None) -> float | None:
+    if not db.project_invoices.count_documents({}):
+        return None
+    month = dt.date.today().strftime("%Y-%m")
+    total = sum(
+        inv.get("amount", 0) for inv in db.project_invoices.find({"status": "paid"})
+        if str(inv.get("date", "")).startswith(month)
+    )
+    return round(total, 2)
+
+
+def _latest_payroll_month(db: Database) -> str | None:
+    row = db.payslips.find_one(sort=[("month", -1)])
+    return row["month"] if row else None
+
+
+@computer("gross_burn_monthly")
+def _gross_burn_monthly(db: Database, project: str | None = None) -> float | None:
+    """Payroll gross pay only (INR — see payslips/MyPayslip.tsx's `₹`
+    formatting). AWS cost and invoice amounts are USD; summing them with
+    payroll without a real FX conversion would produce a meaningless mixed-
+    currency figure, so this deliberately doesn't combine them (payroll is
+    also the dominant cost by two orders of magnitude in this dataset)."""
+    month = _latest_payroll_month(db)
+    if not month:
+        return None
+    payroll = sum(p.get("gross", 0) for p in db.payslips.find({"month": month}))
+    return round(payroll, 2)
+
+
+@computer("ar_over_60")
+def _ar_over_60(db: Database, project: str | None = None) -> float | None:
+    if not db.project_invoices.count_documents({}):
+        return None
+    today = dt.date.today()
+    total = 0.0
+    for inv in db.project_invoices.find({"status": {"$in": ["pending", "overdue"]}}):
+        due = _as_date(inv.get("due_date"))
+        if due and (today - due).days > 60:
+            total += inv.get("amount", 0)
+    return round(total, 2)
+
+
+@computer("ar_days_outstanding")
+def _ar_days_outstanding(db: Database, project: str | None = None) -> float | None:
+    if not db.project_invoices.count_documents({}):
+        return None
+    today = dt.date.today()
+    days_past_due = []
+    for inv in db.project_invoices.find({"status": {"$in": ["pending", "overdue"]}}):
+        due = _as_date(inv.get("due_date"))
+        if due and (today - due).days > 0:
+            days_past_due.append((today - due).days)
+    return round(mean(days_past_due), 1) if days_past_due else 0.0
+
+
+# --- HR computers (employees/attendance seeded — no GreytHR yet) ---
+@computer("active_headcount")
+def _active_headcount(db: Database, project: str | None = None) -> int | None:
+    if not db.employees.count_documents({}):
+        return None
+    return db.employees.count_documents({"status": "active"})
+
+
+def _attendance_rate_30d(db: Database, status: str) -> float | None:
+    cutoff = (dt.date.today() - dt.timedelta(days=30)).isoformat()
+    scope = {"date": {"$gte": cutoff}}
+    total = db.attendance.count_documents(scope)
+    if not total:
+        return None
+    matching = db.attendance.count_documents({**scope, "status": status})
+    return round(matching / total * 100, 2)
+
+
+@computer("absenteeism_rate_30d")
+def _absenteeism_rate_30d(db: Database, project: str | None = None) -> float | None:
+    return _attendance_rate_30d(db, "Absent")
+
+
+@computer("late_rate_30d")
+def _late_rate_30d(db: Database, project: str | None = None) -> float | None:
+    return _attendance_rate_30d(db, "Late")
+
+
+# --- Product Development computers (bug timing from OpenProject) ---
+@computer("bug_resolution_days")
+def _bug_resolution_days(db: Database, project: str | None = None) -> float | None:
+    q = {**_BUG_Q, "status": {"$in": CLOSED_BUG_STATUSES}, **_task_q(project)}
+    if not db.tasks.count_documents(q):
+        return None
+    durations = []
+    for b in db.tasks.find(q, {"created_at": 1, "updated_at": 1}):
+        created = _as_datetime(b.get("created_at"))
+        closed = _as_datetime(b.get("updated_at"))
+        if created and closed and closed >= created:
+            durations.append((closed - created).total_seconds() / 86400)
+    return round(mean(durations), 1) if durations else None
+
+
+@computer("bug_reopen_rate")
+def _bug_reopen_rate(db: Database, project: str | None = None) -> float | None:
+    q = {**_BUG_Q, **_task_q(project)}
+    docs = list(db.tasks.find(q, {"status": 1, "reopen_count": 1}))
+    if not docs:
+        return None
+    reopened = sum(1 for d in docs
+                   if (d.get("reopen_count") or 0) >= 1 or d.get("status") == "Reopen")
+    terminal_clean = sum(1 for d in docs if d.get("status") in CLOSED_BUG_STATUSES
+                         and (d.get("reopen_count") or 0) < 1)
+    denom = reopened + terminal_clean
+    return round(reopened / denom * 100, 2) if denom else 0.0
+
+
+# --- Marketing computer (CRM contacts seeded) ---
+@computer("contact_coverage_30d")
+def _contact_coverage_30d(db: Database, project: str | None = None) -> float | None:
+    active = list(db.crm_contacts.find({"status": "active"}, {"last_contact": 1}))
+    if not active:
+        return None
+    today = dt.date.today()
+    fresh = 0
+    for c in active:
+        last = _as_date(c.get("last_contact"))
+        if last and (today - last).days <= 30:
+            fresh += 1
+    return round(fresh / len(active) * 100, 2)
+
+
 @computer("static")
-def _static(db: Database) -> None:
+def _static(db: Database, project: str | None = None) -> None:
     """Placeholder for KPIs whose source integration isn't connected yet."""
     return None
 
@@ -119,11 +308,11 @@ def rag_status(value, target, direction: str) -> str:
     return "amber" if value <= threshold else "red"
 
 
-def compute(db: Database, kpi_def: dict):
+def compute(db: Database, kpi_def: dict, project: str | None = None):
     fn = _COMPUTERS.get(kpi_def["formula"])
     if fn is None:
         return None
-    return fn(db)
+    return fn(db, project)
 
 
 def _last_values(db: Database, kpi_id: str, n: int = 2) -> list:

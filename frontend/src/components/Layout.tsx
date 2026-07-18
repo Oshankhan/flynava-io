@@ -19,7 +19,6 @@ import {
   ApartmentOutlined,
   AuditOutlined,
   BarChartOutlined,
-  BookOutlined,
   BulbOutlined,
   CalendarOutlined,
   CheckSquareOutlined,
@@ -168,7 +167,6 @@ export default function Layout() {
     list.push(
       { key: "/calendar", icon: <CalendarOutlined />, label: "Calendar" },
       { key: "/documents", icon: <FileProtectOutlined />, label: "Documents" },
-      { key: "/knowledge", icon: <BookOutlined />, label: "Knowledge Base" },
       { type: "divider" }
     );
     if (dashboards.length > 0)
@@ -221,7 +219,6 @@ export default function Layout() {
     "/tasks": level >= 2 ? "Team Tasks" : "My Tasks",
     "/approvals": "Approvals",
     "/calendar": "Calendar",
-    "/knowledge": "Knowledge Base",
   };
   const title = titles[active?.key ?? ""] ?? active?.label ?? "IO";
   const subtitles: Record<string, string> = {

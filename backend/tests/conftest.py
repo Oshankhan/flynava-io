@@ -21,6 +21,9 @@ settings.upload_dir = tempfile.mkdtemp(prefix="io_uploads_")
 # Tests never call live AI providers.
 settings.openai_api_key = ""
 settings.anthropic_api_key = ""
+# Tests use the deterministic, dependency-free HashingEmbedder — no model
+# download, no network access, same vector for the same text every run.
+settings.rag_embeddings_enabled = False
 # The report scheduler's background thread never runs under pytest — tests
 # call `report_scheduler.tick()` directly instead.
 settings.scheduler_enabled = False

@@ -63,3 +63,8 @@ def ensure_indexes(db: Database) -> None:
     db.crm_contacts.create_index([("contact_id", ASCENDING)], unique=True)
     db.project_invoices.create_index([("project_id", ASCENDING)])
     db.project_invoices.create_index([("invoice_id", ASCENDING)], unique=True)
+    db.kpi_explanations.create_index([("kpi_id", ASCENDING)], unique=True)
+    db.ai_insights.create_index([("insight_id", ASCENDING)], unique=True)
+    db.ai_insights.create_index([("dept", ASCENDING), ("updated_at", ASCENDING)])
+    db.rag_chunks.create_index([("chunk_id", ASCENDING)], unique=True)
+    db.rag_chunks.create_index([("source", ASCENDING)])

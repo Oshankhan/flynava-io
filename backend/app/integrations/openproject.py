@@ -12,10 +12,17 @@ from pymongo.database import Database
 
 from ..config import settings
 from ..core.tls import combined_ca_bundle
+from ..kpi.engine import TERMINAL_STATUSES
 from .base import Connector
 
 PAGE_SIZE = 200
 MAX_PAGES = 10  # safety cap (2,000 work packages)
+
+# KQ Project (id 48) is slated for archival on the OP side — excluded here in
+# the meantime so it doesn't skew live KPIs/insights. Remove this once it's
+# actually archived in OpenProject (its own `active` flag will then do the
+# job via `_map_project`, same as any other archived project).
+EXCLUDED_PROJECT_SOURCE_IDS = {"48"}
 
 
 def _id_from_href(href: str | None) -> str | None:
@@ -27,6 +34,15 @@ def _id_from_href(href: str | None) -> str | None:
 
 def _link_title(links: dict, key: str) -> str | None:
     return (links.get(key) or {}).get("title")
+
+
+def work_package_url(source_id: str | None) -> str | None:
+    """Deep-link to a real OpenProject work package — used wherever a bug/task
+    entity comes from a live sync (has a `source_id`), so an insight card or
+    KPI explanation can open the actual item, not just name it."""
+    if not source_id:
+        return None
+    return f"{settings.openproject_base_url}/work_packages/{source_id}"
 
 
 class OpenProjectConnector(Connector):
@@ -49,18 +65,23 @@ class OpenProjectConnector(Connector):
 
     def upsert(self, db: Database, data: dict) -> tuple[int, int]:
         fetched, processed = super().upsert(db, data)
-        # OpenProject projects have no progress field — derive it from the mean
-        # percentageDone of their work packages so project health is meaningful.
+        # OpenProject projects have no progress field — derive one so project
+        # health is meaningful. Not from percentageDone: confirmed against the
+        # real data (2026-07-15) that this team doesn't maintain %Done — 285 of
+        # 293 Closed tasks in one project sat at 0%. Status is the real
+        # completion signal: % of the project's work items in a terminal
+        # status (Closed / Not a Bug / Done).
         for p in data.get("projects", []):
             sid = p["source_id"]
             tasks = list(db.tasks.find(
                 {"source_system": self.source, "project_source_id": sid},
-                {"progress": 1}))
+                {"status": 1}))
             if tasks:
-                avg = round(sum(t.get("progress") or 0 for t in tasks) / len(tasks), 1)
+                closed = sum(1 for t in tasks if t.get("status") in TERMINAL_STATUSES)
+                pct = round(closed / len(tasks) * 100, 1)
                 db.projects.update_one(
                     {"source_system": self.source, "source_id": sid},
-                    {"$set": {"progress": avg}})
+                    {"$set": {"progress": pct}})
         return fetched, processed
 
     def _paged(self, client: httpx.Client, path: str,
@@ -86,9 +107,14 @@ class OpenProjectConnector(Connector):
             # Closed/Rejected work packages are ingested too (bug closure rate).
             wp_raw = self._paged(c, "/api/v3/work_packages",
                                  extra={"filters": "[]"})
+        projects_raw = [p for p in projects_raw
+                       if str(p.get("id")) not in EXCLUDED_PROJECT_SOURCE_IDS]
+        tasks = [self._map_task(w) for w in wp_raw]
+        tasks = [t for t in tasks
+                if t["project_source_id"] not in EXCLUDED_PROJECT_SOURCE_IDS]
         return {
             "projects": [self._map_project(p) for p in projects_raw],
-            "tasks": [self._map_task(w) for w in wp_raw],
+            "tasks": tasks,
         }
 
     @staticmethod
@@ -113,4 +139,6 @@ class OpenProjectConnector(Connector):
             "assignee": _link_title(links, "assignee"),
             "author": _link_title(links, "author"),
             "project_source_id": _id_from_href((links.get("project") or {}).get("href")),
+            "created_at": w.get("createdAt"),
+            "updated_at": w.get("updatedAt"),
         }

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Avatar, Button, Card, Descriptions, Flex, Input, Spin, Tag, Typography } from "antd";
+import { Avatar, Button, Card, Descriptions, Flex, Input, Spin, Typography } from "antd";
 import { CloseOutlined, SendOutlined } from "@ant-design/icons";
 import { api, ApiError, type AiAnswer } from "../lib/api";
+import { linkify } from "../lib/linkify";
 import inayaImg from "../assets/inaya/Inaya-img.png";
 
 const { Paragraph, Text } = Typography;
@@ -12,12 +13,6 @@ interface ChatTurn {
   error?: string;
 }
 
-const CONF_COLOR: Record<string, string> = {
-  High: "success",
-  Medium: "warning",
-  Low: "error",
-};
-
 const SUGGESTIONS = [
   "Show me my overdue tasks",
   "What are my reopened bugs?",
@@ -27,6 +22,19 @@ const SUGGESTIONS = [
 
 export const INAYA_OPEN_EVENT = "inaya:open";
 
+/** Opens Inaya pre-loaded with an existing answer (e.g. an AI Insights card
+ * the user clicked) instead of a blank chat — the finding's Answer/Reason/
+ * Evidence/Confidence show up as if Inaya had just been asked, and the user
+ * can immediately follow up in the same conversation. No API call: the
+ * card already carries everything an AiAnswer needs. */
+export function openInayaWithAnswer(question: string, answer: AiAnswer) {
+  window.dispatchEvent(
+    new CustomEvent<{ q: string; a: AiAnswer }>(INAYA_OPEN_EVENT, {
+      detail: { q: question, a: answer },
+    })
+  );
+}
+
 export default function InayaChat() {
   const [open, setOpen] = useState(false);
   const [turns, setTurns] = useState<ChatTurn[]>([]);
@@ -35,7 +43,11 @@ export default function InayaChat() {
   const bottom = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const onOpen = () => setOpen(true);
+    const onOpen = (e: Event) => {
+      const detail = (e as CustomEvent<{ q: string; a: AiAnswer }>).detail;
+      if (detail) setTurns((t) => [...t, { q: detail.q, a: detail.a }]);
+      setOpen(true);
+    };
     window.addEventListener(INAYA_OPEN_EVENT, onOpen);
     return () => window.removeEventListener(INAYA_OPEN_EVENT, onOpen);
   }, []);
@@ -47,11 +59,18 @@ export default function InayaChat() {
   async function ask(question: string) {
     const text = question.trim();
     if (!text || busy) return;
+    // Prior completed turns become conversation history so follow-ups
+    // ("which of those are assigned to Alice?") resolve — capped client
+    // side too, though the server re-caps regardless.
+    const history = turns
+      .filter((t): t is ChatTurn & { a: AiAnswer } => !!t.a && !t.error)
+      .slice(-5)
+      .map((t) => ({ q: t.q, a: t.a.answer }));
     setBusy(true);
     setQ("");
     setTurns((t) => [...t, { q: text }]);
     try {
-      const a = await api.askIO(text);
+      const a = await api.askIO(text, history);
       setTurns((t) => t.map((x, i) => (i === t.length - 1 ? { ...x, a } : x)));
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : "Inaya couldn't answer that";
@@ -110,15 +129,21 @@ export default function InayaChat() {
                       ) : t.a ? (
                         <>
                           <Paragraph strong className="mb-2 text-[13px]">
-                            {t.a.answer}
+                            {linkify(t.a.answer)}
                           </Paragraph>
                           <Descriptions column={1} size="small" colon>
-                            <Descriptions.Item label="Why">{t.a.reason}</Descriptions.Item>
-                            <Descriptions.Item label="Action">{t.a.recommended_action}</Descriptions.Item>
+                            <Descriptions.Item label="Why">{linkify(t.a.reason)}</Descriptions.Item>
+                            <Descriptions.Item label="Action">
+                              {linkify(t.a.recommended_action)}
+                            </Descriptions.Item>
                           </Descriptions>
-                          <Tag color={CONF_COLOR[t.a.confidence] ?? "default"}>
-                            Confidence: {t.a.confidence}
-                          </Tag>
+                          {t.a.evidence?.length > 0 && (
+                            <ul className="my-1.5 ps-[18px] text-xs opacity-75">
+                              {t.a.evidence.slice(0, 6).map((e, i) => (
+                                <li key={i}>{linkify(e)}</li>
+                              ))}
+                            </ul>
+                          )}
                         </>
                       ) : null}
                     </Card>
@@ -128,13 +153,20 @@ export default function InayaChat() {
             ))}
             <div ref={bottom} />
           </div>
-          <Flex gap={8} className="mt-2.5">
-            <Input
+          <Flex gap={8} align="end" className="mt-2.5">
+            <Input.TextArea
               placeholder="Ask Inaya…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              onPressEnter={() => ask(q)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  ask(q);
+                }
+              }}
               disabled={busy}
+              autoSize={{ minRows: 1, maxRows: 6 }}
+              className="flex-1 min-w-0 resize-none"
             />
             <Button type="primary" icon={<SendOutlined />} onClick={() => ask(q)} loading={busy} />
           </Flex>

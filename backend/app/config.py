@@ -39,6 +39,15 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"  # cheapest capable model — cost guard
     ai_max_tokens: int = 400  # hard cap per answer — cost guard
+    insights_cache_hours: int = 6  # department insight cards recompute at most this often
+
+    # RAG embeddings (Ask IO semantic recall). Local + free — no API key.
+    # `rag_embeddings_enabled=False` (or a missing/failing `fastembed` install)
+    # degrades to the deterministic HashingEmbedder; nothing breaks either way.
+    rag_embeddings_enabled: bool = True
+    rag_embed_model: str = "BAAI/bge-small-en-v1.5"
+    rag_top_k: int = 10
+    rag_min_score: float = 0.35
 
     # Document uploads (FlyNava archive / approval workflows)
     upload_dir: str = "uploads"

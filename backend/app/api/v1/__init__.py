@@ -1,7 +1,7 @@
 """Aggregate all v1 routers under /api/v1."""
 from fastapi import APIRouter
 
-from . import (auth, users, rbac, integrations, kpis, dashboards, ai,
+from . import (auth, users, rbac, integrations, kpis, dashboards, ai, insights,
                notifications, awards, admin, documents, reports, report_hub, hr,
                org, tasks, meetings, requests, workspace, compliance,
                positions, analytics, projects, crm)
@@ -14,6 +14,7 @@ api_router.include_router(integrations.router)
 api_router.include_router(kpis.router)
 api_router.include_router(dashboards.router)
 api_router.include_router(ai.router)
+api_router.include_router(insights.router)
 api_router.include_router(notifications.router)
 api_router.include_router(awards.router)
 api_router.include_router(admin.router)

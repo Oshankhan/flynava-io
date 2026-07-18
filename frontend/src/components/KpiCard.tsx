@@ -14,6 +14,7 @@ import {
   TeamOutlined,
 } from "@ant-design/icons";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
+import type { KeyboardEvent } from "react";
 import type { Kpi, KpiSeries } from "../lib/api";
 import { formatValue } from "../lib/format";
 import RagBadge from "./RagBadge";
@@ -45,7 +46,15 @@ function iconFor(kpi: Kpi) {
   return <LineChartOutlined />;
 }
 
-export default function KpiCard({ kpi, series }: { kpi: Kpi; series?: KpiSeries }) {
+export default function KpiCard({
+  kpi,
+  series,
+  onClick,
+}: {
+  kpi: Kpi;
+  series?: KpiSeries;
+  onClick?: (kpi: Kpi) => void;
+}) {
   const change = kpi.change_pct;
   const good = change != null && (change > 0) === (kpi.direction === "higher");
   const accent = accentFor(kpi.kpi_id);
@@ -56,8 +65,23 @@ export default function KpiCard({ kpi, series }: { kpi: Kpi; series?: KpiSeries 
     <Card
       size="small"
       bordered={false}
-      className="h-full shadow-sm"
+      className={`h-full shadow-sm${onClick ? " cursor-pointer" : ""}`}
       styles={{ body: { display: "flex", flexDirection: "column", height: "100%" } }}
+      {...(onClick
+        ? {
+            hoverable: true,
+            tabIndex: 0,
+            role: "button",
+            "aria-label": `Why is ${kpi.name} ${kpi.value ?? "—"}?`,
+            onClick: () => onClick(kpi),
+            onKeyDown: (e: KeyboardEvent) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick(kpi);
+              }
+            },
+          }
+        : {})}
     >
       <Flex justify="space-between" align="center" gap={8}>
         <span

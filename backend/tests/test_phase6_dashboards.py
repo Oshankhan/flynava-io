@@ -29,8 +29,13 @@ def test_finance_demo_values_present(client, auth_header):
 
 
 def test_recalculate_does_not_wipe_static_values(client, auth_header, db):
-    # recalc runs the engine; static KPIs must keep their seeded demo values
+    # recalc runs the engine; genuinely-static KPIs (no integration wired yet)
+    # must keep their seeded demo values rather than being overwritten with null.
     client.post("/api/v1/kpis/recalculate", headers=auth_header("admin@flynava.ai"))
     r = client.get("/api/v1/dashboards/hr", headers=auth_header("hr@flynava.ai"))
     kpis = {k["kpi_id"]: k for k in r.json()["kpis"]}
-    assert kpis["hr_headcount"]["value"] == 128  # not overwritten with null
+    assert kpis["hr_attrition"]["value"] == 6.4  # still static — no GreytHR connected
+    # hr_headcount, by contrast, is now live-computed from the seeded employee
+    # roster — recalc should replace the old demo value (128) with the real count.
+    active = db.employees.count_documents({"status": "active"})
+    assert kpis["hr_headcount"]["value"] == active

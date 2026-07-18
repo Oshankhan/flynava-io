@@ -87,3 +87,36 @@ def test_sync_unknown_source_404(client, auth_header):
     r = client.post("/api/v1/integrations/nope/sync",
                     headers=auth_header("admin@flynava.ai"))
     assert r.status_code == 404
+
+
+def _task(status: str) -> dict:
+    return {"source_id": "99", "title": "Track me", "status": status, "progress": 0,
+            "due_date": None, "wp_type": "Bug", "priority": "High",
+            "assignee": None, "author": None, "project_source_id": None}
+
+
+def test_status_transition_tracked_on_change(db):
+    conn = OpenProjectConnector(base_url=BASE, api_key="tok")
+
+    conn.upsert(db, {"projects": [], "tasks": [_task("Open")]})
+    doc = db.tasks.find_one({"source_system": "openproject", "source_id": "99"})
+    assert "status_history" not in doc  # first-ever sync: nothing to transition from
+
+    conn.upsert(db, {"projects": [], "tasks": [_task("Reopen")]})
+    doc = db.tasks.find_one({"source_system": "openproject", "source_id": "99"})
+    assert len(doc["status_history"]) == 1
+    assert doc["status_history"][0] == {"from": "Open", "to": "Reopen",
+                                        "at": doc["status_history"][0]["at"]}
+    assert doc["reopen_count"] == 1
+
+    # unchanged status on the next sync -> no new history entry, no double count
+    conn.upsert(db, {"projects": [], "tasks": [_task("Reopen")]})
+    doc = db.tasks.find_one({"source_system": "openproject", "source_id": "99"})
+    assert len(doc["status_history"]) == 1
+    assert doc["reopen_count"] == 1
+
+    # a further transition away from Reopen doesn't touch reopen_count
+    conn.upsert(db, {"projects": [], "tasks": [_task("Closed")]})
+    doc = db.tasks.find_one({"source_system": "openproject", "source_id": "99"})
+    assert len(doc["status_history"]) == 2
+    assert doc["reopen_count"] == 1

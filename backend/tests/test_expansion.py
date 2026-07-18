@@ -61,13 +61,20 @@ def test_dashboard_series_and_change_pct(client, auth_header):
     r = client.get("/api/v1/dashboards/finance",
                    headers=auth_header("leadership@flynava.ai"))
     body = r.json()
-    # revenue has a seeded 12-month history -> a trend series exists
+    # revenue has a seeded 12-month history -> a trend series exists (this
+    # holds regardless of whether the KPI is static or live-computed — the
+    # series only needs >=3 stored history points)
     assert any(s["kpi_id"] == "fin_revenue_mtd" for s in body["series"])
     rev = next(s for s in body["series"] if s["kpi_id"] == "fin_revenue_mtd")
     assert len(rev["points"]) >= 3
-    # change arrow: 432000 vs 424000 previous month = +1.9%
-    kpi = next(k for k in body["kpis"] if k["kpi_id"] == "fin_revenue_mtd")
-    assert kpi["change_pct"] == 1.9
+    # change arrow: only "static" KPIs get one (computed KPIs like
+    # fin_revenue_mtd recompute on demand, so a stored-history delta would be
+    # noise — same convention as the operations/product_dev live KPIs).
+    rev_kpi = next(k for k in body["kpis"] if k["kpi_id"] == "fin_revenue_mtd")
+    assert rev_kpi["change_pct"] is None
+    # fin_gross_margin is still static (no ERP connected) -> 57.5 vs 57.2 = +0.5%
+    margin = next(k for k in body["kpis"] if k["kpi_id"] == "fin_gross_margin")
+    assert margin["change_pct"] == 0.5
 
 
 def test_bug_breakdown_on_manager_dashboard(client, auth_header, db):

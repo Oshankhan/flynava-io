@@ -1,13 +1,9 @@
 import { useState } from "react";
-import { Card, Descriptions, Empty, Input, Spin, Tag, Typography } from "antd";
+import { Card, Descriptions, Empty, Flex, Input, Spin, Typography } from "antd";
 import { api, ApiError, type AiAnswer } from "../lib/api";
+import { linkify } from "../lib/linkify";
 
 const { Paragraph, Text } = Typography;
-const CONF_COLOR: Record<string, string> = {
-  High: "success",
-  Medium: "warning",
-  Low: "error",
-};
 
 export default function AskIO() {
   const [open, setOpen] = useState(false);
@@ -55,29 +51,30 @@ export default function AskIO() {
           }
           title="Ask IO"
         >
-          {loading && <Spin tip="Thinking…"><div className="h-10" /></Spin>}
+          {loading && (
+            <Flex align="center" justify="center" className="h-10">
+              <Spin />
+            </Flex>
+          )}
           {error && <Empty description={error} />}
           {!loading && answer && (
             <>
               <Paragraph strong className="mb-2">
-                {answer.answer}
+                {linkify(answer.answer)}
               </Paragraph>
               <Descriptions column={1} size="small" colon>
-                <Descriptions.Item label="Why">{answer.reason}</Descriptions.Item>
+                <Descriptions.Item label="Why">{linkify(answer.reason)}</Descriptions.Item>
                 <Descriptions.Item label="Action">
-                  {answer.recommended_action}
+                  {linkify(answer.recommended_action)}
                 </Descriptions.Item>
               </Descriptions>
               {answer.evidence?.length > 0 && (
                 <ul className="my-1.5 ps-[18px] text-xs opacity-75">
                   {answer.evidence.slice(0, 6).map((e, i) => (
-                    <li key={i}>{e}</li>
+                    <li key={i}>{linkify(e)}</li>
                   ))}
                 </ul>
               )}
-              <Tag color={CONF_COLOR[answer.confidence] ?? "default"}>
-                Confidence: {answer.confidence}
-              </Tag>
             </>
           )}
         </Card>

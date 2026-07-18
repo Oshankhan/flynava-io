@@ -12,6 +12,7 @@ import time
 from pymongo.database import Database
 
 from ..integrations.base import Connector
+from . import rag_index
 
 
 def run_connector(db: Database, connector: Connector) -> dict:
@@ -35,5 +36,12 @@ def run_connector(db: Database, connector: Connector) -> dict:
         "status": "error" if errors else "ok",
     }
     db.integration_logs.insert_one(log)
+
+    if not errors:
+        try:
+            rag_index.reindex(db, sources=["tasks", "projects"])
+        except Exception:  # noqa: BLE001 - incremental reindex must not fail the sync
+            pass
+
     log.pop("_id", None)
     return log

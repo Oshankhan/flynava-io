@@ -26,3 +26,9 @@ if (!window.matchMedia) {
 if (!window.getComputedStyle) {
   // jsdom provides it, but guard just in case.
 }
+
+// jsdom doesn't implement scrollIntoView at all (InayaChat scrolls its
+// message list on every new turn).
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}

@@ -51,27 +51,37 @@ KPI_DEFINITIONS: list[dict] = [
      "module": "product_dev", "formula": "static", "unit": "count",
      "target": 3, "direction": "higher", "demo_value": 3.2,
      "demo_history": [1.8, 2.0, 2.1, 2.4, 2.2, 2.6, 2.8, 2.7, 3.0, 2.9, 3.1, 3.2]},
+    {"kpi_id": "pd_bug_resolution_days", "name": "Bug Resolution Time (days)",
+     "module": "product_dev", "formula": "bug_resolution_days", "unit": "days",
+     "target": 14, "direction": "lower", "demo_history": []},
+    {"kpi_id": "pd_reopen_rate", "name": "Bug Reopen Rate", "module": "product_dev",
+     "formula": "bug_reopen_rate", "unit": "%", "target": 10, "direction": "lower",
+     "demo_history": []},
 
-    # --- HR (demo until GreytHR connected) ---
+    # --- HR (headcount/absenteeism computed live from employees/attendance;
+    # attrition/training stay demo until GreytHR connects) ---
     {"kpi_id": "hr_headcount", "name": "Total Headcount", "module": "hr",
-     "formula": "static", "unit": "count", "target": None, "direction": "higher",
-     "demo_value": 128,
+     "formula": "active_headcount", "unit": "count", "target": None, "direction": "higher",
      "demo_history": [96, 99, 103, 106, 108, 112, 115, 118, 120, 123, 126, 128]},
     {"kpi_id": "hr_attrition", "name": "Attrition Rate", "module": "hr",
      "formula": "static", "unit": "%", "target": 8, "direction": "lower",
      "demo_value": 6.4,
      "demo_history": [9.1, 8.8, 8.9, 8.4, 8.2, 7.9, 7.6, 7.4, 7.1, 6.9, 6.6, 6.4]},
     {"kpi_id": "hr_absenteeism", "name": "Absenteeism Rate", "module": "hr",
-     "formula": "static", "unit": "%", "target": 3, "direction": "lower",
-     "demo_value": 2.1},
+     "formula": "absenteeism_rate_30d", "unit": "%", "target": 3, "direction": "lower",
+     "demo_history": [3.4, 3.2, 3.1, 2.9, 2.8, 2.6, 2.5, 2.4, 2.3, 2.2, 2.1]},
+    {"kpi_id": "hr_late_rate", "name": "Late Arrival Rate", "module": "hr",
+     "formula": "late_rate_30d", "unit": "%", "target": 10, "direction": "lower",
+     "demo_history": []},
     {"kpi_id": "hr_training", "name": "Training Completion", "module": "hr",
      "formula": "static", "unit": "%", "target": 90, "direction": "higher",
      "demo_value": 76},
 
-    # --- Finance (demo until ERP connected) ---
+    # --- Finance (revenue/burn/AR computed live from invoices + payroll +
+    # AWS costs; margin/expenses stay demo until ERP connects) ---
     {"kpi_id": "fin_revenue_mtd", "name": "Revenue (MTD)", "module": "finance",
-     "formula": "static", "unit": "USD", "target": 500000, "direction": "higher",
-     "demo_value": 432000,
+     "formula": "invoice_collections_mtd", "unit": "USD", "target": 500000,
+     "direction": "higher",
      "demo_history": [310000, 322000, 348000, 335000, 361000, 378000, 372000,
                       395000, 401000, 415000, 424000, 432000]},
     {"kpi_id": "fin_expenses_mtd", "name": "Operating Expenses (MTD)",
@@ -82,12 +92,15 @@ KPI_DEFINITIONS: list[dict] = [
      "demo_value": 57.5,
      "demo_history": [51.2, 52.0, 53.1, 52.6, 54.0, 54.8, 54.4, 55.6, 56.1,
                       56.8, 57.2, 57.5]},
-    {"kpi_id": "fin_burn_rate", "name": "Burn Rate (monthly)", "module": "finance",
-     "formula": "static", "unit": "USD", "target": 300000, "direction": "lower",
-     "demo_value": 265000},
+    {"kpi_id": "fin_burn_rate", "name": "Burn Rate (monthly, payroll)",
+     "module": "finance", "formula": "gross_burn_monthly", "unit": "INR",
+     "target": None, "direction": "lower", "demo_history": []},
     {"kpi_id": "fin_ar_over_60", "name": "AR Aging > 60 days", "module": "finance",
-     "formula": "static", "unit": "USD", "target": 50000, "direction": "lower",
-     "demo_value": 82000},
+     "formula": "ar_over_60", "unit": "USD", "target": 50000, "direction": "lower",
+     "demo_history": [82000]},
+    {"kpi_id": "fin_ar_days", "name": "A/R Days Outstanding", "module": "finance",
+     "formula": "ar_days_outstanding", "unit": "days", "target": 30,
+     "direction": "lower", "demo_history": []},
 
     # --- Marketing & Sales (demo until HubSpot/GA connected) ---
     {"kpi_id": "mkt_leads", "name": "Leads (30d)", "module": "marketing_sales",
@@ -105,6 +118,9 @@ KPI_DEFINITIONS: list[dict] = [
      "target": None, "direction": "higher", "demo_value": 24500,
      "demo_history": [15200, 16100, 16800, 17500, 17200, 18400, 19600, 20300,
                       21500, 22400, 23600, 24500]},
+    {"kpi_id": "mkt_contact_coverage", "name": "Client Contact Coverage",
+     "module": "marketing_sales", "formula": "contact_coverage_30d", "unit": "%",
+     "target": 80, "direction": "higher", "demo_history": []},
 
     # --- Recruitment (demo until GreytHR/LinkedIn connected) ---
     {"kpi_id": "rec_open_positions", "name": "Open Positions",

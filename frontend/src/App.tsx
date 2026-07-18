@@ -17,7 +17,6 @@ import Tasks from "./pages/Tasks";
 import ProjectDetail from "./pages/ProjectDetail";
 import Approvals from "./pages/Approvals";
 import CalendarPage from "./pages/CalendarPage";
-import KnowledgeBase from "./pages/KnowledgeBase";
 import NotificationsPage from "./pages/NotificationsPage";
 import MyTeam from "./pages/MyTeam";
 import Analytics from "./pages/Analytics";
@@ -63,7 +62,6 @@ function Shell() {
               <Route path="/projects/:projectId" element={<ProjectDetail />} />
               <Route path="/approvals" element={<Approvals />} />
               <Route path="/calendar" element={<CalendarPage />} />
-              <Route path="/knowledge" element={<KnowledgeBase />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/dashboard/:key" element={<Dashboard />} />
               <Route path="/awards" element={<Awards />} />

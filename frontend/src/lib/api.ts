@@ -106,6 +106,8 @@ export interface DashboardPayload {
   alerts: unknown[];
   series?: KpiSeries[];
   bug_breakdown?: BugSlice[];
+  insight_depts?: string[];
+  project?: string | null;
 }
 export interface DashboardLink {
   key: string;
@@ -118,6 +120,108 @@ export interface AiAnswer {
   recommended_action: string;
   confidence: "Low" | "Medium" | "High";
   last_updated: string;
+}
+
+export interface AiHistoryTurn {
+  q: string;
+  a: string;
+}
+
+// --- Department AI insights (problem-statement detectors) ---
+export type InsightSeverity = "high" | "medium" | "low" | "info";
+export interface InsightMetric {
+  label: string;
+  value: number | string;
+  unit?: string;
+}
+export interface InsightEntity {
+  kind: string;
+  id?: string | null;
+  label?: string | null;
+  url?: string | null;
+  extra?: Record<string, unknown>;
+}
+export interface InsightChart {
+  kind: "bars";
+  points: { label: string; value: number }[];
+}
+export interface InsightFeedback {
+  useful: number;
+  not_useful: number;
+  mine: boolean | null;
+}
+export interface InsightCard {
+  insight_id: string;
+  dept: string;
+  title: string;
+  severity: InsightSeverity;
+  problem: string;
+  metrics: InsightMetric[];
+  entities: InsightEntity[];
+  evidence: string[];
+  chart: InsightChart | null;
+  answer: string;
+  reason: string;
+  recommended_action: string;
+  confidence: "Low" | "Medium" | "High";
+  ai_provider: string;
+  generated_at: string;
+  feedback: InsightFeedback;
+}
+export interface InsightsPayload {
+  dept: string;
+  title: string;
+  project?: string | null;
+  cards: InsightCard[];
+  generated_at: string;
+  cached: boolean;
+}
+export interface InsightProject {
+  source_id: string;
+  name: string;
+  task_count: number;
+}
+
+// --- KPI explainability ("how did you come up with this number?") ---
+export interface KpiExplainInput {
+  label: string;
+  value: number | string;
+}
+export interface KpiExplainEvidence {
+  kind: string;
+  id?: string | null;
+  label?: string | null;
+  url?: string | null;
+  extra?: Record<string, unknown>;
+}
+export interface KpiExplainSource {
+  system: string;
+  collection: string | null;
+  live: boolean;
+  last_sync: string | null;
+  note: string;
+}
+export interface KpiExplanation {
+  kpi_id: string;
+  name: string;
+  module: string;
+  unit?: string;
+  target?: number | null;
+  direction: "higher" | "lower";
+  value: number | null;
+  rag: Rag;
+  formula_text: string;
+  computation: string;
+  inputs: KpiExplainInput[];
+  evidence: KpiExplainEvidence[];
+  source: KpiExplainSource;
+  history: SeriesPoint[];
+  answer: string;
+  reason: string;
+  recommended_action: string;
+  confidence: "Low" | "Medium" | "High";
+  ai_provider: string;
+  generated_at: string;
 }
 
 export interface NotificationItem {
@@ -847,11 +951,25 @@ export const api = {
     }),
   me: () => req<{ user: User; modules: Record<string, string> }>("/auth/me"),
   listDashboards: () => req<DashboardLink[]>("/dashboards"),
-  getDashboard: (key: string) => req<DashboardPayload>(`/dashboards/${key}`),
-  askIO: (question: string) =>
+  getDashboard: (key: string, project?: string | null) =>
+    req<DashboardPayload>(`/dashboards/${key}${project ? `?project=${project}` : ""}`),
+  askIO: (question: string, history?: AiHistoryTurn[]) =>
     req<AiAnswer>("/ai/ask", {
       method: "POST",
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ question, history }),
+    }),
+  explainKpi: (kpiId: string) => req<KpiExplanation>(`/kpis/${kpiId}/explain`),
+  insightProjects: () => req<InsightProject[]>("/insights/projects"),
+  insights: (dept: string, project?: string | null) =>
+    req<InsightsPayload>(`/insights/${dept}${project ? `?project=${project}` : ""}`),
+  refreshInsights: (dept: string, project?: string | null) =>
+    req<InsightsPayload>(`/insights/${dept}/refresh${project ? `?project=${project}` : ""}`, {
+      method: "POST",
+    }),
+  insightFeedback: (insightId: string, useful: boolean) =>
+    req<InsightFeedback & { insight_id: string }>("/insights/feedback", {
+      method: "POST",
+      body: JSON.stringify({ insight_id: insightId, useful }),
     }),
 
   // Notifications

@@ -517,7 +517,15 @@ _BUG_PRIORITIES = ["Immediate", "High", "Normal", "Low"]
 
 
 def _kq_bugs(now: dt.datetime, assignee_ids: list[str], names: dict[str, str]) -> list[dict]:
-    """~40 synthetic prod-support bugs for KQ, spread across real assignees."""
+    """~40 synthetic prod-support bugs for KQ, spread across real assignees.
+
+    `created_at` is backdated (rather than left at the seed timestamp) and
+    Reopen-status bugs carry a `reopen_count` + synthetic `status_history` —
+    so the insight detectors (bug aging, repeat-reopen offenders) have
+    realistic variety to work with from the very first seed, before any real
+    OpenProject sync has accumulated its own history via
+    `integrations/base.py`'s status-transition tracking.
+    """
     rng = random.Random(20260712)
     out = []
     n = 40
@@ -528,14 +536,25 @@ def _kq_bugs(now: dt.datetime, assignee_ids: list[str], names: dict[str, str]) -
         status = rng.choices(_BUG_STATUSES, weights=[30, 20, 10, 25, 15])[0]
         priority = rng.choices(_BUG_PRIORITIES, weights=[15, 30, 40, 15])[0]
         due = (now - dt.timedelta(days=rng.randint(-10, 30))).date().isoformat()
-        out.append({
+        created_at = now - dt.timedelta(days=rng.randint(1, 45))
+        bug = {
             "task_id": f"bug_kq_{i + 1:03d}", "project_id": "proj_kq",
             "title": f"[{module}] {title} (#{i + 1})", "wp_type": "Bug",
             "status": status, "priority": priority,
             "assignee_id": assignee_id, "assignee": names.get(assignee_id),
             "progress": 100 if status in ("Closed", "Resolved") else rng.choice([0, 25, 50, 75]),
-            "due_date": due, "stage": "development",
-        })
+            "due_date": due, "stage": "development", "created_at": created_at,
+        }
+        if status == "Reopen":
+            reopens = rng.choice([1, 1, 2, 3])
+            bug["reopen_count"] = reopens
+            bug["status_history"] = [
+                {"from": "Open", "to": "In progress",
+                 "at": created_at + dt.timedelta(days=1)},
+                {"from": "In progress", "to": "Reopen",
+                 "at": created_at + dt.timedelta(days=rng.randint(2, 10))},
+            ]
+        out.append(bug)
     return out
 
 
@@ -1006,8 +1025,10 @@ def _seed_core(db: Database, now: dt.datetime) -> None:
                                {"$set": {**doc, "created_at": now}}, upsert=True)
 
     for t in _kq_bugs(now, PROJECTS[0]["member_ids"], names):
+        # `t` may carry its own backdated created_at (and reopen_count /
+        # status_history) — let it win over the seed-run timestamp default.
         db.tasks.update_one({"task_id": t["task_id"]},
-                            {"$set": {**t, "source_system": "seed", "created_at": now}},
+                            {"$set": {"source_system": "seed", "created_at": now, **t}},
                             upsert=True)
 
     for t in _project_tasks(now, names):

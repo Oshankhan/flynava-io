@@ -19,10 +19,14 @@ def list_dashboards(user: dict = Depends(get_current_user)) -> list[dict]:
 
 
 @router.get("/dashboards/{key}")
-def get_dashboard(key: str, user: dict = Depends(get_current_user),
+def get_dashboard(key: str, project: str | None = None,
+                  user: dict = Depends(get_current_user),
                   db: Database = Depends(get_db)) -> dict:
     if key not in dashboards.DASHBOARDS:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "unknown dashboard")
     if not dashboards.can_view(user, key):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "no access to this dashboard")
-    return dashboards.build(db, key, user)
+    if project and not db.projects.find_one(
+            {"source_system": "openproject", "source_id": project}):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "unknown project")
+    return dashboards.build(db, key, user, project=project)
