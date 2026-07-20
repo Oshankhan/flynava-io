@@ -12,15 +12,18 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import re
 from typing import Callable
 
 from pymongo.database import Database
 
 from ..ai.embeddings import get_embedder
+from ..config import settings
 from ..integrations.openproject import work_package_url
 
 ChunkBuilder = Callable[[Database], list[dict]]
 _BUILDERS: dict[str, ChunkBuilder] = {}
+_UNKNOWN_PROJECT = "an unknown project"
 
 
 def chunk_source(name: str):
@@ -59,34 +62,135 @@ def _project_names(db: Database) -> dict[str, str]:
     return out
 
 
+_MD_IMAGE_RE = re.compile(r"!\[[^\]]*\]\([^)]*\)")
+
+
+def _clean_description(raw: str, cap: int = 500) -> str:
+    """Strip markdown image tags (attachment links, not useful as text) and
+    collapse whitespace before truncating — OP descriptions are markdown."""
+    text = _MD_IMAGE_RE.sub("", raw or "")
+    return " ".join(text.split())[:cap]
+
+
+def _task_chunk(t: dict, pnames: dict[str, str]) -> dict | None:
+    tid = t.get("source_id") or t.get("task_id")
+    title = t.get("title")
+    if not tid or not title:
+        return None
+    pid = t.get("project_source_id") or t.get("project_id")
+    pname = pnames.get(str(pid), _UNKNOWN_PROJECT)
+    who = t.get("assignee") or t.get("assignee_id") or "Unassigned"
+    wp = t.get("wp_type") or "Item"
+    due = f", due {t['due_date']}" if t.get("due_date") else ""
+    # Real OP-synced items get their deep link folded right into the text —
+    # so it's part of what both the LLM sees (it can quote the link in its
+    # prose answer) and what the frontend can auto-linkify out of the
+    # evidence bullets.
+    url = work_package_url(t.get("source_id"))
+    link = f" Link: {url}" if url else ""
+    description = _clean_description(t.get("description") or "")
+    desc_bit = f' Description: "{description}"' if description else ""
+    text = (f'{wp} in {pname}: "{title}" — status {t.get("status")}, '
+           f'priority {t.get("priority") or "Normal"}, assignee {who}{due}.'
+           f'{desc_bit}{link}')
+    return _chunk("tasks", tid, text,
+                 {"project": pname, "status": t.get("status"), "wp_type": wp, "url": url})
+
+
 @chunk_source("tasks")
 def _tasks(db: Database) -> list[dict]:
     pnames = _project_names(db)
+    rows = db.tasks.find({}, {"title": 1, "wp_type": 1, "status": 1, "priority": 1,
+                              "assignee": 1, "assignee_id": 1, "project_id": 1,
+                              "project_source_id": 1, "task_id": 1, "source_id": 1,
+                              "due_date": 1, "description": 1})
+    chunks = (_task_chunk(t, pnames) for t in rows)
+    return [c for c in chunks if c is not None]
+
+
+@chunk_source("task_comments")
+def _task_comments(db: Database) -> list[dict]:
+    """One chunk per real OpenProject comment, pulled from the Activity
+    journal (`integrations/openproject.py`'s `_sync_journals`) rather than
+    just a work package's title — comments are where the actual bug context,
+    retest notes, and closure reasoning live. Capped to the most recent
+    `openproject_journal_comment_cap` comments per work package so a heavily-
+    discussed bug doesn't crowd out everything else in the index."""
+    pnames = _project_names(db)
+    task_meta = {
+        str(t.get("source_id")): t
+        for t in db.tasks.find({"source_system": "openproject"},
+                               {"source_id": 1, "title": 1, "wp_type": 1,
+                                "project_source_id": 1})
+    }
+    by_wp: dict[str, list[dict]] = {}
+    for c in db.task_journals.find({"kind": "comment"}).sort("created_at", 1):
+        by_wp.setdefault(c["wp_source_id"], []).append(c)
+
     out = []
-    for t in db.tasks.find({}, {"title": 1, "wp_type": 1, "status": 1, "priority": 1,
-                                "assignee": 1, "assignee_id": 1, "project_id": 1,
-                                "project_source_id": 1, "task_id": 1, "source_id": 1,
-                                "due_date": 1}):
-        tid = t.get("source_id") or t.get("task_id")
-        title = t.get("title")
-        if not tid or not title:
+    for wp_id, comments in by_wp.items():
+        meta = task_meta.get(wp_id)
+        if not meta:
             continue
-        pid = t.get("project_source_id") or t.get("project_id")
-        pname = pnames.get(str(pid), "an unknown project")
-        who = t.get("assignee") or t.get("assignee_id") or "Unassigned"
-        wp = t.get("wp_type") or "Item"
-        due = f", due {t['due_date']}" if t.get("due_date") else ""
-        # Real OP-synced items get their deep link folded right into the
-        # text — so it's part of what both the LLM sees (it can quote the
-        # link in its prose answer) and what the frontend can auto-linkify
-        # out of the evidence bullets.
-        url = work_package_url(t.get("source_id"))
-        link = f" Link: {url}" if url else ""
-        text = (f'{wp} in {pname}: "{title}" — status {t.get("status")}, '
-               f'priority {t.get("priority") or "Normal"}, assignee {who}{due}.{link}')
-        out.append(_chunk("tasks", tid, text,
-                          {"project": pname, "status": t.get("status"), "wp_type": wp, "url": url}))
+        title = meta.get("title") or "Untitled"
+        wp = meta.get("wp_type") or "Item"
+        pname = pnames.get(str(meta.get("project_source_id")), _UNKNOWN_PROJECT)
+        url = work_package_url(wp_id)
+        for c in comments[-settings.openproject_journal_comment_cap:]:
+            body = (c.get("comment") or "")[:600]
+            who = c.get("user") or "someone"
+            when = c.get("created_at")
+            text = (f'Comment on {wp} #{wp_id} "{title}" ({pname}) by {who} on {when}: '
+                   f'"{body}"' + (f" Link: {url}" if url else ""))
+            out.append(_chunk("task_comments", c["source_id"], text,
+                              {"project": pname, "wp_id": wp_id, "url": url}))
     return out
+
+
+def _timeline_steps(history: list[dict]) -> str:
+    steps = []
+    for h in history[-12:]:
+        who = f" by {h['by']}" if h.get("by") else ""
+        frm = h.get("from") or "(created)"
+        steps.append(f"{frm} → {h.get('to')}{who} on {h.get('at')}")
+    return "; ".join(steps)
+
+
+def _timeline_chunk(t: dict, pnames: dict[str, str]) -> dict | None:
+    wp_id = t.get("source_id")
+    history = t.get("status_history") or []
+    if not wp_id or not history:
+        return None
+    pname = pnames.get(str(t.get("project_source_id")), _UNKNOWN_PROJECT)
+    wp = t.get("wp_type") or "Item"
+    title = t.get("title") or "Untitled"
+    url = work_package_url(wp_id)
+
+    closed_bit = (f" Closed by {t['closed_by']} on {t['closed_at']}."
+                 if t.get("closed_at") else " Not yet closed.")
+    reopen_bit = f" Reopened {t['reopen_count']} time(s)." if t.get("reopen_count") else ""
+
+    text = (f'{wp} #{wp_id} "{title}" ({pname}) timeline: {_timeline_steps(history)}.'
+           f'{closed_bit}{reopen_bit} Current status: {t.get("status")}.'
+           + (f" Link: {url}" if url else ""))
+    return _chunk("task_timeline", wp_id, text,
+                 {"project": pname, "status": t.get("status"), "url": url})
+
+
+@chunk_source("task_timeline")
+def _task_timeline(db: Database) -> list[dict]:
+    """One chunk per journal-synced work package: a condensed status story —
+    when it closed, by whom, how many times it's been reopened — so Inaya
+    can answer "who closed this and when" / "what's still pending" from the
+    Activity journal instead of just the current status snapshot."""
+    pnames = _project_names(db)
+    rows = db.tasks.find(
+        {"source_system": "openproject", "journal_synced_updated_at": {"$exists": True}},
+        {"source_id": 1, "title": 1, "wp_type": 1, "status": 1, "project_source_id": 1,
+         "status_history": 1, "reopen_count": 1, "closed_at": 1, "closed_by": 1},
+    )
+    chunks = (_timeline_chunk(t, pnames) for t in rows)
+    return [c for c in chunks if c is not None]
 
 
 @chunk_source("projects")

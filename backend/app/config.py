@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     # OpenProject integration (Phase 2)
     openproject_base_url: str = "https://op.flynava.ai"
     openproject_api_key: str = ""
+    # Comment/journal backfill (Activity API is one call per work package —
+    # paced across sync runs instead of all at once). Steady-state syncs only
+    # refetch a WP's journal when its updated_at has moved since last pull.
+    openproject_journal_batch: int = 250
+    openproject_journal_comment_cap: int = 20  # comments kept per WP for RAG
 
     # AI layer (Phase 5). Providers are pluggable (AI-010); auto-picks by key.
     anthropic_api_key: str = ""

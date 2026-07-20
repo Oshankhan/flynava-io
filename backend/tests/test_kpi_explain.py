@@ -113,6 +113,39 @@ def test_explain_active_headcount_evidence_are_active_employees(client, auth_hea
     assert all(e["kind"] == "employee" for e in body["evidence"])
 
 
+def test_explain_bug_reopen_rate_discloses_journal_verification(client, auth_header, db):
+    db.tasks.insert_one({
+        "source_system": "openproject", "source_id": "j1", "wp_type": "Bug",
+        "title": "Journal-verified reopen", "status": "Developed", "reopen_count": 1,
+        "journal_synced_updated_at": "2026-06-01T00:00:00Z",
+    })
+    r = client.get("/api/v1/kpis/pd_reopen_rate/explain",
+                   headers=auth_header("leadership@flynava.ai"))
+    assert r.status_code == 200
+    body = r.json()
+    assert "journal" in body["formula_text"].lower()
+    evidence = next(e for e in body["evidence"] if e["id"] == "j1")
+    assert evidence["extra"]["journal_verified"] is True
+
+
+def test_explain_bug_resolution_days_shows_journal_vs_proxy_source(client, auth_header, db):
+    now = "2026-06-15T00:00:00Z"
+    db.tasks.insert_one({
+        "source_system": "openproject", "source_id": "j2", "wp_type": "Bug",
+        "title": "Closed via journal", "status": "Closed",
+        "created_at": "2026-06-01T00:00:00Z", "updated_at": now,
+        "closed_at": "2026-06-05T00:00:00Z", "closed_by": "Alice",
+    })
+    r = client.get("/api/v1/kpis/pd_bug_resolution_days/explain",
+                   headers=auth_header("leadership@flynava.ai"))
+    assert r.status_code == 200
+    body = r.json()
+    evidence = next(e for e in body["evidence"] if e["id"] == "j2")
+    assert evidence["extra"]["source"] == "journal"
+    assert evidence["extra"]["closed_by"] == "Alice"
+    assert evidence["extra"]["days_to_resolve"] == 4.0  # Jun 1 -> Jun 5, not Jun 15
+
+
 def test_explain_404_for_unknown_kpi(client, auth_header):
     r = client.get("/api/v1/kpis/does_not_exist/explain",
                    headers=auth_header("admin@flynava.ai"))

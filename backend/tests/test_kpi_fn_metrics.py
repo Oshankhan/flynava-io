@@ -97,6 +97,22 @@ def test_bug_resolution_days_only_counts_bugs_with_both_timestamps(db):
     assert snap2["pd_bug_resolution_days"]["value"] == 5.0
 
 
+def test_bug_resolution_days_prefers_journal_closed_at_over_updated_at_proxy(db):
+    # closed_at (from the OpenProject Activity journal) is the exact closure
+    # moment; updated_at can be much later (e.g. a label edit after closing) —
+    # the KPI must use the precise journal timestamp when it's available.
+    now = dt.datetime.now(dt.timezone.utc)
+    db.tasks.insert_one({
+        "source_system": "openproject", "source_id": "res2", "wp_type": "Bug",
+        "title": "Resolved via journal", "status": "Closed",
+        "created_at": (now - dt.timedelta(days=10)).isoformat(),
+        "updated_at": now.isoformat(),  # 10 days later — would give 10.0 if used
+        "closed_at": (now - dt.timedelta(days=7)).isoformat(),  # actually closed after 3 days
+    })
+    snap = _snap(db, "product_dev")
+    assert snap["pd_bug_resolution_days"]["value"] == 3.0
+
+
 def test_bug_reopen_rate_counts_reopened_vs_cleanly_closed(db):
     db.tasks.insert_many([
         {"source_system": "openproject", "source_id": "r1", "wp_type": "Bug",

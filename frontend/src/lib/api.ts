@@ -20,6 +20,15 @@ function reportIfSessionExpired(path: string, status: number) {
   }
 }
 
+function toQuery(params: Record<string, string | undefined>): string {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v) qs.set(k, v);
+  });
+  const s = qs.toString();
+  return s ? `?${s}` : "";
+}
+
 async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem(TOKEN_KEY);
   const res = await fetch(`${API_BASE_URL}/api/v1${path}`, {
@@ -943,6 +952,391 @@ async function uploadReq<T>(path: string, form: FormData): Promise<T> {
   return res.json();
 }
 
+// --- Indicator Of Success ---
+export interface SuccessCard {
+  id: string;
+  label: string;
+  value: number | null;
+  unit: string;
+  delta_pct: number | null;
+  delta_direction: "up" | "down" | "flat" | null;
+  good: boolean | null;
+  spark?: SeriesPoint[];
+  link?: string;
+}
+export interface SuccessSlice {
+  label: string;
+  value: number;
+}
+export interface CentralPayload {
+  month: string;
+  period: { from: string; to: string };
+  cards: SuccessCard[];
+  charts: {
+    visitors: {
+      points: { t: string; visitors: number; interactions: number }[];
+      footer: { total_visitors: number; total_interactions: number; engagement_rate: number };
+    };
+    progress: { slices: SuccessSlice[]; overall_pct: number | null };
+  };
+  tables: {
+    timeline: {
+      milestone_id: string;
+      name: string;
+      sublabel: string;
+      date: string;
+      status: "Completed" | "In Progress" | "Upcoming";
+      order: number;
+    }[];
+    mini_cards: SuccessCard[];
+  };
+  last_updated: string;
+}
+export interface OrgDeptRow {
+  dept: string;
+  headcount: number;
+  performance: number;
+  attrition: number;
+  trend: number[];
+}
+export interface OrgPayload {
+  month: string;
+  cards: SuccessCard[];
+  charts: {
+    headcount_trend: { points: SeriesPoint[] };
+    dept_headcount: { slices: SuccessSlice[] };
+    attrition_trend: { points: SeriesPoint[] };
+    demographics: {
+      gender: { label: string; count: number }[];
+      age: { band: string; count: number }[];
+      education: { level: string; count: number }[];
+    };
+  };
+  tables: { top_departments: OrgDeptRow[] };
+  last_updated: string;
+}
+export interface MarketingCampaignRow {
+  name: string;
+  leads: number;
+  conv_rate: number;
+  roi: number;
+  status: string;
+}
+export interface MarketingChannelRow {
+  channel: string;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+  leads: number;
+  conv_rate: number;
+  cost: number;
+  cpl: number;
+  roi: number;
+}
+export interface MarketingPayload {
+  month: string;
+  cards: SuccessCard[];
+  charts: {
+    leads_by_source: { slices: SuccessSlice[] };
+    leads_trend: { points: SeriesPoint[] };
+  };
+  tables: {
+    leads_by_source: { source: string; leads: number }[];
+    top_campaigns: MarketingCampaignRow[];
+    channels: MarketingChannelRow[];
+  };
+  last_updated: string;
+}
+export interface FinanceSummaryRow {
+  metric: string;
+  current: number | null;
+  previous: number | null;
+  change: number | null;
+  change_pct: number | null;
+}
+export interface FinancePayload {
+  month: string;
+  granularity: "monthly" | "yearly";
+  cards: SuccessCard[];
+  charts: {
+    net_cash_flow_trend: { points: SeriesPoint[] };
+    revenue_growth_trend: { points: SeriesPoint[] };
+    current_ratio_trend: { points: SeriesPoint[] };
+  };
+  tables: {
+    financial_summary: FinanceSummaryRow[];
+    revenue_segments: { segment: string; amount: number }[];
+    expense_breakdown: { category: string; amount: number }[];
+  };
+  last_updated: string;
+}
+export interface StartupKpiRow {
+  metric: string;
+  current: number | null;
+  previous: number | null;
+  change: number | null;
+  change_pct: number | null;
+  spark: SeriesPoint[] | null;
+}
+export interface StartupPayload {
+  month: string;
+  cards: SuccessCard[];
+  charts: {
+    mrr_trend: { points: SeriesPoint[] };
+    dau_trend: { points: SeriesPoint[]; average: number };
+    cac_trend: { points: SeriesPoint[] };
+  };
+  tables: { kpi_overview: StartupKpiRow[] };
+  last_updated: string;
+}
+export interface OpsProcessRow {
+  process: string;
+  total_tasks: number;
+  completed: number;
+  on_time_pct: number;
+  overdue: number;
+  avg_completion_hours: number;
+  status: "Good" | "Attention";
+}
+export interface OpsEfficiencyRow {
+  metric: string;
+  value: number | null;
+  delta_pct: number | null;
+}
+export interface OpsPayload {
+  month: string;
+  cards: SuccessCard[];
+  charts: {
+    by_status: { slices: SuccessSlice[] };
+    by_priority: { slices: SuccessSlice[] };
+    tasks_trend: { points: SeriesPoint[] };
+  };
+  tables: {
+    by_status: { status: string; count: number }[];
+    by_priority: { priority: string; count: number }[];
+    top_processes: OpsProcessRow[];
+    efficiency: OpsEfficiencyRow[];
+  };
+  last_updated: string;
+}
+
+// --- Financial Forecaster ---
+export interface ForecasterCard extends SuccessCard {
+  band?: string;
+  category?: string;
+}
+export interface ForecasterAlert {
+  severity: "high" | "medium" | "low";
+  title: string;
+  detail: string;
+}
+export interface ForecasterOverviewPayload {
+  month: string;
+  cards: ForecasterCard[];
+  panels: {
+    revenue: {
+      this_month: number | null;
+      mom_pct: number | null;
+      forecast_this_month: number | null;
+      vs_forecast_pct: number | null;
+      trend: SeriesPoint[];
+    };
+    workforce: {
+      total_employees: number | null;
+      new_joiners: number | null;
+      resigned: number | null;
+      conversion_rate: number | null;
+      trend: SeriesPoint[];
+    };
+    costs: {
+      total_expenses: number | null;
+      mom_pct: number | null;
+      top_categories: { category: string; amount: number }[];
+    };
+    cashflow: {
+      cash_balance: number | null;
+      net_cash_flow: number | null;
+      trend: SeriesPoint[];
+    };
+    analyzer: {
+      pending_count: number | null;
+      overdue_amount: number | null;
+      upcoming_due_7d: number | null;
+      success_rate: number | null;
+      status_breakdown: { status: string; pct: number }[];
+    };
+  };
+  insights: string[];
+  alerts: ForecasterAlert[];
+  forecast_cards: ForecasterCard[];
+  forecast_label: string;
+  last_updated: string;
+}
+export interface ForecasterDeptRow {
+  dept: string;
+  headcount: number;
+  performance: number;
+  attrition: number;
+  trend: number[];
+}
+export interface ForecasterWorkforcePayload {
+  month: string;
+  cards: ForecasterCard[];
+  charts: {
+    headcount_forecast: { actual: SeriesPoint[]; forecast: SeriesPoint[] };
+    joiners_vs_resigned: { joiners: SeriesPoint[]; resigned: SeriesPoint[] };
+  };
+  tables: { departments: ForecasterDeptRow[] };
+  last_updated: string;
+}
+export interface ForecasterRevenueRow {
+  month: string;
+  actual: number | null;
+  forecast: number | null;
+  variance_pct: number | null;
+}
+export interface ForecasterRevenuePayload {
+  month: string;
+  cards: ForecasterCard[];
+  charts: { revenue_trend: { actual: SeriesPoint[]; forecast: SeriesPoint[] } };
+  tables: {
+    actual_vs_forecast: ForecasterRevenueRow[];
+    revenue_segments: { segment: string; amount: number }[];
+  };
+  last_updated: string;
+}
+export interface ForecasterCashflowPayload {
+  month: string;
+  cards: ForecasterCard[];
+  charts: {
+    cash_in_vs_out: { bars: { t: string; cash_in: number | null; cash_out: number | null }[] };
+    cash_balance_forecast: { actual: SeriesPoint[]; forecast: SeriesPoint[] };
+  };
+  last_updated: string;
+}
+export interface ForecasterCategoryRow {
+  category: string;
+  amount: number;
+  previous: number | null;
+  change_pct: number | null;
+}
+export interface ForecasterCostsPayload {
+  month: string;
+  cards: ForecasterCard[];
+  charts: { expense_trend: { actual: SeriesPoint[]; forecast: SeriesPoint[] } };
+  tables: { categories: ForecasterCategoryRow[] };
+  last_updated: string;
+}
+export interface ForecasterInvoiceRow {
+  invoice_id: string;
+  number: string;
+  project: string;
+  date: string;
+  due_date: string;
+  amount: number;
+  status: string;
+}
+export interface ForecasterAnalyzerPayload {
+  month: string;
+  cards: ForecasterCard[];
+  charts: {
+    status_breakdown: { slices: SuccessSlice[] };
+    success_rate_trend: { points: SeriesPoint[] };
+  };
+  tables: { invoices: ForecasterInvoiceRow[] };
+  last_updated: string;
+}
+
+// --- Management Overview: Project Bugs Tracker + Project Report ---
+export interface ManagementBugProject {
+  project: string;
+  name: string;
+}
+export interface ManagementBugRow {
+  bug_id: string | null;
+  project: string;
+  title: string | null;
+  severity: string;
+  status: string | null;
+  assignee: string;
+  reported_on: string | null;
+  age_days: number | null;
+}
+export interface ManagementActivityRow {
+  kind: "created" | "status_change";
+  bug_id: string | null;
+  project: string;
+  detail: string;
+  at: string;
+}
+export interface ManagementBugsPayload {
+  window: { from: string; to: string };
+  projects: ManagementBugProject[];
+  cards: SuccessCard[];
+  charts: {
+    creation_trend: { points: { t: string; created: number; resolved: number }[] };
+    by_status: { slices: SuccessSlice[] };
+    by_severity: { slices: SuccessSlice[] };
+    resolution_time_trend: { points: SeriesPoint[] };
+  };
+  tables: {
+    by_status: { status: string; count: number; pct: number }[];
+    by_module: { module: string; count: number; pct: number }[];
+    recent_unresolved: ManagementBugRow[];
+    recent_activity: ManagementActivityRow[];
+  };
+  last_updated: string;
+}
+export interface ManagementProjectOption {
+  project_id: string;
+  name: string;
+}
+export interface ManagementStage {
+  key: string;
+  name: string;
+  description?: string;
+  status: "done" | "active" | "pending";
+  progress: number;
+  start_date: string | null;
+  end_date: string | null;
+  owner_team?: string;
+}
+export interface ManagementReportPayload {
+  project: {
+    project_id: string;
+    code: string;
+    name: string;
+    client?: string | null;
+    status: string;
+    engagement?: string | null;
+    priority?: string | null;
+    start_date?: string | null;
+    due_date?: string | null;
+    project_manager: { user_id: string; name: string } | null;
+    progress: number;
+    expected_progress: number | null;
+    rag: Rag;
+    member_count: number;
+  };
+  stages: ManagementStage[];
+  stats: {
+    tasks_total: number;
+    tasks_done: number;
+    task_completion_pct: number | null;
+    bugs_total: number;
+    bugs_open: number;
+    bugs_critical: number;
+    bug_resolution_pct: number | null;
+  };
+  invoices: {
+    paid: number;
+    pending: number;
+    overdue: number;
+    rows: ProjectInvoice[];
+  };
+  last_updated: string;
+}
+
 export const api = {
   login: (email: string, password: string) =>
     req<LoginResult>("/auth/login", {
@@ -1398,4 +1792,43 @@ export const api = {
     const token = localStorage.getItem(TOKEN_KEY);
     return `${API_BASE_URL}/api/v1/notifications/stream?token=${encodeURIComponent(token ?? "")}`;
   },
+
+  // Indicator Of Success
+  successCentral: (p?: { month?: string; from?: string; to?: string }) =>
+    req<CentralPayload>(
+      `/success/central${toQuery({ month: p?.month, from: p?.from, to: p?.to })}`
+    ),
+  successOrganization: (month?: string) =>
+    req<OrgPayload>(`/success/organization${toQuery({ month })}`),
+  successMarketing: (month?: string) =>
+    req<MarketingPayload>(`/success/marketing${toQuery({ month })}`),
+  successFinance: (month?: string, granularity: "monthly" | "yearly" = "monthly") =>
+    req<FinancePayload>(`/success/finance${toQuery({ month, granularity })}`),
+  successStartup: (month?: string) =>
+    req<StartupPayload>(`/success/startup${toQuery({ month })}`),
+  successOperations: (month?: string) =>
+    req<OpsPayload>(`/success/operations${toQuery({ month })}`),
+
+  // Financial Forecaster
+  forecasterOverview: (month?: string) =>
+    req<ForecasterOverviewPayload>(`/forecaster/overview${toQuery({ month })}`),
+  forecasterWorkforce: (month?: string) =>
+    req<ForecasterWorkforcePayload>(`/forecaster/workforce${toQuery({ month })}`),
+  forecasterRevenue: (month?: string) =>
+    req<ForecasterRevenuePayload>(`/forecaster/revenue${toQuery({ month })}`),
+  forecasterCashflow: (month?: string) =>
+    req<ForecasterCashflowPayload>(`/forecaster/cashflow${toQuery({ month })}`),
+  forecasterCosts: (month?: string) =>
+    req<ForecasterCostsPayload>(`/forecaster/costs${toQuery({ month })}`),
+  forecasterAnalyzer: (month?: string) =>
+    req<ForecasterAnalyzerPayload>(`/forecaster/analyzer${toQuery({ month })}`),
+
+  // Management Overview
+  managementBugs: (p?: { preset?: string; from?: string; to?: string; project?: string }) =>
+    req<ManagementBugsPayload>(
+      `/management/bugs${toQuery({ preset: p?.preset, from: p?.from, to: p?.to, project: p?.project })}`
+    ),
+  managementReport: (project: string) =>
+    req<ManagementReportPayload>(`/management/report${toQuery({ project })}`),
+  managementProjects: () => req<ManagementProjectOption[]>("/management/projects"),
 };

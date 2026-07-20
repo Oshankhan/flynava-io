@@ -251,9 +251,13 @@ def _bug_resolution_days(db: Database, project: str | None = None) -> float | No
     if not db.tasks.count_documents(q):
         return None
     durations = []
-    for b in db.tasks.find(q, {"created_at": 1, "updated_at": 1}):
+    for b in db.tasks.find(q, {"created_at": 1, "updated_at": 1, "closed_at": 1}):
         created = _as_datetime(b.get("created_at"))
-        closed = _as_datetime(b.get("updated_at"))
+        # `closed_at` (from the OpenProject Activity journal — the actual
+        # moment it transitioned into a terminal status) is exact; `updated_at`
+        # (last touch on the item) is only a proxy, used when the journal
+        # hasn't been synced for this bug yet.
+        closed = _as_datetime(b.get("closed_at")) or _as_datetime(b.get("updated_at"))
         if created and closed and closed >= created:
             durations.append((closed - created).total_seconds() / 86400)
     return round(mean(durations), 1) if durations else None

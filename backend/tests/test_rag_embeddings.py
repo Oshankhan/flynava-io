@@ -88,6 +88,103 @@ def test_reindex_force_reembeds_even_when_unchanged():
     assert stats["unchanged"] == 0
 
 
+def test_tasks_chunk_source_includes_description_text():
+    db = mongomock.MongoClient()["t_rag_description"]
+    db.tasks.insert_one({
+        "source_system": "openproject", "source_id": "1", "title": "Fare mismatch",
+        "wp_type": "Bug", "status": "Open",
+        "description": "Root cause: stale currency cache.\n\n![](/api/v3/attachments/1/content)"
+                       " Steps to reproduce: switch currency then requote.",
+    })
+    rag_index.reindex(db, sources=["tasks"])
+    doc = db.rag_chunks.find_one({"chunk_id": "tasks:1"})
+    assert "Root cause: stale currency cache." in doc["text"]
+    assert "Steps to reproduce" in doc["text"]
+    assert "attachments" not in doc["text"]  # markdown image link stripped
+
+
+def test_task_comments_chunk_source_indexes_real_comment_text():
+    db = mongomock.MongoClient()["t_rag_comments"]
+    db.projects.insert_one({"source_id": "1", "name": "Kenya Airways", "status": "active"})
+    db.tasks.insert_one({"source_system": "openproject", "source_id": "7582",
+                         "title": "Footnote data mismatch", "wp_type": "Bug",
+                         "project_source_id": "1"})
+    db.task_journals.insert_one({
+        "source_system": "openproject", "source_id": "7582:4", "wp_source_id": "7582",
+        "kind": "comment", "user": "Alice", "created_at": "2026-06-10T10:00:00Z",
+        "comment": "Retested against the new fare data — confirmed fixed.",
+    })
+    stats = rag_index.reindex(db, sources=["task_comments"])
+    assert stats["sources"]["task_comments"] == 1
+    doc = db.rag_chunks.find_one({"chunk_id": "task_comments:7582:4"})
+    assert doc is not None
+    assert "Retested against the new fare data" in doc["text"]
+    assert "Alice" in doc["text"]
+    assert "Kenya Airways" in doc["text"]
+
+
+def test_task_comments_chunk_source_caps_comments_per_work_package(monkeypatch):
+    from app.config import settings
+    monkeypatch.setattr(settings, "openproject_journal_comment_cap", 2)
+    db = mongomock.MongoClient()["t_rag_comment_cap"]
+    db.tasks.insert_one({"source_system": "openproject", "source_id": "1",
+                         "title": "Chatty bug", "wp_type": "Bug"})
+    for i in range(5):
+        db.task_journals.insert_one({
+            "source_system": "openproject", "source_id": f"1:{i}", "wp_source_id": "1",
+            "kind": "comment", "user": "Bob", "created_at": f"2026-06-{10 + i:02d}T00:00:00Z",
+            "comment": f"comment number {i}",
+        })
+    stats = rag_index.reindex(db, sources=["task_comments"])
+    assert stats["sources"]["task_comments"] == 2  # capped, keeps the most recent
+
+
+def test_task_timeline_chunk_source_summarizes_closure_and_reopen():
+    db = mongomock.MongoClient()["t_rag_timeline"]
+    db.projects.insert_one({"source_id": "1", "name": "Kenya Airways", "status": "active"})
+    db.tasks.insert_one({
+        "source_system": "openproject", "source_id": "6973", "title": "FBC - 2B is FX",
+        "wp_type": "Bug", "status": "Developed", "project_source_id": "1",
+        "journal_synced_updated_at": "2025-11-14T09:39:59Z",
+        "status_history": [
+            {"from": None, "to": "New", "at": "2025-09-18T06:43:46Z", "by": "Anjitha"},
+            {"from": "Retest", "to": "Closed", "at": "2025-11-09T16:09:04Z", "by": "Alice"},
+            {"from": "Closed", "to": "Developed", "at": "2025-11-14T09:39:59Z", "by": "Anjitha"},
+        ],
+        "reopen_count": 1, "closed_at": "2025-11-09T16:09:04Z", "closed_by": "Alice",
+    })
+    stats = rag_index.reindex(db, sources=["task_timeline"])
+    assert stats["sources"]["task_timeline"] == 1
+    doc = db.rag_chunks.find_one({"chunk_id": "task_timeline:6973"})
+    assert doc is not None
+    assert "Closed by Alice on 2025-11-09T16:09:04Z" in doc["text"]
+    assert "Reopened 1 time(s)" in doc["text"]
+    assert "Closed → Developed by Anjitha" in doc["text"]
+
+
+def test_task_timeline_skips_tasks_without_journal_data():
+    db = mongomock.MongoClient()["t_rag_timeline_skip"]
+    db.tasks.insert_one({"source_system": "openproject", "source_id": "1",
+                         "title": "Never journal-synced", "wp_type": "Bug", "status": "Open"})
+    stats = rag_index.reindex(db, sources=["task_timeline"])
+    assert stats["sources"]["task_timeline"] == 0
+
+
+def test_retrieve_surfaces_comment_content_not_just_task_title(db):
+    db.projects.insert_one({"source_id": "900", "name": "Fare Project", "status": "active"})
+    db.tasks.insert_one({"source_system": "openproject", "source_id": "901",
+                         "title": "Fare mismatch", "wp_type": "Bug", "project_source_id": "900"})
+    db.task_journals.insert_one({
+        "source_system": "openproject", "source_id": "901:1", "wp_source_id": "901",
+        "kind": "comment", "user": "Priya",
+        "created_at": "2026-06-01T00:00:00Z",
+        "comment": "Root cause was a stale currency conversion cache for fare quotes.",
+    })
+    rag_index.reindex(db, sources=["task_comments"])
+    evidence = rag.retrieve(db, "root cause stale currency conversion cache")
+    assert any("stale currency conversion cache" in e for e in evidence)
+
+
 def test_vector_search_finds_semantically_closest_chunk():
     db = mongomock.MongoClient()["t_rag_search"]
     db.tasks.insert_many([

@@ -22,6 +22,9 @@ import MyTeam from "./pages/MyTeam";
 import Analytics from "./pages/Analytics";
 import OrgChart from "./pages/OrgChart";
 import MemberDetail from "./pages/MemberDetail";
+import SuccessPage from "./pages/success/SuccessPage";
+import ForecasterPage from "./pages/forecaster/ForecasterPage";
+import ManagementPage from "./pages/management/ManagementPage";
 
 function Shell() {
   const { dark } = useTheme();
@@ -73,6 +76,9 @@ function Shell() {
               <Route path="/admin" element={<Admin />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/org-chart" element={<OrgChart />} />
+              <Route path="/success/:tab" element={<SuccessPage />} />
+              <Route path="/forecaster/:tab" element={<ForecasterPage />} />
+              <Route path="/management/:tab" element={<ManagementPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/workspace" replace />} />
           </Routes>

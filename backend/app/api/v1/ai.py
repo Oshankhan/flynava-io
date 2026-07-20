@@ -58,10 +58,16 @@ def index_status(user: dict = Depends(require_role("super_admin")),
                  db: Database = Depends(get_db)) -> dict:
     counts = Counter(c["source"] for c in db.rag_chunks.find({}, {"source": 1}))
     version = (db.rag_index_meta.find_one({"_id": "version"}) or {}).get("value", 0)
+    total_op_tasks = db.tasks.count_documents({"source_system": "openproject"})
+    journal_synced = db.tasks.count_documents(
+        {"source_system": "openproject", "journal_synced_updated_at": {"$exists": True}})
     return {
         "total_chunks": sum(counts.values()),
         "by_source": dict(counts),
         "index_version": version,
         "embedder": get_embedder().name,
         "available_sources": rag_index.sources(),
+        # Comment/journal backfill is paced (openproject_journal_batch work
+        # packages per sync) — this shows how far it's gotten.
+        "journal_backfill": {"synced": journal_synced, "total": total_op_tasks},
     }

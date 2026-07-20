@@ -16,14 +16,17 @@ import {
   Typography,
 } from "antd";
 import {
+  AimOutlined,
   ApartmentOutlined,
   AuditOutlined,
   BarChartOutlined,
   BulbOutlined,
   CalendarOutlined,
   CheckSquareOutlined,
+  ControlOutlined,
   DashboardOutlined,
   FileProtectOutlined,
+  FundProjectionScreenOutlined,
   HomeOutlined,
   IdcardOutlined,
   LogoutOutlined,
@@ -66,12 +69,73 @@ export function rolesOf(user: User | null): string[] {
   return user.roles && user.roles.length > 0 ? user.roles : [user.role];
 }
 
+// A bare "own" access level (self-only visibility — an employee's own HR
+// record, their own task list) doesn't qualify for these company-wide
+// aggregate screens — mirrors the backend's `has_aggregate_access` gate in
+// api/deps.py, so the sidebar never offers a tab that then 403s.
+function hasAggregateAccess(modules: Record<string, string>, module: string): boolean {
+  const level = modules[module];
+  return !!level && level !== "own";
+}
+
+function buildSuccessChildren(
+  modules: Record<string, string>,
+  level: number
+): { key: string; label: string }[] {
+  const has = (m: string) => hasAggregateAccess(modules, m);
+  const children: { key: string; label: string }[] = [];
+  if (["operations", "hr", "finance", "marketing_sales"].some(has))
+    children.push({ key: "/success/central", label: "Central Dashboard" });
+  if (has("hr")) children.push({ key: "/success/organization", label: "Organization Insights" });
+  if (has("marketing_sales"))
+    children.push({ key: "/success/marketing", label: "Marketing Insights" });
+  if (has("finance")) children.push({ key: "/success/finance", label: "Finance Performance" });
+  if (has("finance") || level >= 4)
+    children.push({ key: "/success/startup", label: "Startup Metrics" });
+  if (has("operations"))
+    children.push({ key: "/success/operations", label: "Operational Insights" });
+  return children;
+}
+
+// Financial Forecaster is gated on `finance` alone (every screen there is a
+// company-wide financial view) — mirrors the backend's single
+// `require_any_module("finance")` gate in api/v1/forecaster.py.
+function buildForecasterChildren(modules: Record<string, string>): { key: string; label: string }[] {
+  if (!hasAggregateAccess(modules, "finance")) return [];
+  return [
+    { key: "/forecaster/overview", label: "Overview" },
+    { key: "/forecaster/workforce", label: "Workforce" },
+    { key: "/forecaster/revenue", label: "Revenue" },
+    { key: "/forecaster/cashflow", label: "Cashflow" },
+    { key: "/forecaster/costs", label: "Costs" },
+    { key: "/forecaster/analyzer", label: "Finance Analyzer" },
+  ];
+}
+
+// Management Overview: Insights hub is gated on any of the 4 insight depts
+// (mirrors the existing per-dept /insights/{dept} gate); Bugs Tracker +
+// Project Report are gated on operations/product_dev alone (mirrors the
+// backend's require_any_module("operations", "product_dev") in
+// api/v1/management.py) — both project/team-wide views.
+function buildManagementChildren(modules: Record<string, string>): { key: string; label: string }[] {
+  const has = (m: string) => hasAggregateAccess(modules, m);
+  const children: { key: string; label: string }[] = [];
+  if (["operations", "finance", "hr", "marketing_sales"].some(has))
+    children.push({ key: "/management/insights", label: "Management Insights" });
+  if (has("operations") || has("product_dev")) {
+    children.push({ key: "/management/bugs", label: "Project Bugs Tracker" });
+    children.push({ key: "/management/report", label: "Project Report" });
+  }
+  return children;
+}
+
 export default function Layout() {
   const { user, logout } = useAuth();
   const { dark, toggle } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [dashboards, setDashboards] = useState<DashboardLink[]>([]);
+  const [modules, setModules] = useState<Record<string, string>>({});
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [inbox, setInbox] = useState(0);
@@ -83,6 +147,10 @@ export default function Layout() {
 
   useEffect(() => {
     if (user) api.listDashboards().then(setDashboards).catch(() => setDashboards([]));
+  }, [user]);
+
+  useEffect(() => {
+    if (user) api.me().then((r) => setModules(r.modules)).catch(() => setModules({}));
   }, [user]);
 
   // Poll unread + approval inbox; toast when something new lands.
@@ -179,6 +247,34 @@ export default function Layout() {
           label: d.title,
         })),
       });
+
+    const successChildren = buildSuccessChildren(modules, level);
+    if (successChildren.length > 0)
+      list.push({
+        key: "success",
+        icon: <AimOutlined />,
+        label: "Indicator Of Success",
+        children: successChildren,
+      });
+
+    const forecasterChildren = buildForecasterChildren(modules);
+    if (forecasterChildren.length > 0)
+      list.push({
+        key: "forecaster",
+        icon: <FundProjectionScreenOutlined />,
+        label: "Financial Forecaster",
+        children: forecasterChildren,
+      });
+
+    const managementChildren = buildManagementChildren(modules);
+    if (managementChildren.length > 0)
+      list.push({
+        key: "management",
+        icon: <ControlOutlined />,
+        label: "Management Overview",
+        children: managementChildren,
+      });
+
     if (canPeople)
       list.push({ key: "/people", icon: <TeamOutlined />, label: "People (HR)" });
     if (level >= 3)
@@ -192,7 +288,7 @@ export default function Layout() {
     if (user.role === "super_admin")
       list.push({ key: "/admin", icon: <SettingOutlined />, label: "Admin" });
     return list;
-  }, [user, level, dashboards, inbox]);
+  }, [user, level, dashboards, modules, inbox]);
 
   if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
 
@@ -225,6 +321,21 @@ export default function Layout() {
     "/documents": "Central repository for marketing documents, assets and brand resources.",
     "/tasks": "Projects, tasks and workload across your teams.",
     "/reports": "Create, schedule and share reports across all domains.",
+    "/success/central": "Company-wide productivity, efficiency, and growth at a glance.",
+    "/success/organization": "Headcount, attrition, payroll, and workforce demographics.",
+    "/success/marketing": "Campaigns, leads, conversion, and channel performance.",
+    "/success/finance": "Revenue, expenses, margins, and cash flow.",
+    "/success/startup": "Customer, revenue, and burn metrics for growth tracking.",
+    "/success/operations": "Task throughput, on-time delivery, and process efficiency.",
+    "/forecaster/overview": "Executive summary of financial performance and forecasts.",
+    "/forecaster/workforce": "Headcount, hiring, attrition, and workforce forecast.",
+    "/forecaster/revenue": "Revenue actuals vs forecast and segment breakdown.",
+    "/forecaster/cashflow": "Cash position, inflows/outflows, and balance forecast.",
+    "/forecaster/costs": "Expense categories, trends, and cost forecast.",
+    "/forecaster/analyzer": "Payment status, overdue amounts, and success rate.",
+    "/management/insights": "AI-detected problems across operations, finance, HR, and marketing.",
+    "/management/bugs": "Bug creation, resolution, and severity trends across projects.",
+    "/management/report": "Per-project status: progress, stages, tasks, and billing.",
   };
   const subtitle = subtitles[active?.key ?? ""];
 

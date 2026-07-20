@@ -437,27 +437,38 @@ def _explain_bug_resolution(db: Database, kpi_def: dict) -> dict:
     q = {**_BUG_Q, "status": {"$in": CLOSED_BUG_STATUSES}}
     pnames = _project_names(db)
     resolved = []
+    journal_backed = 0
     for b in db.tasks.find(q):
         created = _as_datetime(b.get("created_at"))
-        closed = _as_datetime(b.get("updated_at"))
+        closed_at = b.get("closed_at")
+        closed = _as_datetime(closed_at) or _as_datetime(b.get("updated_at"))
         if created and closed and closed >= created:
-            resolved.append((b, round((closed - created).total_seconds() / 86400, 1)))
-    value = round(mean(d for _, d in resolved), 1) if resolved else None
+            resolved.append((b, round((closed - created).total_seconds() / 86400, 1),
+                            bool(closed_at)))
+            if closed_at:
+                journal_backed += 1
+    value = round(mean(d for _, d, _ in resolved), 1) if resolved else None
     resolved.sort(key=lambda bd: -bd[1])
     return {
-        "formula_text": "Mean of (updated_at − created_at) in days, across closed "
-                        "bugs (status in Closed/Not a Bug/Done/...) — `updated_at` "
-                        "is the last touch on the item, used as a proxy for the "
-                        "close date.",
+        "formula_text": "Mean of (closed_at − created_at) in days, across closed bugs "
+                        "(status in Closed/Not a Bug/Done/...) — `closed_at` is the exact "
+                        "moment the OpenProject Activity journal recorded the transition "
+                        "into a terminal status; for bugs whose journal hasn't synced yet, "
+                        "`updated_at` (last touch on the item) is used as a fallback proxy.",
         "computation": (f"{len(resolved)} closed bug(s) with timestamps average "
-                        f"{value} day(s) to resolve.") if resolved else
-                       "No closed bugs have both created_at and updated_at timestamps "
-                       "yet (only real OpenProject-synced bugs carry both).",
-        "inputs": [{"label": b.get("title"), "value": d} for b, d in resolved[:MAX_EVIDENCE_ROWS]],
+                        f"{value} day(s) to resolve ({journal_backed} from the exact "
+                        f"journal closure time, {len(resolved) - journal_backed} from "
+                        f"the updated_at proxy).") if resolved else
+                       "No closed bugs have both created_at and a resolvable close "
+                       "timestamp yet.",
+        "inputs": [{"label": b.get("title"), "value": d} for b, d, _ in resolved[:MAX_EVIDENCE_ROWS]],
         "evidence": [{"kind": "bug", "id": b.get("source_id") or b.get("task_id"),
                      "label": b.get("title"), "url": work_package_url(b.get("source_id")),
-                     "extra": {"days_to_resolve": d, "project": _task_project(b, pnames)}}
-                    for b, d in resolved[:MAX_EVIDENCE_ROWS]],
+                     "extra": {"days_to_resolve": d,
+                              "closed_by": b.get("closed_by") if exact else None,
+                              "source": "journal" if exact else "updated_at proxy",
+                              "project": _task_project(b, pnames)}}
+                    for b, d, exact in resolved[:MAX_EVIDENCE_ROWS]],
         "source": _source_info(db, "tasks", q),
     }
 
@@ -472,11 +483,20 @@ def _explain_bug_reopen_rate(db: Database, kpi_def: dict) -> dict:
                       and (d.get("reopen_count") or 0) < 1]
     denom = len(reopened) + len(terminal_clean)
     value = round(len(reopened) / denom * 100, 2) if denom else 0.0
+    journal_backed = sum(1 for d in docs if d.get("journal_synced_updated_at"))
     return {
-        "formula_text": "Bugs ever reopened (reopen_count ≥ 1 or status = Reopen) ÷ "
-                        "(those + bugs closed cleanly without a reopen).",
+        "formula_text": "Bugs ever reopened ÷ (those + bugs closed cleanly without a "
+                        "reopen). For bugs whose OpenProject Activity journal has synced, "
+                        "'reopened' counts every transition OUT of a terminal status "
+                        "(Closed/Not a Bug/Done/...) — including one that lands on a "
+                        "status not literally named 'Reopen' (e.g. Closed → Developed), "
+                        "which the older sync-time-diff signal alone would miss. Bugs "
+                        "without a synced journal yet fall back to that diff signal "
+                        "(reopen_count ≥ 1 or current status = Reopen).",
         "computation": (f"{len(reopened)} reopened / ({len(reopened)} + "
-                        f"{len(terminal_clean)} cleanly-closed) = {value}%")
+                        f"{len(terminal_clean)} cleanly-closed) = {value}% "
+                        f"({journal_backed} of {len(docs)} bug(s) have journal-verified "
+                        f"reopen counts).")
                        if denom else "No bug data ingested yet.",
         "inputs": [{"label": "Ever reopened", "value": len(reopened)},
                   {"label": "Closed cleanly", "value": len(terminal_clean)}],
@@ -484,6 +504,7 @@ def _explain_bug_reopen_rate(db: Database, kpi_def: dict) -> dict:
                      "label": b.get("title"), "url": work_package_url(b.get("source_id")),
                      "extra": {"status": b.get("status"),
                               "reopen_count": b.get("reopen_count") or 0,
+                              "journal_verified": bool(b.get("journal_synced_updated_at")),
                               "project": _task_project(b, pnames)}}
                     for b in reopened[:MAX_EVIDENCE_ROWS]],
         "source": _source_info(db, "tasks", _BUG_Q),

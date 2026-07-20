@@ -9,7 +9,8 @@ from ..core import rbac
 from ..core.security import decode_token
 from ..db import get_db
 
-__all__ = ["get_db", "get_current_user", "require_module", "require_role"]
+__all__ = ["get_db", "get_current_user", "require_module", "require_role",
+          "has_aggregate_access", "require_any_module"]
 
 
 def get_current_user(
@@ -46,6 +47,30 @@ def require_role(*roles: str):
     def dep(user: dict = Depends(get_current_user)) -> dict:
         if user["role"] not in roles:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "insufficient role")
+        return user
+
+    return dep
+
+
+def has_aggregate_access(user: dict, module: str) -> bool:
+    """Like `rbac.has_any_access`, but a bare "own" level — self-only
+    visibility, e.g. an employee's own HR record or own task list — doesn't
+    qualify for company-wide aggregate screens (Indicator Of Success,
+    Financial Forecaster) unlike `require_module`/`has_any_access`, which
+    only check "not none". Unioned across every role a multi-role user
+    holds."""
+    return any(rbac.access_level(r, module) not in (rbac.NONE, "own")
+              for r in rbac.user_roles(user))
+
+
+def require_any_module(*modules: str):
+    """403 unless the caller has non-"own" access to at least one of
+    `modules`, unioned across every role they hold."""
+
+    def dep(user: dict = Depends(get_current_user)) -> dict:
+        if not any(has_aggregate_access(user, m) for m in modules):
+            raise HTTPException(status.HTTP_403_FORBIDDEN,
+                                f"no access to {' or '.join(modules)}")
         return user
 
     return dep

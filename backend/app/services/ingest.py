@@ -39,7 +39,7 @@ def run_connector(db: Database, connector: Connector) -> dict:
 
     if not errors:
         try:
-            rag_index.reindex(db, sources=["tasks", "projects"])
+            rag_index.reindex(db, sources=["tasks", "projects", "task_comments", "task_timeline"])
         except Exception:  # noqa: BLE001 - incremental reindex must not fail the sync
             pass
 

@@ -1109,6 +1109,15 @@ def _seed_core(db: Database, now: dt.datetime) -> None:
     run_connector(db, AwsSimConnector())
     _seed_report_runs(db, now)
 
+    from .success_seed import seed_success
+
+    seed_success(db, now)
+
+    # Reads finance_monthly/org_monthly seeded just above, so must run after.
+    from .forecaster_seed import seed_forecaster
+
+    seed_forecaster(db, now)
+
 
 def seed_demo_extras(db: Database) -> dict:
     """Refresh all demo seed data except HR, safe to rerun against an
@@ -1151,7 +1160,11 @@ def reset_roster(db: Database) -> dict:
                  "kpi_values", "kpi_defs", "folders", "documents",
                  "report_defs", "report_runs", "report_views",
                  "aws_costs", "aws_resources", "aws_budgets",
-                 "crm_contacts", "project_invoices"):
+                 "crm_contacts", "project_invoices",
+                 "traffic_daily", "central_monthly", "org_monthly",
+                 "marketing_monthly", "finance_monthly", "startup_monthly",
+                 "startup_daily", "ops_monthly", "ops_daily", "milestones",
+                 "forecaster_monthly"):
         db[coll].delete_many({})
     seed(db)
     # Compute the live KPI values now so dashboards show real numbers (the
