@@ -30,7 +30,11 @@ SYSTEM = (
     "several bugs), write them as a single readable sentence or a dash-"
     "separated list inside that string, never as a nested JSON array or object. "
     "If conversation history is provided, use it to resolve references like "
-    "'those bugs' or 'that project' in the current question."
+    "'those bugs' or 'that project' in the current question. When the "
+    "evidence has both an org-wide aggregate (e.g. 'all projects combined') "
+    "and a per-project breakdown, and the question names a specific project, "
+    "use ONLY that project's number from the per-project line — never quote "
+    "the org-wide total as if it belonged to one project."
 )
 
 # History is client-supplied (the frontend already holds the full turn list)
@@ -52,19 +56,54 @@ MAX_LIVE_FACTS = 10
 MAX_EVIDENCE = MAX_LIVE_FACTS + 10  # live facts + up to rag_top_k semantic hits
 
 
+def _bug_facts(db: Database, bug_q: dict) -> list[str]:
+    """Per-project bug counts + open-bug status breakdown. Without these, the
+    only bug numbers available were global aggregates — verified live: asking
+    "how many bugs are open in the KQ project" returned the org-wide open
+    count (179 across ALL projects) mislabeled as KQ-specific, because
+    nothing in the evidence was actually scoped per project. Same root cause
+    as the earlier per-project task-count fix, just for bugs specifically."""
+    op_projects = list(db.projects.find({"source_system": "openproject"}))
+    if not op_projects:
+        return []
+
+    count_lines = []
+    status_lines = []
+    for p in op_projects:
+        q = {**bug_q, "project_source_id": p["source_id"]}
+        total = db.tasks.count_documents(q)
+        if not total:
+            continue
+        open_q = {**q, "status": {"$nin": TERMINAL_STATUSES}}
+        open_n = db.tasks.count_documents(open_q)
+        crit_n = db.tasks.count_documents(
+            {**open_q, "priority": {"$in": ["Immediate", "High"]}})
+        count_lines.append(f"{p.get('name')}: {total} total, {open_n} open, "
+                           f"{crit_n} critical")
+
+        status_counts: dict[str, int] = {}
+        for t in db.tasks.find(open_q, {"status": 1}):
+            s = t.get("status") or "Unknown"
+            status_counts[s] = status_counts.get(s, 0) + 1
+        if status_counts:
+            breakdown = ", ".join(
+                f"{s} {n}" for s, n in sorted(status_counts.items(), key=lambda kv: -kv[1]))
+            status_lines.append(f"{p.get('name')}: {breakdown}")
+
+    facts = []
+    if count_lines:
+        facts.append("Bug counts by project — " + "; ".join(count_lines) + ".")
+    if status_lines:
+        facts.append("Open bug status breakdown by project — " + "; ".join(status_lines) + ".")
+    return facts
+
+
 def _live_facts(db: Database) -> list[str]:
     facts: list[str] = []
 
     active_projects = list(db.projects.find({"status": "active"}))
     if active_projects:
         facts.append(f"{len(active_projects)} active project(s).")
-    at_risk = [p for p in active_projects
-              if p.get("expected_progress") and p.get("progress", 0) < 0.7 * p["expected_progress"]]
-    for p in at_risk[:5]:
-        facts.append(
-            f"Project {p.get('name')}: {p.get('progress', 0)}% complete, "
-            f"expected {p['expected_progress']}% (AT RISK)."
-        )
 
     # Per-project task counts — same query the AI Insights project dropdown
     # uses (api/v1/insights.py:list_insight_projects), so "how many tasks are
@@ -80,14 +119,11 @@ def _live_facts(db: Database) -> list[str]:
             counts.append(f"{p.get('name')}: {n} task(s)")
         facts.append("OpenProject task counts by project — " + "; ".join(counts) + ".")
 
-    today = dt.date.today().isoformat()
-    overdue = db.tasks.count_documents(
-        {"due_date": {"$lt": today, "$ne": None}, "progress": {"$lt": 100}}
-    )
-    if overdue:
-        facts.append(f"{overdue} task(s)/work item(s) are overdue.")
-
-    # Bug picture (from OpenProject work packages)
+    # Bug picture — global aggregate AND per-project breakdown. The global
+    # line alone is what caused per-project bug questions to get answered
+    # with the org-wide number (see _bug_facts docstring) — both are kept
+    # since "how many bugs total" and "how many in project X" are both real
+    # questions, and placed early so they survive the MAX_LIVE_FACTS cap.
     bug_q = {"wp_type": {"$regex": "bug", "$options": "i"}}
     total_bugs = db.tasks.count_documents(bug_q)
     if total_bugs:
@@ -96,8 +132,24 @@ def _live_facts(db: Database) -> list[str]:
             {**bug_q, "priority": {"$in": ["Immediate", "High"]},
              "status": {"$nin": TERMINAL_STATUSES}})
         facts.append(
-            f"Bugs: {total_bugs} total, {open_bugs} still open, "
+            f"Bugs (all projects combined): {total_bugs} total, {open_bugs} still open, "
             f"{crit} open at High/Immediate priority.")
+    facts.extend(_bug_facts(db, bug_q))
+
+    today = dt.date.today().isoformat()
+    overdue = db.tasks.count_documents(
+        {"due_date": {"$lt": today, "$ne": None}, "progress": {"$lt": 100}}
+    )
+    if overdue:
+        facts.append(f"{overdue} task(s)/work item(s) are overdue.")
+
+    at_risk = [p for p in active_projects
+              if p.get("expected_progress") and p.get("progress", 0) < 0.7 * p["expected_progress"]]
+    for p in at_risk[:3]:
+        facts.append(
+            f"Project {p.get('name')}: {p.get('progress', 0)}% complete, "
+            f"expected {p['expected_progress']}% (AT RISK)."
+        )
 
     for c in db.compliance_items.find({"status": {"$ne": "done"}}).limit(2):
         facts.append(

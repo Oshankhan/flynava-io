@@ -26,6 +26,44 @@ def test_live_facts_include_accurate_per_project_task_counts(db):
     assert "Count Check Co: 4 task(s)" in fact
 
 
+def test_live_facts_scope_bug_counts_per_project_not_global(db):
+    # Regression: asked live "how many bugs are open in the KQ project" and
+    # got the ORG-WIDE open-bug count (179, across every project) quoted as
+    # if it were KQ-specific — because the only bug fact available was a
+    # single global aggregate with no per-project breakdown at all.
+    db.projects.insert_many([
+        {"source_system": "openproject", "source_id": "px_kq", "name": "KQ Co", "status": "active"},
+        {"source_system": "openproject", "source_id": "px_sv", "name": "SV Co", "status": "active"},
+    ])
+    db.tasks.insert_many([
+        {"source_system": "openproject", "source_id": "b1", "project_source_id": "px_kq",
+         "title": "kq bug 1", "wp_type": "Bug", "status": "Open", "priority": "High"},
+        {"source_system": "openproject", "source_id": "b2", "project_source_id": "px_kq",
+         "title": "kq bug 2", "wp_type": "Bug", "status": "In progress", "priority": "Normal"},
+        {"source_system": "openproject", "source_id": "b3", "project_source_id": "px_kq",
+         "title": "kq bug 3 closed", "wp_type": "Bug", "status": "Closed", "priority": "High"},
+        {"source_system": "openproject", "source_id": "b4", "project_source_id": "px_sv",
+         "title": "sv bug 1", "wp_type": "Bug", "status": "Open", "priority": "Normal"},
+        {"source_system": "openproject", "source_id": "b5", "project_source_id": "px_sv",
+         "title": "sv bug 2", "wp_type": "Bug", "status": "Open", "priority": "Normal"},
+        {"source_system": "openproject", "source_id": "b6", "project_source_id": "px_sv",
+         "title": "sv bug 3", "wp_type": "Bug", "status": "Open", "priority": "Normal"},
+    ])
+    evidence = rag.retrieve(db, "how many bugs are open in KQ Co?")
+
+    # the global line exists but is clearly labeled as org-wide, not KQ-specific
+    assert any(e.startswith("Bugs (all projects combined)") for e in evidence)
+
+    per_project = next(e for e in evidence if e.startswith("Bug counts by project"))
+    assert "KQ Co: 3 total, 2 open, 1 critical" in per_project
+    assert "SV Co: 3 total, 3 open, 0 critical" in per_project
+
+    status_breakdown = next(
+        e for e in evidence if e.startswith("Open bug status breakdown by project"))
+    assert "KQ Co: Open 1, In progress 1" in status_breakdown or \
+           "KQ Co: In progress 1, Open 1" in status_breakdown
+
+
 def test_retrieve_pulls_evidence_from_seeded_data(db):
     # insert a controlled at-risk active project rather than relying on the
     # real roster's seeded projects (whose progress numbers change over time)

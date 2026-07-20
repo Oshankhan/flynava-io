@@ -114,6 +114,6 @@ def test_rag_includes_bug_and_compliance_evidence(db):
     from app.ai import rag
     from app.ai.provider import EchoProvider
     result = rag.answer(db, "how are we doing on bugs?", EchoProvider())
-    assert any("Bugs:" in e for e in result["evidence"])
+    assert any("Bugs (all projects combined):" in e for e in result["evidence"])
     assert any("Compliance:" in e for e in result["evidence"])
     assert len(result["evidence"]) <= rag.MAX_EVIDENCE

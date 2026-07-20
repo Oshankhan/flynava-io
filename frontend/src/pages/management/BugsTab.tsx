@@ -99,39 +99,34 @@ export default function BugsTab() {
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} xl={12}>
-          <Card title="Bugs Creation Trend" size="small" bordered={false} className="h-full">
-            <TwoSeriesLine
-              points={data.charts.creation_trend.points}
-              aKey="created" aName="Created" aColor="#7c3aed"
-              bKey="resolved" bName="Resolved" bColor="#157f52"
+      <Card title="Bugs by Status" size="small" bordered={false}>
+        <Row gutter={[12, 12]}>
+          <Col xs={24} sm={12}>
+            <LabeledDonut title="" slices={data.charts.by_status.slices} centerLabel="Total" />
+          </Col>
+          <Col xs={24} sm={12}>
+            <Table
+              size="small"
+              pagination={false}
+              rowKey="status"
+              dataSource={data.tables.by_status}
+              columns={[
+                { title: "Status", dataIndex: "status", key: "status" },
+                { title: "Count", dataIndex: "count", key: "count" },
+                { title: "%", dataIndex: "pct", key: "pct", render: (v: number) => `${v}%` },
+              ]}
             />
-          </Card>
-        </Col>
-        <Col xs={24} xl={12}>
-          <Card title="Bugs by Status" size="small" bordered={false} className="h-full">
-            <Row gutter={[12, 12]}>
-              <Col xs={24} sm={12}>
-                <LabeledDonut title="" slices={data.charts.by_status.slices} centerLabel="Total" />
-              </Col>
-              <Col xs={24} sm={12}>
-                <Table
-                  size="small"
-                  pagination={false}
-                  rowKey="status"
-                  dataSource={data.tables.by_status}
-                  columns={[
-                    { title: "Status", dataIndex: "status", key: "status" },
-                    { title: "Count", dataIndex: "count", key: "count" },
-                    { title: "%", dataIndex: "pct", key: "pct", render: (v: number) => `${v}%` },
-                  ]}
-                />
-              </Col>
-            </Row>
-          </Card>
-        </Col>
-      </Row>
+          </Col>
+        </Row>
+        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/10">
+          <div className="text-xs font-medium mb-2 opacity-70">Bugs Creation Trend</div>
+          <TwoSeriesLine
+            points={data.charts.creation_trend.points}
+            aKey="created" aName="Created" aColor="#7c3aed"
+            bKey="resolved" bName="Resolved" bColor="#157f52"
+          />
+        </div>
+      </Card>
 
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={12}>
