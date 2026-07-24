@@ -105,7 +105,8 @@ def test_openai_provider_calls_chat_completions(monkeypatch):
     assert route.called
     sent = route.calls[0].request
     assert b"gpt-4o-mini" in sent.content
-    assert b'"max_tokens": 400' in sent.content or b'"max_tokens":400' in sent.content
+    cap = settings.ai_max_tokens
+    assert f'"max_tokens": {cap}'.encode() in sent.content or f'"max_tokens":{cap}'.encode() in sent.content
     assert '"answer":"A"' in out
 
 

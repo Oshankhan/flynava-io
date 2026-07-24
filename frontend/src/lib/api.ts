@@ -1337,6 +1337,86 @@ export interface ManagementReportPayload {
   last_updated: string;
 }
 
+// --- Resource Management ---
+export interface ResourcePersonRow {
+  user_id: string;
+  name: string;
+  designation?: string | null;
+  team_id: string;
+  team_name?: string | null;
+  department?: string | null;
+  tasks: number;
+  open: number;
+  pending: number;
+  in_progress: number;
+  overdue: number;
+  completed: number;
+  completion_pct: number;
+  workload_pct: number;
+  status: "overloaded" | "optimal" | "underutilized";
+}
+export interface ResourceTopPerformer extends ResourcePersonRow {
+  sla_pct: number;
+  rating: number;
+}
+export interface ResourceAtRisk extends ResourcePersonRow {
+  reassign_count: number;
+  recommendation: string;
+}
+export interface ResourceTeamCapacity {
+  team_id: string;
+  name: string;
+  department?: string | null;
+  utilization_pct: number;
+  status: "critical" | "overloaded" | "healthy" | "low";
+  member_count: number;
+  tasks: number;
+  completion_pct: number;
+}
+export interface ResourcePerformancePoint {
+  team: string;
+  completion_pct: number;
+  workload_pct: number;
+}
+export interface ResourceProjectStatus {
+  project_id: string;
+  code: string;
+  name: string;
+  progress: number;
+  expected_progress: number | null;
+  health: "on_track" | "at_risk" | "behind";
+  resources: number;
+  due_date?: string | null;
+  current_stage_name?: string | null;
+}
+export interface ResourceLifecycleStage {
+  name: string;
+  count: number;
+}
+export interface ResourceLifecycle {
+  department: string;
+  source: "live" | "partial" | "demo";
+  stages: ResourceLifecycleStage[];
+  avg_cycle_days: number | null;
+  note?: string;
+}
+export interface ResourceInsight {
+  severity: "high" | "medium" | "low";
+  text: string;
+}
+export interface ResourceDashboardPayload {
+  kpi_cards: Kpi[];
+  team_capacity: ResourceTeamCapacity[];
+  heatmap: ResourcePersonRow[];
+  top_performers: ResourceTopPerformer[];
+  performance_matrix: ResourcePerformancePoint[];
+  at_risk_resources: ResourceAtRisk[];
+  project_resource_status: ResourceProjectStatus[];
+  work_lifecycle: ResourceLifecycle[];
+  insights: ResourceInsight[];
+  generated_at: string;
+}
+
 export const api = {
   login: (email: string, password: string) =>
     req<LoginResult>("/auth/login", {
@@ -1831,4 +1911,7 @@ export const api = {
   managementReport: (project: string) =>
     req<ManagementReportPayload>(`/management/report${toQuery({ project })}`),
   managementProjects: () => req<ManagementProjectOption[]>("/management/projects"),
+
+  // Resource Management
+  resourceDashboard: () => req<ResourceDashboardPayload>("/resources/dashboard"),
 };

@@ -40,7 +40,17 @@ export default function InayaChat() {
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
+  const [shownSources, setShownSources] = useState<Set<number>>(new Set());
   const bottom = useRef<HTMLDivElement>(null);
+
+  function toggleSources(i: number) {
+    setShownSources((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  }
 
   useEffect(() => {
     const onOpen = (e: Event) => {
@@ -138,11 +148,24 @@ export default function InayaChat() {
                             </Descriptions.Item>
                           </Descriptions>
                           {t.a.evidence?.length > 0 && (
-                            <ul className="my-1.5 ps-[18px] text-xs opacity-75">
-                              {t.a.evidence.slice(0, 6).map((e, i) => (
-                                <li key={i}>{linkify(e)}</li>
-                              ))}
-                            </ul>
+                            <>
+                              <Text
+                                type="secondary"
+                                className="text-xs cursor-pointer hover:underline"
+                                onClick={() => toggleSources(i)}
+                              >
+                                {shownSources.has(i)
+                                  ? "Hide sources"
+                                  : `Show sources (${t.a.evidence.length})`}
+                              </Text>
+                              {shownSources.has(i) && (
+                                <ul className="my-1.5 ps-[18px] text-xs opacity-75">
+                                  {t.a.evidence.slice(0, 6).map((e, j) => (
+                                    <li key={j}>{linkify(e)}</li>
+                                  ))}
+                                </ul>
+                              )}
+                            </>
                           )}
                         </>
                       ) : null}

@@ -20,17 +20,45 @@ import json
 from .provider import LLMProvider
 
 
+def _unwrap_double_wrapped(parsed: dict) -> dict:
+    """Verified live: a large evidence payload (14 items for one assignee)
+    made the model stringify its WHOLE envelope again as the value of the
+    outer "answer" key, leaving reason/recommended_action empty — instead of
+    plain prose for "answer" as instructed. Bounded one-level unwrap: if
+    "answer" is a string that itself parses as a dict with its own "answer"
+    key, prefer that inner envelope."""
+    inner = parsed.get("answer")
+    if not isinstance(inner, str):
+        return parsed
+    stripped = inner.strip()
+    if not (stripped.startswith("{") and '"answer"' in stripped):
+        return parsed
+    try:
+        nested = json.loads(stripped)
+    except (json.JSONDecodeError, TypeError):
+        return parsed
+    if not isinstance(nested, dict) or "answer" not in nested:
+        return parsed
+    return {
+        "answer": nested.get("answer", ""),
+        "reason": nested.get("reason") or parsed.get("reason", ""),
+        "recommended_action": nested.get("recommended_action") or parsed.get("recommended_action", ""),
+    }
+
+
 def parse_llm_json(raw: str) -> dict:
-    """Parse model output; tolerate ```json fences."""
+    """Parse model output; tolerate ```json fences and an occasional
+    double-wrapped envelope (see `_unwrap_double_wrapped`)."""
     cleaned = raw.strip()
     if cleaned.startswith("```"):
         first_newline = cleaned.find("\n")
         cleaned = cleaned[first_newline + 1:] if first_newline != -1 else cleaned
         cleaned = cleaned.rsplit("```", 1)[0].strip()
     try:
-        return json.loads(cleaned)
+        parsed = json.loads(cleaned)
     except (json.JSONDecodeError, TypeError):
         return {"answer": raw, "reason": "", "recommended_action": ""}
+    return _unwrap_double_wrapped(parsed) if isinstance(parsed, dict) else parsed
 
 
 def confidence_from_evidence(evidence: list[str]) -> str:

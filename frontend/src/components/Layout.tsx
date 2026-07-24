@@ -23,6 +23,7 @@ import {
   BulbOutlined,
   CalendarOutlined,
   CheckSquareOutlined,
+  ClusterOutlined,
   ControlOutlined,
   DashboardOutlined,
   FileProtectOutlined,
@@ -127,6 +128,21 @@ function buildManagementChildren(modules: Record<string, string>): { key: string
     children.push({ key: "/management/report", label: "Project Report" });
   }
   return children;
+}
+
+// Resource Management: gated on level >= 3 (dept-heads and above) — mirrors
+// the backend's `user_level(user) < 3` 403 in api/v1/resources.py. Every
+// sub-tab is listed once access is granted; only Resource Dashboard is built
+// today, the rest are "coming soon" placeholders (see ResourcePage.tsx).
+function buildResourceChildren(level: number): { key: string; label: string }[] {
+  if (level < 3) return [];
+  return [
+    { key: "/resource/dashboard", label: "Resource Dashboard" },
+    { key: "/resource/capacity", label: "Team Capacity" },
+    { key: "/resource/planner", label: "Resource Planner" },
+    { key: "/resource/lifecycle", label: "Work Lifecycle" },
+    { key: "/resource/reports", label: "Reports" },
+  ];
 }
 
 export default function Layout() {
@@ -275,6 +291,15 @@ export default function Layout() {
         children: managementChildren,
       });
 
+    const resourceChildren = buildResourceChildren(level);
+    if (resourceChildren.length > 0)
+      list.push({
+        key: "resource",
+        icon: <ClusterOutlined />,
+        label: "Resource Management",
+        children: resourceChildren,
+      });
+
     if (canPeople)
       list.push({ key: "/people", icon: <TeamOutlined />, label: "People (HR)" });
     if (level >= 3)
@@ -336,6 +361,11 @@ export default function Layout() {
     "/management/insights": "AI-detected problems across operations, finance, HR, and marketing.",
     "/management/bugs": "Bug creation, resolution, and severity trends across projects.",
     "/management/report": "Per-project status: progress, stages, tasks, and billing.",
+    "/resource/dashboard": "Real-time overview of teams, resources and work lifecycle.",
+    "/resource/capacity": "Team-by-team capacity and utilization.",
+    "/resource/planner": "Plan and allocate resources across projects.",
+    "/resource/lifecycle": "Work lifecycle stages across every department.",
+    "/resource/reports": "Resource utilization and allocation reports.",
   };
   const subtitle = subtitles[active?.key ?? ""];
 

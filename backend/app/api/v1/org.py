@@ -56,6 +56,9 @@ def _is_ancestor(db: Database, viewer_id: str, target_id: str, max_hops: int = 8
 def _can_view(db: Database, viewer: dict, target_id: str) -> bool:
     if viewer["user_id"] == target_id:
         return True
+    # L4 (CEO/founder) and HR see the whole org regardless of reporting
+    # chain — HR specifically needs this for cross-team admin work, not
+    # just their own line.
     if user_level(viewer) >= 4 or viewer.get("role") in ("super_admin", "hr"):
         return True
     return _is_ancestor(db, viewer["user_id"], target_id)
@@ -194,6 +197,8 @@ def team_members(team_id: str, user: dict = Depends(get_current_user),
 def directory(user: dict = Depends(get_current_user),
               db: Database = Depends(get_db)) -> list[dict]:
     """Lightweight company directory for pickers (invites, assignment)."""
+    # investor/partner are external stakeholder logins, not real org
+    # members — they don't belong in a "pick a person to assign to" list.
     return [_user_lite(u) for u in
             db.users.find({"status": "active",
                            "role": {"$nin": ["investor", "partner"]}}, _LITE)

@@ -10,12 +10,14 @@ export default function AskIO() {
   const [loading, setLoading] = useState(false);
   const [answer, setAnswer] = useState<AiAnswer | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showSources, setShowSources] = useState(false);
 
   async function ask(q: string) {
     if (!q.trim()) return;
     setLoading(true);
     setError(null);
     setOpen(true);
+    setShowSources(false);
     try {
       setAnswer(await api.askIO(q));
     } catch (err) {
@@ -69,11 +71,22 @@ export default function AskIO() {
                 </Descriptions.Item>
               </Descriptions>
               {answer.evidence?.length > 0 && (
-                <ul className="my-1.5 ps-[18px] text-xs opacity-75">
-                  {answer.evidence.slice(0, 6).map((e, i) => (
-                    <li key={i}>{linkify(e)}</li>
-                  ))}
-                </ul>
+                <>
+                  <Text
+                    type="secondary"
+                    className="text-xs cursor-pointer hover:underline"
+                    onClick={() => setShowSources((s) => !s)}
+                  >
+                    {showSources ? "Hide sources" : `Show sources (${answer.evidence.length})`}
+                  </Text>
+                  {showSources && (
+                    <ul className="my-1.5 ps-[18px] text-xs opacity-75">
+                      {answer.evidence.slice(0, 6).map((e, i) => (
+                        <li key={i}>{linkify(e)}</li>
+                      ))}
+                    </ul>
+                  )}
+                </>
               )}
             </>
           )}

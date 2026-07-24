@@ -64,6 +64,98 @@ def test_live_facts_scope_bug_counts_per_project_not_global(db):
            "KQ Co: In progress 1, Open 1" in status_breakdown
 
 
+def test_live_facts_list_every_item_for_a_named_assignee(db):
+    # Regression: asked live "what bugs are assigned to Oshan Khan" — the
+    # answer named only 1 of their 2 real open bugs, because per-item recall
+    # runs through semantic top-k search (a similarity ranking, not an exact
+    # filter) and the second bug simply didn't rank in the top-k alongside
+    # other bug chunks, even though it was indexed. The assignee's full list
+    # must come from a direct query instead.
+    db.tasks.insert_many([
+        {"source_system": "openproject", "source_id": "a1", "project_source_id": "px_kq",
+         "title": "bug one", "wp_type": "Bug", "status": "Replica Done", "assignee": "Test Person"},
+        {"source_system": "openproject", "source_id": "a2", "project_source_id": "px_kq",
+         "title": "bug two", "wp_type": "Bug", "status": "Open", "assignee": "Test Person"},
+        {"source_system": "openproject", "source_id": "a3", "project_source_id": "px_kq",
+         "title": "someone else's bug", "wp_type": "Bug", "status": "Open", "assignee": "Other Person"},
+    ])
+    evidence = rag.retrieve(db, "what bugs are assigned to Test Person")
+    header = next(e for e in evidence if e.startswith("Test Person has"))
+    assert "2 OPEN work item(s)" in header
+    assert any("bug one" in e for e in evidence)
+    assert any("bug two" in e for e in evidence)
+    assert not any("someone else's bug" in e for e in evidence)
+
+
+def test_live_facts_excludes_closed_items_for_named_assignee(db):
+    # User-reported (2026-07-20, real OpenProject screenshot): "assigned to
+    # X" was including years-old Closed bugs alongside current open work,
+    # inflating the count far past what the person's real OpenProject
+    # "Assigned to me" view shows (that view hides closed/done by default).
+    # Verified live via direct OpenProject API call that our data was
+    # accurate, not stale — this is a scope/definition fix, not a sync bug.
+    db.tasks.insert_many([
+        {"source_system": "openproject", "source_id": "b1", "project_source_id": "px_kq",
+         "title": "old closed bug", "wp_type": "Bug", "status": "Closed", "assignee": "Test Person"},
+        {"source_system": "openproject", "source_id": "b2", "project_source_id": "px_kq",
+         "title": "current open bug", "wp_type": "Bug", "status": "Open", "assignee": "Test Person"},
+    ])
+    evidence = rag.retrieve(db, "what bugs are assigned to Test Person")
+    header = next(e for e in evidence if e.startswith("Test Person has"))
+    assert "1 OPEN work item(s)" in header
+    assert any("current open bug" in e for e in evidence)
+    assert not any("old closed bug" in e for e in evidence)
+
+
+def test_live_facts_reports_zero_open_when_all_closed(db):
+    db.tasks.insert_one(
+        {"source_system": "openproject", "source_id": "c1", "project_source_id": "px_kq",
+         "title": "long done bug", "wp_type": "Bug", "status": "Done", "assignee": "Test Person"})
+    evidence = rag.retrieve(db, "what bugs are assigned to Test Person")
+    assert any("Test Person has 0 open work items" in e for e in evidence)
+
+
+def test_live_facts_resolves_unambiguous_first_name_only(db):
+    # User-reported (2026-07-20, real usage): asked "how many bugs in the
+    # name of Oshan" (first name only, casual phrasing) — the full-name-only
+    # substring match found nothing, silently returned no evidence, and the
+    # model confidently answered "no bugs assigned to Oshan" — wrong, since
+    # they had a real open bug. A bare first name must resolve when only one
+    # real assignee has it.
+    db.tasks.insert_one(
+        {"source_system": "openproject", "source_id": "d1", "project_source_id": "px_kq",
+         "title": "unique first name bug", "wp_type": "Bug", "status": "Open",
+         "assignee": "Zolan Marek"})
+    evidence = rag.retrieve(db, "how many bugs for Zolan in kq project")
+    assert any(e.startswith("Zolan Marek has") for e in evidence)
+    assert any("unique first name bug" in e for e in evidence)
+
+
+def test_live_facts_bare_first_name_ambiguous_across_two_people_no_guess(db):
+    # This org has genuine collisions (e.g. real "Rahul Chowta" vs "Rahul
+    # Kumar") — guessing one when two different real people share a first
+    # name would silently attribute someone else's bugs to the wrong person.
+    db.tasks.insert_many([
+        {"source_system": "openproject", "source_id": "e1", "project_source_id": "px_kq",
+         "title": "person one's bug", "wp_type": "Bug", "status": "Open",
+         "assignee": "Zolan Marek"},
+        {"source_system": "openproject", "source_id": "e2", "project_source_id": "px_kq",
+         "title": "person two's bug", "wp_type": "Bug", "status": "Open",
+         "assignee": "Zolan Petrova"},
+    ])
+    evidence = rag.retrieve(db, "how many bugs for Zolan in kq project")
+    assert not any(e.startswith("Zolan Marek has") for e in evidence)
+    assert not any(e.startswith("Zolan Petrova has") for e in evidence)
+
+
+def test_live_facts_no_assignee_match_when_no_name_in_question(db):
+    db.tasks.insert_one({"source_system": "openproject", "source_id": "a1",
+                        "project_source_id": "px_kq", "title": "bug one",
+                        "wp_type": "Bug", "status": "Open", "assignee": "Test Person"})
+    evidence = rag.retrieve(db, "which projects are at risk?")
+    assert not any(e.startswith("Test Person has") for e in evidence)
+
+
 def test_retrieve_pulls_evidence_from_seeded_data(db):
     # insert a controlled at-risk active project rather than relying on the
     # real roster's seeded projects (whose progress numbers change over time)

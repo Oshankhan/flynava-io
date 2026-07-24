@@ -78,6 +78,9 @@ def _decide_leave(db: Database, leave_id: str, user: dict, decision: str,
     audit.record(db, actor_id=user["user_id"], action=f"leave_{decision.lower()}",
                  entity_type="leave", entity_id=leave_id,
                  meta={**result, "comment": comment})
+    # employees and users are two separate collections with no shared id —
+    # email is the only field that links an HR employee record back to the
+    # login account that should get the decision notification.
     emp = db.employees.find_one({"emp_id": result["emp_id"]}, {"email": 1})
     owner = db.users.find_one({"email": emp["email"]}, {"user_id": 1}) if emp else None
     if owner:

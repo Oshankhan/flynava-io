@@ -28,6 +28,9 @@ function buildTree(users: UserLite[]): TreeDataNode[] {
 
   for (const u of users) {
     const parent = u.reports_to;
+    // A manager who isn't in this visible user set (RBAC-filtered, or the
+    // chain leads outside the org) can't be attached to — treat as a root
+    // so the person still renders instead of silently disappearing.
     if (parent && byId.has(parent)) {
       if (!childrenOf.has(parent)) childrenOf.set(parent, []);
       childrenOf.get(parent)!.push(u);
@@ -86,6 +89,9 @@ export default function OrgChart() {
         <Text type="secondary">No users to show.</Text>
       ) : (
         <div className="overflow-x-auto">
+          {/* Org is small enough that a fully-collapsed default would just
+             hide everyone behind one click per level — expand every node
+             up front instead. */}
           <Tree
             showLine
             defaultExpandedKeys={allKeys}

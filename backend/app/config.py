@@ -43,7 +43,11 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-opus-4-8"
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"  # cheapest capable model — cost guard
-    ai_max_tokens: int = 400  # hard cap per answer — cost guard
+    # 400 was too tight for a real case: enumerating one person's full list
+    # of ~14 work items (each needs its own id + link per the SYSTEM prompt)
+    # got cut off mid-JSON, and the truncated output failed to parse at all —
+    # producing a garbled raw-JSON-string answer instead of a shorter one.
+    ai_max_tokens: int = 700  # hard cap per answer — cost guard
     insights_cache_hours: int = 6  # department insight cards recompute at most this often
 
     # RAG embeddings (Ask IO semantic recall). Local + free — no API key.

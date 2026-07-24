@@ -292,6 +292,46 @@ def _contact_coverage_30d(db: Database, project: str | None = None) -> float | N
     return round(fresh / len(active) * 100, 2)
 
 
+# --- Resource Management computers ---
+# "Utilization" has no stored value anywhere in this DB — see
+# services/resource_mgmt.py's `person_utilizations()`, the single source of
+# truth this KPI strip and the Resource Dashboard's heatmap/capacity views
+# both read (imported locally below, not at module load, so this file never
+# has a load-time dependency on the services package).
+@computer("res_active_employee_count")
+def _res_active_employees(db: Database, project: str | None = None) -> int:
+    return db.users.count_documents({"status": "active"})
+
+
+@computer("res_avg_utilization_pct")
+def _res_avg_utilization(db: Database, project: str | None = None) -> float | None:
+    from ..services.resource_mgmt import person_utilizations
+    utils = person_utilizations(db)
+    return round(mean(utils), 1) if utils else None
+
+
+@computer("res_overloaded_count")
+def _res_overloaded(db: Database, project: str | None = None) -> int:
+    from ..services.resource_mgmt import person_utilizations
+    return sum(1 for u in person_utilizations(db) if u > 100)
+
+
+@computer("res_underutilized_count")
+def _res_underutilized(db: Database, project: str | None = None) -> int:
+    from ..services.resource_mgmt import person_utilizations
+    return sum(1 for u in person_utilizations(db) if u < 70)
+
+
+@computer("res_tasks_at_risk_count")
+def _res_tasks_at_risk(db: Database, project: str | None = None) -> int:
+    today = dt.date.today()
+    soon = (today + dt.timedelta(days=3)).isoformat()
+    return db.tasks.count_documents({
+        "status": {"$nin": TERMINAL_STATUSES},
+        "due_date": {"$ne": None, "$lte": soon},
+    })
+
+
 @computer("static")
 def _static(db: Database, project: str | None = None) -> None:
     """Placeholder for KPIs whose source integration isn't connected yet."""

@@ -20,6 +20,9 @@ coverage/
 .env.local
 *.local
 
+# Logs — local dev server output, never committed
+*.log
+
 # Editor / OS
 .DS_Store
 .idea/

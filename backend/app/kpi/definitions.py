@@ -158,4 +158,26 @@ KPI_DEFINITIONS: list[dict] = [
      "formula": "static", "unit": "%", "target": 90, "direction": "higher",
      "demo_value": 86,
      "demo_history": [78, 79, 80, 79, 81, 82, 83, 82, 84, 85, 85, 86]},
+
+    # --- Resource Management (computed live from users/teams/tasks — no
+    # utilization/capacity metric is stored anywhere, so every KPI here is
+    # derived; see services/resource_mgmt.py for the shared formula) ---
+    {"kpi_id": "res_total_employees", "name": "Total Employees",
+     "module": "resource_mgmt", "formula": "res_active_employee_count",
+     "unit": "count", "target": None, "direction": "higher", "demo_history": []},
+    {"kpi_id": "res_active_projects", "name": "Active Projects",
+     "module": "resource_mgmt", "formula": "active_project_count",
+     "unit": "count", "target": None, "direction": "higher", "demo_history": []},
+    {"kpi_id": "res_avg_utilization", "name": "Avg Utilization",
+     "module": "resource_mgmt", "formula": "res_avg_utilization_pct",
+     "unit": "%", "target": 85, "direction": "higher", "demo_history": []},
+    {"kpi_id": "res_overloaded", "name": "Overloaded Members",
+     "module": "resource_mgmt", "formula": "res_overloaded_count",
+     "unit": "count", "target": 0, "direction": "lower", "demo_history": []},
+    {"kpi_id": "res_underutilized", "name": "Underutilized Members",
+     "module": "resource_mgmt", "formula": "res_underutilized_count",
+     "unit": "count", "target": 0, "direction": "lower", "demo_history": []},
+    {"kpi_id": "res_tasks_at_risk", "name": "Tasks at Risk",
+     "module": "resource_mgmt", "formula": "res_tasks_at_risk_count",
+     "unit": "count", "target": 0, "direction": "lower", "demo_history": []},
 ]

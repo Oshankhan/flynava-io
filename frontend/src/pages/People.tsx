@@ -86,6 +86,8 @@ function Directory() {
             render: (_, r) => inr(r.salary.net),
           },
           {
+            // leave_balance is per-type (Casual/Sick/Earned) — the
+            // directory row just wants one combined "days left" figure.
             title: "Leave left",
             key: "leave",
             render: (_, r) =>
@@ -257,6 +259,8 @@ function Attendance() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
+            {/* mode="tags" + separators lets someone paste a comma/space
+               separated list of addresses instead of typing Enter after each. */}
             <Select
               mode="tags"
               className="w-full"
@@ -283,6 +287,9 @@ function Attendance() {
         footer={<Button onClick={() => setEmailHtml(null)}>Close</Button>}
       >
         {emailHtml && (
+          // Safe: emailHtml is a preview rendered server-side by our own
+          // backend (services/hr.py render_attendance_html) from the parsed
+          // attendance rows, never raw user input — not an XSS vector.
           <div
             className="border border-[#eee] p-4 rounded-lg"
             dangerouslySetInnerHTML={{ __html: emailHtml }}

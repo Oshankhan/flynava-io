@@ -4,7 +4,8 @@ from fastapi import APIRouter
 from . import (auth, users, rbac, integrations, kpis, dashboards, ai, insights,
                notifications, awards, admin, documents, reports, report_hub, hr,
                org, tasks, meetings, requests, workspace, compliance,
-               positions, analytics, projects, crm, success, forecaster, management)
+               positions, analytics, projects, crm, success, forecaster, management,
+               resources)
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth.router)
@@ -35,3 +36,4 @@ api_router.include_router(crm.router)
 api_router.include_router(success.router)
 api_router.include_router(forecaster.router)
 api_router.include_router(management.router)
+api_router.include_router(resources.router)
