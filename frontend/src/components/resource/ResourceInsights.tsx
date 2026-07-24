@@ -30,7 +30,7 @@ export default function ResourceInsights({ insights }: { insights: ResourceInsig
         <Text strong className="text-[13px]">AI Resource Insights</Text>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
-        {insights.map((insight, i) => (
+        {insights?.map((insight, i) => (
           <button
             key={i}
             type="button"

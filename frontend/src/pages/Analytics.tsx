@@ -33,7 +33,7 @@ export default function Analytics() {
       kpi_id: "actions_per_day",
       name: "Actions",
       unit: "",
-      points: data.actions_per_day.map((d) => ({ t: d.date, v: d.count })),
+      points: data.actions_per_day?.map((d) => ({ t: d.date, v: d.count })),
     };
   }, [data]);
 
@@ -88,10 +88,10 @@ export default function Analytics() {
 
         <Col xs={24} lg={14}>
           <Card size="small" bordered={false} title="Most Active Users">
-            {data.top_actors.length === 0 ? (
+            {!data.top_actors?.length ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No activity yet" />
             ) : (
-              <div className="w-full" style={{ height: Math.max(180, data.top_actors.length * 34) }}>
+              <div className="w-full" style={{ height: Math.max(180, (data.top_actors?.length ?? 0) * 34) }}>
                 <ResponsiveContainer>
                   <BarChart
                     data={data.top_actors as ActorCount[]}
@@ -111,7 +111,7 @@ export default function Analytics() {
         </Col>
         <Col xs={24} lg={10}>
           <Card size="small" bordered={false} title="Activity by Department">
-            {data.by_department.length === 0 ? (
+            {!data.by_department?.length ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No activity yet" />
             ) : (
               <Table
@@ -135,13 +135,13 @@ export default function Analytics() {
               </Flex>
             }
           >
-            {data.integrations.length === 0 ? (
+            {!data.integrations?.length ? (
               <Text type="secondary" className="text-xs">
                 No integrations synced yet.
               </Text>
             ) : (
               <Row gutter={[16, 16]}>
-                {data.integrations.map((i) => (
+                {data.integrations?.map((i) => (
                   <Col key={i.source} xs={24} md={8}>
                     <Card size="small" bordered className="h-full">
                       <Flex justify="space-between" align="center">

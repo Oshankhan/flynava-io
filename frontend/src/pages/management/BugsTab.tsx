@@ -75,7 +75,7 @@ export default function BugsTab() {
           onChange={(v) => setProject(v === ALL_PROJECTS ? undefined : v)}
           options={[
             { value: ALL_PROJECTS, label: "All Projects" },
-            ...data.projects.map((p) => ({ value: p.project, label: p.name })),
+            ...(data.projects?.map((p) => ({ value: p.project, label: p.name })) ?? []),
           ]}
         />
         <WeekPeriodFilter period={period} onChange={setPeriod} lastUpdated={data.last_updated} onRefresh={refresh} />

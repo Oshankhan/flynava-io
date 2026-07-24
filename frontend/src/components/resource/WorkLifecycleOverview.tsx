@@ -28,7 +28,7 @@ function DeptStrip({ dept }: { dept: ResourceLifecycle }) {
       </div>
 
       <div className="flex items-stretch gap-1 overflow-x-auto pb-1">
-        {dept.stages.map((s, i) => (
+        {dept.stages?.map((s, i) => (
           <div key={s.name} className="flex items-center shrink-0">
             <div className="flex flex-col items-center min-w-[64px]">
               <div className="w-9 h-9 rounded-full bg-io-600/10 text-io-700 dark:text-io-300 flex items-center justify-center font-semibold text-sm">
@@ -38,7 +38,7 @@ function DeptStrip({ dept }: { dept: ResourceLifecycle }) {
                 {s.name}
               </Text>
             </div>
-            {i < dept.stages.length - 1 && (
+            {i < (dept.stages?.length ?? 0) - 1 && (
               <span className="text-gray-300 dark:text-gray-600 mx-1">→</span>
             )}
           </div>
@@ -61,7 +61,7 @@ export default function WorkLifecycleOverview({ departments }: { departments: Re
   return (
     <Card size="small" bordered={false} className="shadow-sm" title="Work Lifecycle Overview (Department Wise)">
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
-        {departments.map((d) => (
+        {departments?.map((d) => (
           <DeptStrip key={d.department} dept={d} />
         ))}
       </div>

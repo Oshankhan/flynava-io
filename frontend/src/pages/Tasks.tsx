@@ -524,8 +524,8 @@ function TaskListPanel({ mode }: { mode: "mine" | "all" }) {
           <Tag color="processing">{b.in_progress} in progress</Tag>
           <Tag>{b.pending} pending</Tag>
           <Tag color="error">{b.overdue} overdue</Tag>
-          {data.reopened.length > 0 && (
-            <Tag color="orange">{data.reopened.length} reopened bugs</Tag>
+          {!!data.reopened?.length && (
+            <Tag color="orange">{(data.reopened?.length ?? 0)} reopened bugs</Tag>
           )}
         </Flex>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>

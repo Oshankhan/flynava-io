@@ -112,12 +112,12 @@ function DeptInsights({
         </Flex>
       )}
       {error && <Alert type="error" showIcon message="Cannot load insights" description={error} />}
-      {!loading && !error && data && data.cards.length === 0 && (
+      {!loading && !error && data && !data.cards?.length && (
         <Empty description="No problems detected right now." />
       )}
-      {!loading && !error && data && data.cards.length > 0 && (
+      {!loading && !error && data && !!data.cards?.length && (
         <Row gutter={[12, 12]}>
-          {data.cards.map((c) => (
+          {data.cards?.map((c) => (
             <Col key={c.insight_id} xs={24} lg={12} xxl={8}>
               <InsightCard card={c} onVote={handleVote} />
             </Col>

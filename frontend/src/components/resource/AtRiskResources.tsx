@@ -9,7 +9,7 @@ export default function AtRiskResources({ rows }: { rows: ResourceAtRisk[] }) {
   return (
     <Card size="small" bordered={false} className="h-full shadow-sm" title="At Risk Resources">
       <Flex vertical gap={12}>
-        {rows.map((r) => (
+        {rows?.map((r) => (
           <div key={r.user_id} className="rounded-lg border border-gray-100 dark:border-white/10 p-3">
             <Flex justify="space-between" align="start" gap={8} wrap>
               <Flex gap={8} align="center">

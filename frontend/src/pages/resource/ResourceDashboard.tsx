@@ -17,7 +17,7 @@ const { Text } = Typography;
 
 function toCsv(data: ResourceDashboardPayload): string {
   const lines = ["Employee,Role,Team,Workload %,Tasks,Completion %,Status"];
-  for (const r of data.heatmap) {
+  for (const r of data.heatmap ?? []) {
     lines.push(
       [r.name, r.designation ?? "", r.team_name ?? "", r.workload_pct, r.tasks, r.completion_pct, r.status]
         .map((v) => `"${String(v).replace(/"/g, '""')}"`)
@@ -88,7 +88,7 @@ export default function ResourceDashboard() {
       </Flex>
 
       <Row gutter={[16, 16]}>
-        {data.kpi_cards.map((kpi) => (
+        {data.kpi_cards?.map((kpi) => (
           <Col key={kpi.kpi_id} xs={12} sm={12} md={8} xl={4}>
             <KpiCard kpi={kpi} />
           </Col>

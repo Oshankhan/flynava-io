@@ -315,7 +315,7 @@ export default function ProjectDetail() {
     setMemberSaving(true);
     try {
       const res = await api.addProjectMembers(projectId, values.member_ids);
-      message.success(res.added.length ? `Added ${res.added.length} member(s)` : "Already on the project");
+      message.success(res.added?.length ? `Added ${res.added.length} member(s)` : "Already on the project");
       setMemberOpen(false);
       memberForm.resetFields();
       load();
@@ -498,12 +498,12 @@ export default function ProjectDetail() {
                 <Card size="small" className="w-32" styles={{ body: { padding: 10 } }}>
                   <Text type="secondary" className="text-[11px] block">Open Tasks</Text>
                   <Text strong className="text-[16px]">
-                    {data.tasks.filter((t) => classify(t.status) !== "completed").length}
+                    {data.tasks?.filter((t) => classify(t.status) !== "completed")?.length ?? 0}
                   </Text>
                 </Card>
                 <Card size="small" className="w-32" styles={{ body: { padding: 10 } }}>
                   <Text type="secondary" className="text-[11px] block">Team Members</Text>
-                  <Text strong className="text-[16px]">{data.members.length}</Text>
+                  <Text strong className="text-[16px]">{(data.members?.length ?? 0)}</Text>
                 </Card>
                 <Card size="small" className="w-32" styles={{ body: { padding: 10 } }}>
                   <Text type="secondary" className="text-[11px] block">Due Date</Text>
@@ -570,7 +570,7 @@ export default function ProjectDetail() {
                       </Flex>
                     )}
                     <Flex vertical gap={10}>
-                      {data.members.map((m) => (
+                      {data.members?.map((m) => (
                         <Flex key={m.user_id} align="center" gap={10} className="p-2 rounded-lg bg-[#f7f8fa] dark:bg-white/[0.04]">
                           <Tooltip title={m.name}><Avatar className="bg-io-600">{m.name[0]}</Avatar></Tooltip>
                           <div className="min-w-0">
@@ -595,15 +595,15 @@ export default function ProjectDetail() {
                         </Button>
                       )}
                     >
-                      {data.tasks.length === 0 ? (
+                      {!data.tasks?.length ? (
                         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No tasks yet" />
                       ) : (
                         <Table size="small" rowKey="task_id" dataSource={data.tasks} columns={taskCols}
                           pagination={{ pageSize: 8, showSizeChanger: false }} scroll={{ x: true }} />
                       )}
                     </Card>
-                    {data.bugs.length > 0 && (
-                      <Card size="small" bordered={false} title={`Bugs (${data.bugs.length})`}>
+                    {!!data.bugs?.length && (
+                      <Card size="small" bordered={false} title={`Bugs (${(data.bugs?.length ?? 0)})`}>
                         <Table size="small" rowKey="task_id" dataSource={data.bugs} columns={bugCols}
                           pagination={{ pageSize: 8, showSizeChanger: false }} scroll={{ x: true }} />
                       </Card>
