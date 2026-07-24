@@ -23,6 +23,9 @@ coverage/
 # Logs — local dev server output, never committed
 *.log
 
+# Database dumps — contain payslips, audit logs, employee records
+backend/backups/
+
 # Editor / OS
 .DS_Store
 .idea/
