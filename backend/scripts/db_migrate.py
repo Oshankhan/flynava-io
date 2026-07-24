@@ -46,7 +46,10 @@ NATURAL_KEYS: dict[str, tuple[str, ...]] = {
     "rag_chunks": ("chunk_id",),
     "milestones": ("milestone_id",),
     "task_journals": ("source_system", "source_id"),
-    "projects": ("source_system", "source_id"),
+    # `project_id` is null on 8 of 11 rows and `source_system` on 3 (manually
+    # created projects never went through the OpenProject connector), so name
+    # is the only field that actually identifies all of them.
+    "projects": ("name",),
     "traffic_daily": ("date",),
     "startup_daily": ("date",),
     "ops_daily": ("date",),
@@ -57,6 +60,41 @@ NATURAL_KEYS: dict[str, tuple[str, ...]] = {
     "startup_monthly": ("month",),
     "ops_monthly": ("month",),
     "forecaster_monthly": ("month",),
+
+    # No unique index, but each of these carries its own id field. Without
+    # them the fallback is `_id`, and since local and prod were seeded from
+    # separate `seed()` runs every ObjectId differs — a merge would then
+    # insert a second copy of all 147 payslips and all 49 employees rather
+    # than matching them. Verified: 147/147 payslips and 49/49 employees are
+    # content-identical across the two databases.
+    "payslips": ("emp_id", "month"),
+    "employees": ("emp_id",),
+    "attendance": ("emp_code", "date"),
+    "leaves": ("leave_id",),
+    "aws_budgets": ("source_system", "source_id"),
+    "aws_costs": ("source_system", "source_id"),
+    "aws_resources": ("source_system", "source_id"),
+    "automation_scripts": ("script_id",),
+    "compliance_items": ("item_id",),
+    "documents": ("doc_id",),
+    "folders": ("folder_id",),
+    "integration_logs": ("source", "run_at"),
+    # The same KPI is recalculated repeatedly for one period, so the timestamp
+    # is part of the identity — without it 42 rows collapse into one.
+    "kpi_values": ("kpi_id", "period_start", "calculated_at"),
+    "meetings": ("meeting_id",),
+    "notifications": ("notif_id",),
+    "positions": ("pos_id",),
+    "product_docs": ("pdoc_id",),
+    "report_defs": ("report_id",),
+    "report_runs": ("run_id",),
+    # Two populations share this collection: OpenProject-synced rows carry
+    # source_id with a null task_id, locally created rows the other way round.
+    # Only the composite identifies both (891/891 distinct).
+    "tasks": ("task_id", "source_system", "source_id"),
+    # Append-only event log with no id of its own; this tuple is what makes
+    # one entry distinct from the next.
+    "audit_logs": ("actor_id", "action", "entity_id", "created_at"),
 }
 
 LOCAL_URI = "mongodb://127.0.0.1:27017"
@@ -99,12 +137,19 @@ def _connect(uri: str, label: str) -> MongoClient:
 
 
 def _key_of(coll: str, doc: dict) -> tuple | None:
+    """Natural key of `doc`, or None to fall back to `_id`.
+
+    A missing field and an explicitly-null one mean the same thing here: some
+    collections mix populations that each fill in only half the key (an
+    OpenProject-synced task omits `task_id` outright, a locally created one
+    omits `source_id`), so requiring every field to be present would leave
+    both halves unkeyed. Only an all-null tuple is treated as no key at all.
+    """
     fields = NATURAL_KEYS.get(coll)
     if not fields:
         return None
-    if any(f not in doc for f in fields):
-        return None
-    return tuple(doc[f] for f in fields)
+    key = tuple(doc.get(f) for f in fields)
+    return None if all(v is None for v in key) else key
 
 
 def cmd_backup(which: str) -> None:
@@ -162,6 +207,10 @@ def _analyse(src_db, dst_db) -> list[dict]:
             src_keys = {d["_id"] for d in src_docs}
             dst_keys = {d["_id"] for d in dst_docs}
 
+        # A key that is not unique *within* a database is worse than no key:
+        # several documents collapse onto one another and the extras are lost.
+        collapse = (len(src_docs) - len(src_keys)) + (len(dst_docs) - len(dst_keys))
+
         rows.append({
             "collection": coll,
             "local": len(src_docs),
@@ -171,6 +220,7 @@ def _analyse(src_db, dst_db) -> list[dict]:
             "insert": len(src_keys - dst_keys),
             "prod_only": len(dst_keys - src_keys),
             "risky": not keyed and len(dst_docs) > 0,
+            "collapse": collapse,
         })
     return rows
 
@@ -184,7 +234,7 @@ def cmd_report() -> None:
           f"{'insert':>7} {'prod-only':>10}  key")
     print("-" * 96)
     for r in rows:
-        flag = "  <-- dup risk" if r["risky"] else ""
+        flag = "  <-- COLLAPSE" if r["collapse"] else ("  <-- dup risk" if r["risky"] else "")
         print(f"{r['collection']:30} {r['local']:>6} {r['prod']:>6} "
               f"{r['overwrite']:>7} {r['insert']:>7} {r['prod_only']:>10}  "
               f"{r['key']}{flag}")
@@ -202,6 +252,17 @@ def cmd_report() -> None:
         print("copy inserts alongside it instead of replacing it:")
         for r in risky:
             print(f"  - {r['collection']}: {r['prod']} prod docs matched only by _id")
+
+    collapsing = [r for r in rows if r["collapse"]]
+    if collapsing:
+        print("\nSTOP — these keys are not unique within a database, so documents")
+        print("would collapse onto each other and the extras would be LOST:")
+        for r in collapsing:
+            print(f"  - {r['collection']}: {r['collapse']} doc(s) share a key "
+                  f"({r['key']}) — widen the key before merging")
+    else:
+        print("\nkey uniqueness: OK — every key identifies exactly one document "
+              "on both sides")
 
 
 def cmd_merge(apply: bool) -> None:
@@ -223,7 +284,10 @@ def cmd_merge(apply: bool) -> None:
         c_ins = c_upd = 0
         for doc in src[coll].find({}):
             key = _key_of(coll, doc)
-            flt = ({f: doc[f] for f in NATURAL_KEYS[coll]} if key is not None
+            # `.get()` mirrors _key_of: a field absent from the local document
+            # queries as None, which Mongo matches against both missing and
+            # explicitly-null fields on the target.
+            flt = ({f: doc.get(f) for f in NATURAL_KEYS[coll]} if key is not None
                    else {"_id": doc["_id"]})
             existing = dst[coll].find_one(flt, {"_id": 1})
             if existing:
