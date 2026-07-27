@@ -33,10 +33,11 @@ def get_current_user(
 
 
 def require_module(module: str):
-    """Dependency factory: 403 unless the user's role has any access to module."""
+    """Dependency factory: 403 unless the user's role AND department both
+    grant access to module (see rbac.has_module_access)."""
 
     def dep(user: dict = Depends(get_current_user)) -> dict:
-        if not rbac.has_access(user["role"], module):
+        if not rbac.has_module_access(user, module):
             raise HTTPException(status.HTTP_403_FORBIDDEN, f"no access to {module}")
         return user
 
@@ -53,14 +54,19 @@ def require_role(*roles: str):
 
 
 def has_aggregate_access(user: dict, module: str) -> bool:
-    """Like `rbac.has_any_access`, but a bare "own" level — self-only
+    """Like `rbac.has_module_access`, but a bare "own" level — self-only
     visibility, e.g. an employee's own HR record or own task list — doesn't
     qualify for company-wide aggregate screens (Indicator Of Success,
-    Financial Forecaster) unlike `require_module`/`has_any_access`, which
-    only check "not none". Unioned across every role a multi-role user
-    holds."""
-    return any(rbac.access_level(r, module) not in (rbac.NONE, "own")
-              for r in rbac.user_roles(user))
+    Financial Forecaster). Also requires each role's access to clear the
+    department gate (see rbac.role_module_allowed) — a manager outside a
+    department no longer sees that department's aggregate screens just by
+    role. Unioned across every role a multi-role user holds."""
+    dept = user.get("department")
+    return any(
+        rbac.access_level(r, module) not in (rbac.NONE, "own")
+        and rbac.role_module_allowed(dept, r, module)
+        for r in rbac.user_roles(user)
+    )
 
 
 def require_any_module(*modules: str):
