@@ -7,7 +7,6 @@ import {
   Input,
   List,
   message,
-  Result,
   Row,
   Select,
   Space,
@@ -25,16 +24,20 @@ import {
   type NotificationItem,
   type User,
 } from "../lib/api";
-import { useAuth } from "../lib/auth";
+import { ROLES } from "../lib/rbac";
+import RequireModule from "../components/RequireModule";
 
 const { Text } = Typography;
-const ROLES = [
-  "super_admin", "leadership", "manager", "hr",
-  "employee", "marketing", "investor", "partner",
-];
 
 export default function Admin() {
-  const { user } = useAuth();
+  return (
+    <RequireModule module="admin_panel">
+      <AdminPanel />
+    </RequireModule>
+  );
+}
+
+function AdminPanel() {
   const [defs, setDefs] = useState<KpiDef[]>([]);
   const [log, setLog] = useState<NotificationItem[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -51,18 +54,8 @@ export default function Admin() {
     api.auditLog().then(setAudit);
   }
   useEffect(() => {
-    if (user?.role === "super_admin") loadAll();
-  }, [user]);
-
-  if (user?.role !== "super_admin") {
-    return (
-      <Result
-        status="403"
-        title="403"
-        subTitle="Admin panel is restricted to Super Admins."
-      />
-    );
-  }
+    loadAll();
+  }, []);
 
   async function sync() {
     setSyncing(true);

@@ -31,7 +31,7 @@ import { api, ApiError, type WorkspaceData } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import StatusDonut from "../components/StatusDonut";
 import DeptPanel from "../components/DeptPanel";
-import { levelOf } from "../components/Layout";
+import { levelOf } from "../lib/rbac";
 import LeadWorkspace from "./LeadWorkspace";
 import DeptWorkspace from "./DeptWorkspace";
 import ExecWorkspace from "./ExecWorkspace";

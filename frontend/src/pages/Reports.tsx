@@ -16,7 +16,7 @@ import {
   type ReportTemplate, type SavedReportView, type UserLite,
 } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { levelOf } from "../components/Layout";
+import { levelOf } from "../lib/rbac";
 import StatTile from "../components/StatTile";
 import ReportWizard from "../components/reports/ReportWizard";
 import ReportViewer from "../components/reports/ReportViewer";

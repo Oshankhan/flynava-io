@@ -51,7 +51,7 @@ import {
   type UserLite,
 } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { levelOf, rolesOf } from "../components/Layout";
+import { levelOf, rolesOf } from "../lib/rbac";
 import ContactsTab from "../components/crm/ContactsTab";
 import BillingTab from "../components/crm/BillingTab";
 
