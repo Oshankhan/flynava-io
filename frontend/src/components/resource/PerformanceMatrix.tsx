@@ -14,12 +14,13 @@ import type { ResourceTeamCapacity } from "../../lib/api";
 import { ragHex, TEAM_STATUS_RAG } from "./statusColors";
 
 export default function PerformanceMatrix({ rows }: { rows: ResourceTeamCapacity[] }) {
-  const points = rows.map((r) => ({
-    name: r.name,
-    x: r.utilization_pct,
-    y: r.completion_pct,
-    status: r.status,
-  }));
+  const points =
+    rows?.map((r) => ({
+      name: r.name,
+      x: r.utilization_pct,
+      y: r.completion_pct,
+      status: r.status,
+    })) ?? [];
 
   return (
     <Card size="small" bordered={false} className="h-full shadow-sm" title="Team Performance Matrix">

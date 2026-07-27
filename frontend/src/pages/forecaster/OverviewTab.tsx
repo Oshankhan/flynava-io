@@ -175,7 +175,7 @@ export default function OverviewTab() {
 
         <Card title={`Forecast Overview — ${data.forecast_label}`} size="small" bordered={false}>
           <div className="grid grid-cols-2 gap-3">
-            {data.forecast_cards.map((card, i) => (
+            {data.forecast_cards?.map((card, i) => (
               <HeroKpiCard
                 key={card.id}
                 card={card}

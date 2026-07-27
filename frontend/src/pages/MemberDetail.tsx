@@ -120,10 +120,10 @@ export default function MemberDetail() {
         </Flex>
       </Card>
 
-      {data.projects.length > 0 && (
+      {!!data.projects?.length && (
         <Card size="small" bordered={false} title="Projects" className="mb-4">
           <Flex gap={8} wrap>
-            {data.projects.map((p) => (
+            {data.projects?.map((p) => (
               <Tag
                 key={p.project_id}
                 color="purple"
@@ -149,7 +149,7 @@ export default function MemberDetail() {
       <Row gutter={[16, 16]} className="mt-4">
         <Col xs={24} lg={14}>
           <Card size="small" bordered={false} title="Tasks" className="h-full">
-            {data.tasks.length === 0 ? (
+            {!data.tasks?.length ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No tasks" />
             ) : (
               <Table size="small" rowKey="task_id" dataSource={data.tasks} columns={taskCols}
@@ -161,7 +161,7 @@ export default function MemberDetail() {
           <Row gutter={[16, 16]}>
             <Col span={24}>
               <Card size="small" bordered={false} title="Reopened Bugs">
-                {data.reopened.length === 0 ? (
+                {!data.reopened?.length ? (
                   <Text type="secondary" className="text-xs">None. 🎉</Text>
                 ) : (
                   <List size="small" dataSource={data.reopened}
@@ -175,7 +175,7 @@ export default function MemberDetail() {
             </Col>
             <Col span={24}>
               <Card size="small" bordered={false} title="Bugs Authored">
-                {data.authored.length === 0 ? (
+                {!data.authored?.length ? (
                   <Text type="secondary" className="text-xs">None.</Text>
                 ) : (
                   <List size="small" dataSource={data.authored}
@@ -231,7 +231,7 @@ export default function MemberDetail() {
             ) : (
               <Text type="secondary" className="text-xs">No HR record linked.</Text>
             )}
-            {data.recent_leaves.length > 0 && (
+            {!!data.recent_leaves?.length && (
               <List size="small" dataSource={data.recent_leaves}
                 renderItem={(l) => (
                   <List.Item actions={[<Tag key="s" color={l.status === "Approved" ? "success" : "processing"}>{l.status}</Tag>]}>
@@ -244,7 +244,7 @@ export default function MemberDetail() {
 
         <Col xs={24} lg={12}>
           <Card size="small" bordered={false} title="Pending Documents">
-            {data.pending_docs.length === 0 ? (
+            {!data.pending_docs?.length ? (
               <Text type="secondary" className="text-xs">Nothing pending.</Text>
             ) : (
               <List size="small" dataSource={data.pending_docs}
@@ -258,7 +258,7 @@ export default function MemberDetail() {
         </Col>
         <Col xs={24} lg={12}>
           <Card size="small" bordered={false} title="Recent Activity">
-            {data.activity.length === 0 ? (
+            {!data.activity?.length ? (
               <Text type="secondary" className="text-xs">Nothing yet.</Text>
             ) : (
               <List size="small" dataSource={data.activity}

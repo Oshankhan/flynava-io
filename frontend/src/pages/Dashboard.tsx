@@ -96,11 +96,11 @@ export default function Dashboard() {
         onRefreshProjects={refreshProjects}
       />
 
-      {data.kpis.length === 0 ? (
+      {!data.kpis?.length ? (
         <Empty description="No KPIs yet — connect integrations and recalculate." />
       ) : (
         <Row gutter={[16, 16]}>
-          {data.kpis.map((k) => (
+          {data.kpis?.map((k) => (
             <Col key={k.kpi_id} xs={24} sm={12} lg={8} xl={6}>
               <KpiCard
                 kpi={k}

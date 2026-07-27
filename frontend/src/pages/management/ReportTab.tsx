@@ -143,7 +143,7 @@ export default function ReportTab() {
           <Card title="Stage Pipeline" size="small" bordered={false}>
             <Steps
               size="small"
-              items={data.stages.map((s) => ({
+              items={data.stages?.map((s) => ({
                 title: s.name,
                 description: `${s.progress}%`,
                 status: STAGE_STATUS[s.status],

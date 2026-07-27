@@ -143,7 +143,7 @@ function ExecutiveWorkspace() {
 
   const b = data.buckets;
   const meetingDays: Record<string, typeof data.meetings> = {};
-  data.meetings.forEach((m) => {
+  data.meetings?.forEach((m) => {
     const k = dayLabel(m.start);
     (meetingDays[k] = meetingDays[k] ?? []).push(m);
   });
@@ -221,7 +221,7 @@ function ExecutiveWorkspace() {
                 extra={<Button type="link" size="small" onClick={() => navigate("/tasks")}>View All <RightOutlined /></Button>}
                 className="h-full"
               >
-                {data.tasks.length === 0 ? (
+                {!data.tasks?.length ? (
                   <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No tasks assigned" />
                 ) : (
                   <List
@@ -263,7 +263,7 @@ function ExecutiveWorkspace() {
                 title="Recent Activities"
                 extra={<Button type="link" size="small" onClick={() => navigate("/notifications")}>View All</Button>}
               >
-                {data.activity.length === 0 ? (
+                {!data.activity?.length ? (
                   <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Nothing yet" />
                 ) : (
                   <List
@@ -302,7 +302,7 @@ function ExecutiveWorkspace() {
                 extra={<Button type="link" size="small" onClick={() => navigate("/calendar")}>View Calendar</Button>}
                 className="h-full"
               >
-                {data.meetings.length === 0 ? (
+                {!data.meetings?.length ? (
                   <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No upcoming meetings" />
                 ) : (
                   Object.entries(meetingDays).map(([day, ms]) => (
@@ -363,7 +363,7 @@ function ExecutiveWorkspace() {
                 </Flex>
               }
             >
-              {data.reopened.length === 0 ? (
+              {!data.reopened?.length ? (
                 <Text type="secondary" className="text-xs">
                   No reopened bugs on your name. 🎉
                 </Text>
@@ -390,7 +390,7 @@ function ExecutiveWorkspace() {
               }
               extra={<Button type="link" size="small" onClick={() => navigate("/approvals")}>View All</Button>}
             >
-              {data.my_requests.length === 0 ? (
+              {!data.my_requests?.length ? (
                 <Text type="secondary" className="text-xs">
                   Nothing submitted yet — raise a request from Approvals.
                 </Text>

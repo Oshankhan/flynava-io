@@ -80,7 +80,7 @@ export default function ExecWorkspace() {
     );
 
   const meetingDays: Record<string, typeof data.meetings> = {};
-  data.meetings.forEach((m) => {
+  data.meetings?.forEach((m) => {
     const k = dayLabel(m.start);
     meetingDays[k] = meetingDays[k] ?? [];
     meetingDays[k].push(m);
@@ -131,9 +131,9 @@ export default function ExecWorkspace() {
       </Flex>
 
       {/* Org-wide KPI headline */}
-      {data.kpis.length > 0 && (
+      {!!data.kpis?.length && (
         <Row gutter={[16, 16]}>
-          {data.kpis.slice(0, 8).map((k) => (
+          {data.kpis?.slice(0, 8).map((k) => (
             <Col key={k.kpi_id} xs={12} md={6} xl={3}>
               <KpiCard kpi={k} series={seriesById[k.kpi_id]} />
             </Col>
@@ -153,7 +153,7 @@ export default function ExecWorkspace() {
         }
       >
         <Row gutter={[16, 16]}>
-          {data.departments.map((d) => (
+          {data.departments?.map((d) => (
             <Col key={d.dept_id} xs={24} sm={12} lg={8} xl={6}>
               <Card
                 size="small"
@@ -200,7 +200,7 @@ export default function ExecWorkspace() {
 
       <Row gutter={[16, 16]} className="mt-4">
         <Col xs={24} lg={14}>
-          {data.projects.length > 0 ? (
+          {data.projects?.length ? (
             <ProjectHealth projects={data.projects} />
           ) : (
             <Card size="small" bordered={false} title="Project Health" className="h-full">
@@ -209,7 +209,7 @@ export default function ExecWorkspace() {
           )}
         </Col>
         <Col xs={24} lg={10}>
-          {data.bug_breakdown && data.bug_breakdown.length > 0 ? (
+          {data.bug_breakdown?.length ? (
             <StatusDonut title="Bugs by Status" data={data.bug_breakdown} centerLabel="Total Bugs" />
           ) : (
             <Card size="small" bordered={false} title="Bugs by Status" className="h-full">
@@ -254,7 +254,7 @@ export default function ExecWorkspace() {
               </Flex>
             }
           >
-            {data.pending_docs.length === 0 ? (
+            {!data.pending_docs?.length ? (
               <Text type="secondary" className="text-xs">Nothing pending review.</Text>
             ) : (
               <List
@@ -308,7 +308,7 @@ export default function ExecWorkspace() {
         </Col>
         <Col xs={24} lg={12}>
           <Card size="small" bordered={false} title="My Calendar">
-            {data.meetings.length === 0 ? (
+            {!data.meetings?.length ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No upcoming meetings" />
             ) : (
               Object.entries(meetingDays).map(([day, ms]) => (

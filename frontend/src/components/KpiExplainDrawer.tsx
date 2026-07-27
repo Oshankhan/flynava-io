@@ -96,12 +96,12 @@ export default function KpiExplainDrawer({
             </Paragraph>
           </div>
 
-          {data.evidence.length > 0 && (
+          {!!data.evidence?.length && (
             <div>
               <Title level={5} className="!mb-2">
-                Evidence ({data.evidence.length}
-                {data.evidence.length >= 15 ? "+" : ""} record
-                {data.evidence.length === 1 ? "" : "s"})
+                Evidence ({(data.evidence?.length ?? 0)}
+                {(data.evidence?.length ?? 0) >= 15 ? "+" : ""} record
+                {(data.evidence?.length ?? 0) === 1 ? "" : "s"})
               </Title>
               <Table<KpiExplainEvidence>
                 size="small"
@@ -186,7 +186,7 @@ export default function KpiExplainDrawer({
             </Flex>
           </div>
 
-          {data.history.length >= 3 && (
+          {(data.history?.length ?? 0) >= 3 && (
             <TrendChart
               series={{ kpi_id: data.kpi_id, name: data.name, unit: data.unit, points: data.history }}
             />
