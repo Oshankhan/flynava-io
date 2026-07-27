@@ -36,7 +36,7 @@ npm test
 
 ## Build phases
 - [x] **Phase 0** — Scaffold, health check, CI, green/white tokens
-- [x] **Phase 1** — Auth (JWT) + RBAC (8 roles × 11 modules) + core data model + seed
+- [x] **Phase 1** — Auth (JWT) + RBAC (9 roles × 11 modules) + core data model + seed
 - [x] **Phase 2** — Ingestion framework + OpenProject connector + Integration_Log
 - [x] **Phase 3** — Config-driven KPI engine + Operations KPIs
 - [x] **Phase 4** — Dashboard shell + Leadership dashboard

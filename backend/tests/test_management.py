@@ -164,21 +164,34 @@ def test_rbac_marketing_denied(client, auth_header):
     assert client.get("/api/v1/management/bugs", headers=hdr).status_code == 403
 
 
-def test_rbac_hr_allowed_via_operations_read(client, auth_header):
-    # hr role has operations:"read" (non-"own") per the RBAC matrix.
+def test_rbac_hr_denied_operations_department_mismatch(client, auth_header):
+    # hr role has operations:"read" (non-"own") per the RBAC matrix, but hr's
+    # department (hr) doesn't cover the operations/product_dev modules —
+    # department gating denies this even though the role alone would allow it.
     r = client.get("/api/v1/management/bugs", headers=auth_header("hr@flynava.ai"))
-    assert r.status_code == 200
+    assert r.status_code == 403
 
 
 def test_rbac_investor_and_partner_allowed(client, auth_header):
+    # investor/partner's department is "exec", which covers every module.
     assert client.get("/api/v1/management/bugs",
                       headers=auth_header("investor@flynava.ai")).status_code == 200
     assert client.get("/api/v1/management/bugs",
                       headers=auth_header("partner@flynava.ai")).status_code == 200
 
 
-def test_rbac_leadership_and_manager_allowed(client, auth_header):
+def test_rbac_leadership_allowed(client, auth_header):
+    # leadership's department is "exec", which covers every module.
     assert client.get("/api/v1/management/bugs",
                       headers=auth_header("leadership@flynava.ai")).status_code == 200
+
+
+def test_rbac_manager_department_gates_access(client, auth_header):
+    # rakshitha.s is a manager in the fin department, which doesn't cover
+    # operations/product_dev — no longer allowed just by role.
     assert client.get("/api/v1/management/bugs",
-                      headers=auth_header("rakshitha.s@flynava.ai")).status_code == 200
+                      headers=auth_header("rakshitha.s@flynava.ai")).status_code == 403
+    # harsha.varlani is a manager in the eng department, which does cover
+    # operations/product_dev — an in-department manager still gets access.
+    assert client.get("/api/v1/management/bugs",
+                      headers=auth_header("harsha.varlani@flynava.ai")).status_code == 200

@@ -26,6 +26,7 @@ import SuccessPage from "./pages/success/SuccessPage";
 import ForecasterPage from "./pages/forecaster/ForecasterPage";
 import ManagementPage from "./pages/management/ManagementPage";
 import ResourcePage from "./pages/resource/ResourcePage";
+import RequireModule from "./components/RequireModule";
 
 function Shell() {
   const { dark } = useTheme();
@@ -71,7 +72,14 @@ function Shell() {
               <Route path="/awards" element={<Awards />} />
               <Route path="/documents" element={<Documents />} />
               <Route path="/reports" element={<Reports />} />
-              <Route path="/people" element={<People />} />
+              <Route
+                path="/people"
+                element={
+                  <RequireModule module="hr">
+                    <People />
+                  </RequireModule>
+                }
+              />
               <Route path="/member/:userId" element={<MemberDetail />} />
               <Route path="/my-payslip" element={<MyPayslip />} />
               <Route path="/admin" element={<Admin />} />

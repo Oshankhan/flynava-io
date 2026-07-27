@@ -172,7 +172,9 @@ def test_rbac_hr_role(client, auth_header):
     hdr = auth_header("hr@flynava.ai")
     assert client.get("/api/v1/success/organization", headers=hdr).status_code == 200
     assert client.get("/api/v1/success/central", headers=hdr).status_code == 200
-    assert client.get("/api/v1/success/operations", headers=hdr).status_code == 200
+    # hr role has operations:"read" per MATRIX, but hr's department (hr) doesn't
+    # cover the operations module — department gating denies this now.
+    assert client.get("/api/v1/success/operations", headers=hdr).status_code == 403
     assert client.get("/api/v1/success/marketing", headers=hdr).status_code == 403
     assert client.get("/api/v1/success/finance", headers=hdr).status_code == 403
     assert client.get("/api/v1/success/startup", headers=hdr).status_code == 403

@@ -24,23 +24,12 @@ EXPLAIN_SYSTEM = (
     "with keys 'answer', 'reason', 'recommended_action'."
 )
 
-# The RBAC MATRIX gates modules by literal role name (a "marketing" role,
-# an "hr" role, ...) — a holdover from the flat-role dashboards. Team leads
-# and executives are `team_lead`/`employee` with a `department` instead, so
-# module access for THEM is department-based: an eng dev sees ops/product KPIs,
-# a marketing exec sees marketing_sales, etc. Elevated roles see everything.
-DEPT_MODULES = {
-    "eng": {"operations", "product_dev"},
-    "fin": {"finance"},
-    "hr": {"hr", "recruitment"},
-    "mkt": {"marketing_sales"},
-}
-ELEVATED_ROLES = ("super_admin", "leadership", "manager")
-
-
+# Module access is gated by both role (rbac.MATRIX) and department
+# (rbac.DEPARTMENT_MODULES) — a manager or leadership user only sees a
+# KPI's module if their own department covers it (department `exec` covers
+# everything, so super_admin/leadership/investor/partner still see all).
 def _require_kpi_access(user: dict, d: dict) -> None:
-    own_dept = d["module"] in DEPT_MODULES.get(user.get("department") or "", set())
-    if user["role"] not in ELEVATED_ROLES and not own_dept:
+    if not rbac.has_module_access(user, d["module"]):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "no access to this KPI")
 
 
@@ -58,8 +47,9 @@ def kpi_history(kpi_id: str, user: dict = Depends(get_current_user),
                 db: Database = Depends(get_db)) -> dict:
     """12-month trend for one KPI (e.g. a Finance TL's revenue/expense card,
     or a Marketing exec's lead-volume trend) — reuses the same points shape
-    dashboards embed. Access: elevated roles always; team_lead/employee only
-    for their own department's modules (see DEPT_MODULES above)."""
+    dashboards embed. Access: role must grant the KPI's module (rbac.MATRIX)
+    AND the caller's department must permit that module (see
+    rbac.has_module_access) — no role is exempt from the department check."""
     d = db.kpi_defs.find_one({"kpi_id": kpi_id})
     if not d:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "kpi not found")

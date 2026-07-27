@@ -23,17 +23,6 @@ from ..deps import get_current_user, get_db
 
 router = APIRouter(tags=["workspace"])
 
-# Which KPI modules feed a department head's "Dept KPI pulse" strip.
-# Intersected with rbac.has_access(role, module) as defence in depth — a
-# dept head's role (manager/hr/marketing) already covers these in MATRIX,
-# this just guards against a future role/module mismatch silently leaking.
-DEPT_KPI_MODULES = {
-    "eng": ["operations", "product_dev"],
-    "fin": ["finance", "compliance"],
-    "hr": ["hr", "recruitment"],
-    "mkt": ["marketing_sales"],
-}
-
 # audit actions that read well in a human feed (auto API audit rows excluded)
 _FEED_VERBS = {
     "task_created": "created task",
@@ -189,8 +178,8 @@ def workspace_department(user: dict = Depends(get_current_user),
             "member_count": len(info["members"]),
         })
 
-    modules = [m for m in DEPT_KPI_MODULES.get(dept, [])
-              if rbac.has_access(user["role"], m)]
+    modules = [m for m in rbac.DEPARTMENT_MODULES.get(dept, set())
+              if rbac.has_module_access(user, m)]
     dept_kpis = engine.latest_snapshot(db, modules) if modules else []
 
     positions = [{k: v for k, v in p.items() if k != "_id"} for p in

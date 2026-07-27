@@ -21,7 +21,7 @@ import type { Dayjs } from "dayjs";
 import { PlusOutlined } from "@ant-design/icons";
 import { api, ApiError, type IoRequest } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { levelOf } from "../components/Layout";
+import { levelOf } from "../lib/rbac";
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;

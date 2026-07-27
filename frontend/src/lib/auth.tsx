@@ -14,6 +14,7 @@ export const SESSION_EXPIRED_KEY = "io_session_expired";
 
 interface AuthState {
   user: User | null;
+  modules: Record<string, string>;
   login: (email: string, password: string) => Promise<User>;
   logout: () => void;
 }
@@ -27,6 +28,7 @@ function readUser(): User | null {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(readUser);
+  const [modules, setModules] = useState<Record<string, string>>({});
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await api.login(email, password);
@@ -40,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     setUser(null);
+    setModules({});
   }, []);
 
   useEffect(() => {
@@ -51,7 +54,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
   }, [logout]);
 
-  const value = useMemo(() => ({ user, login, logout }), [user, login, logout]);
+  // /auth/login doesn't return the modules map — it's fetched separately
+  // here (the one canonical /auth/me call site) so it's available
+  // app-wide, not just to Layout.tsx's nav-building.
+  useEffect(() => {
+    if (!user) return;
+    api.me().then((r) => setModules(r.modules)).catch(() => setModules({}));
+  }, [user]);
+
+  const value = useMemo(
+    () => ({ user, modules, login, logout }),
+    [user, modules, login, logout]
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

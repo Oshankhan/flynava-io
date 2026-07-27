@@ -71,10 +71,9 @@ def test_kpi_history_department_scoped_for_l1_and_l2(client, auth_header):
     ok2 = client.get("/api/v1/kpis/mkt_conversion/history",
                      headers=auth_header("tanvi.gupta@flynava.ai"))
     assert ok2.status_code == 200
-    # Rakshitha (Finance Manager, role="manager") is an elevated role, so this
-    # exercises the elevated-bypass branch rather than dept-scoped access —
-    # the real roster has no non-elevated finance team lead/IC to test that
-    # branch with.
+    # Rakshitha (Finance Manager, role="manager", department="fin") passes
+    # via a normal department match — her department covers the finance
+    # module, same gate a non-manager finance user would go through.
     ok = client.get("/api/v1/kpis/fin_revenue_mtd/history",
                     headers=auth_header("rakshitha.s@flynava.ai"))
     assert ok.status_code == 200

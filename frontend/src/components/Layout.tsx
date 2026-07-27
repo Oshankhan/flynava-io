@@ -37,8 +37,9 @@ import {
   TrophyOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { api, type DashboardLink, type User } from "../lib/api";
+import { api, type DashboardLink } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { levelOf, rolesOf } from "../lib/rbac";
 import { useTheme } from "../lib/theme";
 import AskIO from "./AskIO";
 import NotificationBell from "./NotificationBell";
@@ -47,28 +48,6 @@ import InayaChat from "./InayaChat";
 const { Sider, Header, Content } = AntLayout;
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
-
-const ROLE_LEVEL: Record<string, number> = {
-  super_admin: 4,
-  leadership: 4,
-  manager: 3,
-  hr: 3,
-  marketing: 3,
-  team_lead: 2,
-  employee: 1,
-  investor: 0,
-  partner: 0,
-};
-
-export function levelOf(user: User | null): number {
-  if (!user) return 1;
-  return typeof user.level === "number" ? user.level : ROLE_LEVEL[user.role] ?? 1;
-}
-
-export function rolesOf(user: User | null): string[] {
-  if (!user) return [];
-  return user.roles && user.roles.length > 0 ? user.roles : [user.role];
-}
 
 // A bare "own" access level (self-only visibility — an employee's own HR
 // record, their own task list) doesn't qualify for these company-wide
@@ -146,12 +125,11 @@ function buildResourceChildren(level: number): { key: string; label: string }[] 
 }
 
 export default function Layout() {
-  const { user, logout } = useAuth();
+  const { user, logout, modules } = useAuth();
   const { dark, toggle } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [dashboards, setDashboards] = useState<DashboardLink[]>([]);
-  const [modules, setModules] = useState<Record<string, string>>({});
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [inbox, setInbox] = useState(0);
@@ -163,10 +141,6 @@ export default function Layout() {
 
   useEffect(() => {
     if (user) api.listDashboards().then(setDashboards).catch(() => setDashboards([]));
-  }, [user]);
-
-  useEffect(() => {
-    if (user) api.me().then((r) => setModules(r.modules)).catch(() => setModules({}));
   }, [user]);
 
   // Poll unread + approval inbox; toast when something new lands.

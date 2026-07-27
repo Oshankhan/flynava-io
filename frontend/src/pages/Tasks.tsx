@@ -40,7 +40,7 @@ import {
   type UserLite,
 } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { levelOf } from "../components/Layout";
+import { levelOf } from "../lib/rbac";
 
 const { Text } = Typography;
 

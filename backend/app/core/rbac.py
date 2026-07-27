@@ -148,12 +148,90 @@ def has_any_access(user: dict, module: str) -> bool:
     return any(has_access(r, module) for r in user_roles(user))
 
 
+# Cross-cutting: org-wide programs not owned by one department. Allowed for
+# every department (including department=None) — gated by MATRIX's per-role
+# level only, department plays no further role.
+#   - awards: company-wide recognition program.
+#   - ai_insights: cross-functional "Ask IO" assistant.
+#   - customer_support: no "support" department exists in seed data; already
+#     role-restricted (leadership/manager/super_admin full; investor/partner
+#     summary/sla) — that's gate enough.
+#   - admin_panel: MATRIX already hard-NONEs every role but super_admin, so
+#     department gating is moot regardless.
+_CROSS_CUTTING_MODULES = {"awards", "ai_insights", "customer_support", "admin_panel"}
+
+# user["department"] -> module ids that department may see.
+# `exec` (super_admin/leadership/investor/partner) = every module: those
+# roles are legitimately org-wide because their department covers
+# everything — not via a role bypass.
+# `fin` includes `compliance` (reconciling workspace.py's old DEPT_KPI_MODULES,
+# which had it, against kpis.py's old DEPT_MODULES, which didn't).
+# `product` gets product_dev only (kpis.py's old map had no `product` entry
+# at all — a real gap, since a product manager's seed department is
+# `product`).
+DEPARTMENT_MODULES: dict[str, set[str]] = {
+    "eng": {"operations", "product_dev"},
+    "product": {"product_dev"},
+    "mkt": {"marketing_sales"},
+    "hr": {"hr", "recruitment"},
+    "fin": {"finance", "compliance"},
+    "exec": set(MODULES),
+}
+
+
+def department_allows(department: str | None, module: str) -> bool:
+    """Cross-cutting modules pass for everyone (including no department).
+    Department-owned modules require an exact match; department=None
+    denies them (secure-by-default — flag as a data-quality gap if seen).
+    """
+    if module in _CROSS_CUTTING_MODULES:
+        return True
+    if department is None:
+        return False
+    return module in DEPARTMENT_MODULES.get(department, set())
+
+
+# Roles whose entire purpose IS a single module, mapped to that exact
+# module — the role name already declares the scope as precisely as
+# `department` would, so MATRIX access to THIS specific module is trusted
+# directly, bypassing the department filter. Without this, a user like a
+# product-department manager holding an explicit extra "marketing" role
+# (seeded to co-run marketing_sales alongside product) would lose that
+# access solely because their primary `department` field says "product",
+# not "mkt" — reopening the exact multi-role case `has_any_access` exists
+# for. Any OTHER module these roles happen to touch in MATRIX (e.g. hr's
+# coarse "read" on operations) still goes through the normal department
+# gate — that coarse cross-module reach is exactly the leak department
+# gating was added to close.
+ROLE_HOME_MODULES: dict[str, set[str]] = {
+    "hr": {"hr", "recruitment"},
+    "marketing": {"marketing_sales"},
+}
+
+
+def role_module_allowed(department: str | None, role: str, module: str) -> bool:
+    if module in ROLE_HOME_MODULES.get(role, set()):
+        return True
+    return department_allows(department, module)
+
+
 def accessible_modules_for_user(user: dict) -> dict[str, str]:
     """Like `accessible_modules`, but unioned across every role a user
-    holds — a module appears if ANY of their roles grants access to it.
+    holds, and filtered per-role to modules their department (or that
+    role's home module, see `role_module_allowed`) permits.
     """
+    dept = user.get("department")
     out: dict[str, str] = {}
     for role in user_roles(user):
         for m, lvl in accessible_modules(role).items():
-            out.setdefault(m, lvl)
+            if role_module_allowed(dept, role, m):
+                out.setdefault(m, lvl)
     return out
+
+
+def has_module_access(user: dict, module: str) -> bool:
+    """Single-module gate: role grants it AND department permits it. The
+    shared check used by deps.py's require_module, kpis.py, and workspace.py
+    — replaces ad hoc role-only or duplicated department checks.
+    """
+    return module in accessible_modules_for_user(user)
