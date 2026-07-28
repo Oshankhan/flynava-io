@@ -1417,6 +1417,312 @@ export interface ResourceDashboardPayload {
   generated_at: string;
 }
 
+// --- Milestone Tracker ---
+export type MilestoneHealth = "good" | "needs_attention" | "at_risk";
+export type MilestoneStatus =
+  | "not_started"
+  | "pending"
+  | "in_progress"
+  | "pending_review"
+  | "completed"
+  | "blocked";
+
+export interface MilestoneRow {
+  milestone_id: string;
+  name: string;
+  description?: string;
+  project_id: string | null;
+  project_name?: string | null;
+  department: string | null;
+  department_name?: string | null;
+  team_id: string | null;
+  team_name?: string | null;
+  owner_id: string | null;
+  owner_name?: string | null;
+  manager_id: string | null;
+  manager_name?: string | null;
+  category: string;
+  priority: string;
+  status: MilestoneStatus;
+  start_date: string | null;
+  due_date: string | null;
+  completed_at: string | null;
+  progress_pct: number;
+  actual_pct: number;
+  planned_pct: number;
+  delayed_pct: number;
+  health: MilestoneHealth;
+  overdue: boolean;
+  overdue_days: number;
+  days_left: number | null;
+  completion_criteria?: { label: string; done: boolean }[];
+  dependencies?: string[];
+}
+
+export interface MilestoneTrendPoint {
+  t: string;
+  month: string;
+  planned: number;
+  actual: number;
+  delayed: number;
+}
+
+export interface MilestoneTask {
+  task_id: string;
+  milestone_id: string;
+  title: string;
+  weightage: number;
+  status: string;
+  assignee_id: string | null;
+  assignee_name?: string | null;
+  due_date: string | null;
+  completed_at: string | null;
+  completion_pct: number;
+  order: number;
+}
+
+export interface MilestoneDailyEntry {
+  entry_id: string;
+  milestone_id: string;
+  task_id: string | null;
+  task_title?: string | null;
+  user_id: string;
+  user_name?: string | null;
+  date: string;
+  hours: number;
+  progress_delta: number;
+  note: string;
+  status: "pending" | "approved" | "rejected";
+  approver_id: string | null;
+  approver_name?: string | null;
+  approved_at: string | null;
+}
+
+export interface MilestoneComment {
+  comment_id: string;
+  milestone_id: string;
+  user_id: string;
+  user_name?: string | null;
+  body: string;
+  created_at: string;
+}
+
+export interface MilestoneActivity {
+  event_id: string;
+  milestone_id: string;
+  actor_id: string;
+  actor_name?: string | null;
+  type: string;
+  detail: string;
+  at: string;
+}
+
+export interface MilestoneDocument {
+  doc_id: string;
+  milestone_id?: string;
+  name: string;
+  url?: string;
+  kind?: string;
+  uploaded_by?: string;
+  uploaded_at?: string;
+}
+
+export interface MilestoneDepartmentRow {
+  dept_id: string;
+  name: string;
+  progress_pct: number;
+  planned_pct: number;
+  total: number;
+  completed: number;
+  overdue: number;
+  health: MilestoneHealth;
+}
+
+export interface MilestoneTopPerformer {
+  rank: number;
+  user_id: string;
+  name: string;
+  department: string | null;
+  designation: string | null;
+  completed: number;
+  total: number;
+  completion_pct: number;
+  score: number;
+}
+
+export interface MilestoneAttentionRow {
+  user_id: string;
+  name: string;
+  department: string | null;
+  designation: string | null;
+  overdue_milestones: number;
+  overdue_days: number;
+  risk: "High" | "Medium" | "Low";
+}
+
+export interface MilestoneDeadlineRow {
+  milestone_id: string;
+  name: string;
+  due_date: string | null;
+  priority: string;
+  days_left: number;
+  owner_name?: string | null;
+  project_name?: string | null;
+}
+
+export interface MilestoneDashboardPayload {
+  generated_at: string;
+  period: { month: string; from: string | null; to: string | null };
+  cards: SuccessCard[];
+  org_health: { score: number; band: string; completion_pct?: number; on_time_pct?: number };
+  status_donut: { total: number; slices: SuccessSlice[] };
+  trend: { granularity: string; points: MilestoneTrendPoint[] };
+  departments: MilestoneDepartmentRow[];
+  top_performers: MilestoneTopPerformer[];
+  needs_attention: MilestoneAttentionRow[];
+  upcoming_deadlines: MilestoneDeadlineRow[];
+  totals: { all: number; active: number; completed: number; overdue: number };
+}
+
+export interface MilestoneListPayload {
+  items: MilestoneRow[];
+  total: number;
+  page: number;
+  page_size: number;
+  generated_at: string;
+}
+
+export interface MilestoneDetailPayload {
+  milestone: MilestoneRow;
+  tasks: MilestoneTask[];
+  daily_entries: MilestoneDailyEntry[];
+  dependencies: MilestoneRow[];
+  documents: MilestoneDocument[];
+  comments: MilestoneComment[];
+  timeline: MilestoneActivity[];
+  trend: { granularity: string; points: MilestoneTrendPoint[] };
+  permissions: { can_manage: boolean; can_approve: boolean };
+  counts: {
+    tasks: number;
+    daily_entries: number;
+    dependencies: number;
+    documents: number;
+    comments: number;
+  };
+  generated_at: string;
+}
+
+export interface MilestoneEmployeePayload {
+  employee: {
+    user_id: string;
+    name: string;
+    designation: string | null;
+    department: string | null;
+    department_name: string | null;
+    team_name: string | null;
+    email: string | null;
+  };
+  stats: {
+    total: number;
+    completed: number;
+    in_progress: number;
+    overdue: number;
+    completion_pct: number;
+    avg_progress_pct: number;
+  };
+  active: MilestoneRow[];
+  completed: MilestoneRow[];
+  generated_at: string;
+}
+
+export interface MilestoneDepartmentPayload {
+  department: { dept_id: string; name: string };
+  stats: {
+    total: number;
+    completed: number;
+    in_progress: number;
+    overdue: number;
+    completion_pct: number;
+    avg_progress_pct: number;
+  };
+  trend: { granularity: string; points: MilestoneTrendPoint[] };
+  priority_donut: { total: number; slices: SuccessSlice[] };
+  status_donut: { total: number; slices: SuccessSlice[] };
+  teams: {
+    team_id: string;
+    name: string;
+    total: number;
+    progress_pct: number;
+    overdue: number;
+    health: MilestoneHealth;
+  }[];
+  top_performers: MilestoneTopPerformer[];
+  needs_attention: MilestoneAttentionRow[];
+  upcoming_deadlines: MilestoneDeadlineRow[];
+  generated_at: string;
+}
+
+export interface MilestoneFilterOption {
+  value: string;
+  label: string;
+}
+
+export interface MilestoneFilterOptions {
+  departments: MilestoneFilterOption[];
+  teams: MilestoneFilterOption[];
+  projects: MilestoneFilterOption[];
+  categories: MilestoneFilterOption[];
+  managers: MilestoneFilterOption[];
+  owners: MilestoneFilterOption[];
+  statuses: MilestoneStatus[];
+  priorities: string[];
+}
+
+/** Every filter is optional; omitted keys are simply not sent. */
+export interface MilestoneFilters {
+  department?: string;
+  team?: string;
+  project?: string;
+  category?: string;
+  manager?: string;
+  owner?: string;
+  status?: string;
+  priority?: string;
+  health?: string;
+  date_from?: string;
+  date_to?: string;
+  q?: string;
+}
+
+export interface MilestoneReportMeta {
+  key: string;
+  title: string;
+  description: string;
+}
+
+export interface MilestoneReportColumn {
+  key: string;
+  title: string;
+}
+
+export interface MilestoneReportCatalog {
+  predefined: MilestoneReportMeta[];
+  columns: MilestoneReportColumn[];
+  statuses: MilestoneStatus[];
+  priorities: string[];
+  healths: MilestoneHealth[];
+}
+
+export interface MilestoneReportResult {
+  key: string;
+  title: string;
+  description?: string;
+  columns: MilestoneReportColumn[];
+  rows: Record<string, string | number | boolean | null>[];
+  row_count: number;
+  generated_at: string;
+}
+
 export const api = {
   login: (email: string, password: string) =>
     req<LoginResult>("/auth/login", {
@@ -1914,4 +2220,108 @@ export const api = {
 
   // Resource Management
   resourceDashboard: () => req<ResourceDashboardPayload>("/resources/dashboard"),
+
+  // Milestone Tracker
+  milestoneDashboard: (f?: MilestoneFilters) =>
+    req<MilestoneDashboardPayload>(`/milestones/dashboard${toQuery({ ...f })}`),
+  milestoneFilterOptions: () => req<MilestoneFilterOptions>("/milestones/filters"),
+  milestoneList: (
+    f?: MilestoneFilters,
+    p?: { page?: number; page_size?: number; sort?: string; order?: "asc" | "desc" }
+  ) =>
+    req<MilestoneListPayload>(
+      `/milestones${toQuery({
+        ...f,
+        page: p?.page ? String(p.page) : undefined,
+        page_size: p?.page_size ? String(p.page_size) : undefined,
+        sort: p?.sort,
+        order: p?.order,
+      })}`
+    ),
+  milestoneDetail: (id: string) => req<MilestoneDetailPayload>(`/milestones/${id}`),
+  createMilestone: (body: Partial<MilestoneRow>) =>
+    req<MilestoneRow>("/milestones", { method: "POST", body: JSON.stringify(body) }),
+  updateMilestone: (id: string, body: Partial<MilestoneRow>) =>
+    req<MilestoneRow>(`/milestones/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteMilestone: (id: string) =>
+    req<null>(`/milestones/${id}`, { method: "DELETE" }),
+  addMilestoneTask: (
+    id: string,
+    body: { title: string; weightage?: number; status?: string; assignee_id?: string; due_date?: string }
+  ) => req<MilestoneTask>(`/milestones/${id}/tasks`, { method: "POST", body: JSON.stringify(body) }),
+  updateMilestoneTask: (id: string, taskId: string, body: Partial<MilestoneTask>) =>
+    req<MilestoneTask>(`/milestones/${id}/tasks/${taskId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteMilestoneTask: (id: string, taskId: string) =>
+    req<null>(`/milestones/${id}/tasks/${taskId}`, { method: "DELETE" }),
+  addMilestoneDailyEntry: (
+    id: string,
+    body: { task_id?: string; date?: string; hours?: number; progress_delta?: number; note?: string }
+  ) =>
+    req<MilestoneDailyEntry>(`/milestones/${id}/daily`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  decideMilestoneDailyEntry: (id: string, entryId: string, decision: "approve" | "reject") =>
+    req<MilestoneDailyEntry>(`/milestones/${id}/daily/${entryId}/${decision}`, { method: "POST" }),
+  setMilestoneDependencies: (id: string, dependencies: string[]) =>
+    req<{ dependencies: string[] }>(`/milestones/${id}/dependencies`, {
+      method: "PUT",
+      body: JSON.stringify({ dependencies }),
+    }),
+  linkMilestoneDocument: (id: string, body: { name: string; url?: string; kind?: string }) =>
+    req<MilestoneDocument>(`/milestones/${id}/documents`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  addMilestoneComment: (id: string, body: string) =>
+    req<MilestoneComment>(`/milestones/${id}/comments`, {
+      method: "POST",
+      body: JSON.stringify({ body }),
+    }),
+  employeeMilestones: (userId: string) =>
+    req<MilestoneEmployeePayload>(`/milestones/employees/${userId}`),
+  milestoneDepartments: () =>
+    req<{ dept_id: string; name: string }[]>("/milestones/departments"),
+  departmentMilestones: (deptId: string, f?: MilestoneFilters) =>
+    req<MilestoneDepartmentPayload>(`/milestones/departments/${deptId}${toQuery({ ...f })}`),
+  milestoneReportCatalog: () => req<MilestoneReportCatalog>("/milestones/reports"),
+  runMilestoneReport: (key: string, f?: MilestoneFilters) =>
+    req<MilestoneReportResult>(`/milestones/reports/${key}${toQuery({ ...f })}`),
+  runCustomMilestoneReport: (body: {
+    title?: string;
+    columns: string[];
+    group_by?: string | null;
+    filters?: MilestoneFilters;
+  }) =>
+    req<MilestoneReportResult>("/milestones/reports/custom", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  /** CSV lands as a download; the bearer token rules out a plain <a href>. */
+  exportMilestones: async (f?: MilestoneFilters, filename = "milestones.csv"): Promise<void> => {
+    await downloadCsv(`/milestones/export${toQuery({ ...f })}`, filename);
+  },
+  exportMilestoneReport: async (key: string, f?: MilestoneFilters): Promise<void> => {
+    await downloadCsv(`/milestones/reports/${key}${toQuery({ ...f, format: "csv" })}`, `${key}.csv`);
+  },
 };
+
+async function downloadCsv(path: string, filename: string): Promise<void> {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const res = await fetch(`${API_BASE_URL}/api/v1${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    reportIfSessionExpired(path, res.status);
+    throw new ApiError(res.status, "export failed");
+  }
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}

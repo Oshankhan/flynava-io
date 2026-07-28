@@ -65,6 +65,7 @@ MODULES = [
     "awards",
     "ai_insights",
     "admin_panel",
+    "milestones",
 ]
 
 # module -> role -> access level (verbatim from PRD RBAC matrix)
@@ -124,6 +125,15 @@ MATRIX: dict[str, dict[str, str]] = {
         "team_lead": NONE, "hr": NONE, "employee": NONE,
         "marketing": NONE, "investor": NONE, "partner": NONE,
     },
+    # Milestone Tracker. Every employee owns milestones, so nobody is NONE
+    # except partner (external). "own" for employee means the self-only
+    # Employee Milestones view — `has_aggregate_access` still keeps them out
+    # of the company/department dashboards.
+    "milestones": {
+        "super_admin": "full", "leadership": "full", "manager": "dept",
+        "team_lead": "team", "hr": "read", "employee": "own",
+        "marketing": "own", "investor": "summary", "partner": NONE,
+    },
 }
 
 
@@ -158,7 +168,12 @@ def has_any_access(user: dict, module: str) -> bool:
 #     summary/sla) — that's gate enough.
 #   - admin_panel: MATRIX already hard-NONEs every role but super_admin, so
 #     department gating is moot regardless.
-_CROSS_CUTTING_MODULES = {"awards", "ai_insights", "customer_support", "admin_panel"}
+#   - milestones: every department tracks milestones (eng, mkt, hr, fin,
+#     product all appear in the tracker), so there is no owning department to
+#     match against — MATRIX's per-role level plus the per-level row scoping in
+#     services/milestones.py is the whole gate.
+_CROSS_CUTTING_MODULES = {"awards", "ai_insights", "customer_support",
+                          "admin_panel", "milestones"}
 
 # user["department"] -> module ids that department may see.
 # `exec` (super_admin/leadership/investor/partner) = every module: those

@@ -1118,6 +1118,11 @@ def _seed_core(db: Database, now: dt.datetime) -> None:
 
     seed_forecaster(db, now)
 
+    # Reads users/teams/projects seeded by this function, so must run after.
+    from .milestone_seed import seed_milestones
+
+    seed_milestones(db, now)
+
 
 def seed_demo_extras(db: Database) -> dict:
     """Refresh all demo seed data except HR, safe to rerun against an
@@ -1164,7 +1169,9 @@ def reset_roster(db: Database) -> dict:
                  "traffic_daily", "central_monthly", "org_monthly",
                  "marketing_monthly", "finance_monthly", "startup_monthly",
                  "startup_daily", "ops_monthly", "ops_daily", "milestones",
-                 "forecaster_monthly"):
+                 "forecaster_monthly", "tracker_milestones", "milestone_tasks",
+                 "milestone_daily_entries", "milestone_comments",
+                 "milestone_activity"):
         db[coll].delete_many({})
     seed(db)
     # Compute the live KPI values now so dashboards show real numbers (the

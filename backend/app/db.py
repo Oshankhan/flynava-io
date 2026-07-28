@@ -82,3 +82,21 @@ def ensure_indexes(db: Database) -> None:
     db.ops_daily.create_index([("date", ASCENDING)], unique=True)
     db.milestones.create_index([("milestone_id", ASCENDING)], unique=True)
     db.forecaster_monthly.create_index([("month", ASCENDING)], unique=True)
+    # Milestone Tracker. Deliberately NOT `milestones` — that collection is the
+    # Indicator Of Success central-dashboard roadmap strip (4 ordered company
+    # milestones, see services/success.py). These are the per-employee,
+    # per-project tracked milestones with tasks, weightage and daily entries.
+    db.tracker_milestones.create_index([("milestone_id", ASCENDING)], unique=True)
+    db.tracker_milestones.create_index([("department", ASCENDING), ("status", ASCENDING)])
+    db.tracker_milestones.create_index([("owner_id", ASCENDING), ("status", ASCENDING)])
+    db.tracker_milestones.create_index([("due_date", ASCENDING)])
+    db.milestone_tasks.create_index([("task_id", ASCENDING)], unique=True)
+    db.milestone_tasks.create_index([("milestone_id", ASCENDING)])
+    db.milestone_daily_entries.create_index([("entry_id", ASCENDING)], unique=True)
+    db.milestone_daily_entries.create_index(
+        [("milestone_id", ASCENDING), ("date", ASCENDING)])
+    db.milestone_daily_entries.create_index([("status", ASCENDING)])
+    db.milestone_comments.create_index([("comment_id", ASCENDING)], unique=True)
+    db.milestone_comments.create_index([("milestone_id", ASCENDING)])
+    db.milestone_activity.create_index([("event_id", ASCENDING)], unique=True)
+    db.milestone_activity.create_index([("milestone_id", ASCENDING), ("at", ASCENDING)])

@@ -26,6 +26,10 @@ import SuccessPage from "./pages/success/SuccessPage";
 import ForecasterPage from "./pages/forecaster/ForecasterPage";
 import ManagementPage from "./pages/management/ManagementPage";
 import ResourcePage from "./pages/resource/ResourcePage";
+import MilestonePage from "./pages/milestones/MilestonePage";
+import MilestoneDetail from "./pages/milestones/MilestoneDetail";
+import EmployeeMilestones from "./pages/milestones/EmployeeMilestones";
+import DepartmentDashboard from "./pages/milestones/DepartmentDashboard";
 import RequireModule from "./components/RequireModule";
 
 function Shell() {
@@ -89,6 +93,19 @@ function Shell() {
               <Route path="/forecaster/:tab" element={<ForecasterPage />} />
               <Route path="/management/:tab" element={<ManagementPage />} />
               <Route path="/resource/:tab" element={<ResourcePage />} />
+              {/* Static three-segment paths outrank `/milestones/:tab`, so the
+                  detail/employee/department screens don't collide with it. */}
+              <Route path="/milestones/detail/:milestoneId" element={<MilestoneDetail />} />
+              <Route path="/milestones/employee/:userId" element={<EmployeeMilestones />} />
+              <Route
+                path="/milestones/department/:deptId"
+                element={
+                  <RequireModule module="milestones">
+                    <DepartmentDashboard />
+                  </RequireModule>
+                }
+              />
+              <Route path="/milestones/:tab" element={<MilestonePage />} />
             </Route>
             <Route path="*" element={<Navigate to="/workspace" replace />} />
           </Routes>

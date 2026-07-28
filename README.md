@@ -36,7 +36,7 @@ npm test
 
 ## Build phases
 - [x] **Phase 0** — Scaffold, health check, CI, green/white tokens
-- [x] **Phase 1** — Auth (JWT) + RBAC (9 roles × 11 modules) + core data model + seed
+- [x] **Phase 1** — Auth (JWT) + RBAC (9 roles × 12 modules) + core data model + seed
 - [x] **Phase 2** — Ingestion framework + OpenProject connector + Integration_Log
 - [x] **Phase 3** — Config-driven KPI engine + Operations KPIs
 - [x] **Phase 4** — Dashboard shell + Leadership dashboard
@@ -44,6 +44,13 @@ npm test
 - [x] **Phase 6** — HR, Finance, Marketing, Manager, Employee dashboards
 - [x] **Phase 7** — Notifications + Awards & Recognition + Admin panel
 - [x] **Phase 8** — Playwright e2e scaffold + security middleware + audit trail
+- [x] **Milestone Tracker** — company/department/employee milestone health.
+  Progress is derived, never entered: weightage-weighted task completion driven
+  by *approved* Daily Success entries (`services/milestones.py` is the single
+  formula every screen reads), health is progress vs time elapsed. Six screens
+  under `/milestones/*` — dashboard, list, details, employee, department,
+  reports. Collections are `tracker_milestones` + `milestone_*`; the older
+  `milestones` collection is the unrelated Indicator Of Success roadmap strip.
 
 ## Demo accounts (seeded, password `Passw0rd!`)
 `admin@` (super_admin) · `leadership@` · `manager@` · `hr@` · `employee@` ·

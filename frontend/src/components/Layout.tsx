@@ -27,6 +27,7 @@ import {
   ControlOutlined,
   DashboardOutlined,
   FileProtectOutlined,
+  FlagOutlined,
   FundProjectionScreenOutlined,
   HomeOutlined,
   IdcardOutlined,
@@ -122,6 +123,32 @@ function buildResourceChildren(level: number): { key: string; label: string }[] 
     { key: "/resource/lifecycle", label: "Work Lifecycle" },
     { key: "/resource/reports", label: "Reports" },
   ];
+}
+
+// Milestone Tracker: `milestones` is a cross-cutting module (every department
+// has milestones, see rbac.py's _CROSS_CUTTING_MODULES), so the gate is the
+// per-role MATRIX level alone. An employee's bare "own" level still gets the
+// list and their own Employee Milestones — both are row-scoped server-side —
+// but not the company/department aggregates, which 403 on
+// `has_aggregate_access`. Department Dashboard additionally needs L3+, matching
+// `services/milestones.py`'s `department_view`.
+function buildMilestoneChildren(
+  modules: Record<string, string>,
+  level: number
+): { key: string; label: string }[] {
+  if (!modules.milestones) return [];
+  const children: { key: string; label: string }[] = [];
+  if (hasAggregateAccess(modules, "milestones"))
+    children.push({ key: "/milestones/dashboard", label: "Dashboard" });
+  children.push(
+    { key: "/milestones/list", label: "Milestone List" },
+    { key: "/milestones/employees", label: "Employee Milestones" }
+  );
+  if (hasAggregateAccess(modules, "milestones") && level >= 3)
+    children.push({ key: "/milestones/departments", label: "Department Dashboard" });
+  if (hasAggregateAccess(modules, "milestones"))
+    children.push({ key: "/milestones/reports", label: "Reports & Analytics" });
+  return children;
 }
 
 export default function Layout() {
@@ -274,6 +301,15 @@ export default function Layout() {
         children: resourceChildren,
       });
 
+    const milestoneChildren = buildMilestoneChildren(modules, level);
+    if (milestoneChildren.length > 0)
+      list.push({
+        key: "milestones",
+        icon: <FlagOutlined />,
+        label: "Milestone Tracker",
+        children: milestoneChildren,
+      });
+
     if (canPeople)
       list.push({ key: "/people", icon: <TeamOutlined />, label: "People (HR)" });
     if (level >= 3)
@@ -340,6 +376,11 @@ export default function Layout() {
     "/resource/planner": "Plan and allocate resources across projects.",
     "/resource/lifecycle": "Work lifecycle stages across every department.",
     "/resource/reports": "Resource utilization and allocation reports.",
+    "/milestones/dashboard": "Company-wide milestone health, progress and deadlines.",
+    "/milestones/list": "View, filter and manage every milestone in your scope.",
+    "/milestones/employees": "Milestones assigned to a specific employee.",
+    "/milestones/departments": "Department-wise milestone performance and trends.",
+    "/milestones/reports": "Predefined and custom milestone reports.",
   };
   const subtitle = subtitles[active?.key ?? ""];
 

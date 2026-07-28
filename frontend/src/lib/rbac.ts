@@ -28,6 +28,7 @@ export const MODULES = [
   "awards",
   "ai_insights",
   "admin_panel",
+  "milestones",
 ] as const;
 
 const ROLE_LEVEL: Record<string, number> = {
